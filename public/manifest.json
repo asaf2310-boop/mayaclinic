@@ -1,0 +1,23 @@
+{
+  "name": "Maya's Clinic",
+  "short_name": "Maya's Clinic",
+  "description": "קביעת תורים בקליניקה של מאיה",
+  "start_url": "/book",
+  "display": "standalone",
+  "background_color": "#f7f3ee",
+  "theme_color": "#2eb88a",
+  "lang": "he",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "https://media.base44.com/images/public/69ff3dea5e105013fde56ce0/e149fd61a_IMG_8737.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg"
+    },
+    {
+      "src": "https://media.base44.com/images/public/69ff3dea5e105013fde56ce0/e149fd61a_IMG_8737.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}
