@@ -1,0 +1,106 @@
+import React, { useState, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+import Navbar from "../components/layout/Navbar";
+import TreatmentSelector from "../components/booking/TreatmentSelector";
+import BookingForm from "../components/booking/BookingForm";
+import BookingSuccess from "../components/booking/BookingSuccess";
+import PaymentStep from "../components/booking/PaymentStep";
+import { Skeleton } from "@/components/ui/skeleton";
+
+export default function Book() {
+  const [selectedTreatment, setSelectedTreatment] = useState(null);
+  const [pendingFormData, setPendingFormData] = useState(null);
+  const [bookedAppointment, setBookedAppointment] = useState(null);
+
+  const { data: treatments = [], isLoading } = useQuery({
+    queryKey: ["treatments"],
+    queryFn: () => base44.entities.Treatment.list(),
+  });
+
+  useEffect(() => {
+    if (treatments.length > 0 && !selectedTreatment) {
+      setSelectedTreatment(treatments[0]);
+    }
+  }, [treatments]);
+
+  const createMutation = useMutation({
+    mutationFn: (data) => base44.entities.Appointment.create(data),
+    onSuccess: (data) => {
+      setBookedAppointment({ ...data, treatment_price: selectedTreatment?.price });
+      setPendingFormData(null);
+    },
+  });
+
+  const handleFormSubmit = (formData) => {
+    setPendingFormData(formData);
+  };
+
+  const handleConfirmAfterPayment = () => {
+    createMutation.mutate(pendingFormData);
+  };
+
+  const handleReset = () => {
+    setSelectedTreatment(null);
+    setPendingFormData(null);
+    setBookedAppointment(null);
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      <main className="pt-24 pb-16 px-6" dir="rtl">
+        <div className="max-w-2xl mx-auto">
+          {bookedAppointment ? (
+            <BookingSuccess appointment={bookedAppointment} onReset={handleReset} />
+          ) : pendingFormData ? (
+            <PaymentStep
+              formData={pendingFormData}
+              treatment={selectedTreatment}
+              onConfirm={handleConfirmAfterPayment}
+              onBack={() => setPendingFormData(null)}
+              isSubmitting={createMutation.isPending}
+            />
+          ) : (
+            <>
+              <div className="text-center mb-10">
+                <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-3">קביעת תור</h1>
+                <p className="text-muted-foreground text-lg">בחרו טיפול, תאריך ושעה נוחים</p>
+              </div>
+
+              <div className="space-y-8">
+                {isLoading ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((i) => (
+                      <Skeleton key={i} className="h-20 rounded-xl" />
+                    ))}
+                  </div>
+                ) : treatments.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    אין טיפולים זמינים כרגע
+                  </div>
+                ) : (
+                  <>
+                    <TreatmentSelector
+                      treatments={treatments}
+                      selectedId={selectedTreatment?.id}
+                      onSelect={setSelectedTreatment}
+                    />
+
+                    <div className="h-px bg-border" />
+
+                    <BookingForm
+                      selectedTreatment={selectedTreatment}
+                      onSubmit={handleFormSubmit}
+                      isSubmitting={false}
+                    />
+                  </>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}
