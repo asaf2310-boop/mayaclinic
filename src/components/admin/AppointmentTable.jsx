@@ -137,9 +137,10 @@ export default function AppointmentTable({ appointments, onStatusChange, onPaidC
                     </div>
                   </div>
 
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
                     {renderField("טלפון", apt.patient_phone, "tabular-nums")}
                     {renderField("טיפול", apt.treatment_name)}
+                    {renderField("מחיר טיפול", apt.treatment_price ? `₪${Number(apt.treatment_price).toLocaleString("he-IL")}` : "-")}
                     {renderField("תאריך", apt.date ? format(new Date(apt.date + "T00:00:00"), "dd/MM/yyyy") : "-", "tabular-nums")}
                     {renderField("שעה", apt.time, "tabular-nums")}
                     {renderField("הערות", apt.notes || "-")}
