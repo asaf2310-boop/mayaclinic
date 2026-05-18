@@ -1,6 +1,9 @@
-const DEMO_STORE_KEY = "mayaclinic-demo-store-v2";
+const DEMO_STORE_KEY = "mayaclinic-demo-store-v3";
 
-export const demoModeEnabled = import.meta.env.VITE_DEMO_MODE === "true";
+const demoEnvEnabled = import.meta.env.VITE_DEMO_MODE === "true";
+const demoHostEnabled = typeof window !== "undefined" && window.location.hostname.includes("mayaclinic-demo");
+
+export const demoModeEnabled = demoEnvEnabled || demoHostEnabled;
 
 const ENTITY_KEYS = {
   Treatment: "treatments",
@@ -35,11 +38,11 @@ function createSeedStore() {
   const futureDates = [1, 2, 3, 5, 7, 9, 12, 15, 18, 21].map((days) => formatDate(addDays(today, days)));
 
   const treatments = [
-    { id: "treatment_laser", name: "טיפול לייזר", description: "טיפול אסתטי ממוקד", price: 350, duration: 45, is_active: true },
-    { id: "treatment_facial", name: "טיפול פנים קלאסי", description: "ניקוי, הזנה ולחות לעור", price: 280, duration: 60, is_active: true },
-    { id: "treatment_consult", name: "פגישת ייעוץ", description: "אבחון והתאמת תכנית טיפול", price: 150, duration: 30, is_active: true },
-    { id: "treatment_peeling", name: "פילינג רפואי", description: "חידוש מרקם העור והבהרה", price: 420, duration: 50, is_active: true },
-    { id: "treatment_brows", name: "עיצוב גבות", description: "עיצוב והתאמה למבנה הפנים", price: 120, duration: 30, is_active: true },
+    { id: "treatment_laser", name: "טיפול לייזר", description: "טיפול אסתטי ממוקד", price: 350, duration: 45, duration_minutes: 45, is_active: true },
+    { id: "treatment_facial", name: "טיפול פנים קלאסי", description: "ניקוי, הזנה ולחות לעור", price: 280, duration: 60, duration_minutes: 60, is_active: true },
+    { id: "treatment_consult", name: "פגישת ייעוץ", description: "אבחון והתאמת תכנית טיפול", price: 150, duration: 30, duration_minutes: 30, is_active: true },
+    { id: "treatment_peeling", name: "פילינג רפואי", description: "חידוש מרקם העור והבהרה", price: 420, duration: 50, duration_minutes: 50, is_active: true },
+    { id: "treatment_brows", name: "עיצוב גבות", description: "עיצוב והתאמה למבנה הפנים", price: 120, duration: 30, duration_minutes: 30, is_active: true },
   ];
 
   const availability = futureDates.map((date, index) => ({
@@ -98,7 +101,16 @@ function createSeedStore() {
 
 function readStore() {
   const raw = localStorage.getItem(DEMO_STORE_KEY);
-  if (raw) return JSON.parse(raw);
+  if (raw) {
+    try {
+      const store = JSON.parse(raw);
+      if (store?.treatments?.length && store?.availability?.length && store?.appointments?.length) {
+        return store;
+      }
+    } catch {
+      localStorage.removeItem(DEMO_STORE_KEY);
+    }
+  }
 
   const seed = createSeedStore();
   localStorage.setItem(DEMO_STORE_KEY, JSON.stringify(seed));
