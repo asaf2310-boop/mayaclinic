@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { appParams } from '@/lib/app-params';
+import { useSupabaseBackend } from '@/api/dataClient';
 import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
 
 const AuthContext = createContext();
@@ -19,6 +20,16 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const checkAppState = async () => {
+    if (useSupabaseBackend()) {
+      setAuthError(null);
+      setAppPublicSettings({ id: 'supabase', public_settings: {} });
+      setIsAuthenticated(true);
+      setIsLoadingPublicSettings(false);
+      setIsLoadingAuth(false);
+      setAuthChecked(true);
+      return;
+    }
+
     try {
       setIsLoadingPublicSettings(true);
       setAuthError(null);
