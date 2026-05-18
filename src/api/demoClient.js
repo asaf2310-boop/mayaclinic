@@ -1,4 +1,4 @@
-const DEMO_STORE_KEY = "mayaclinic-demo-store-v1";
+const DEMO_STORE_KEY = "mayaclinic-demo-store-v2";
 
 export const demoModeEnabled = import.meta.env.VITE_DEMO_MODE === "true";
 
@@ -22,77 +22,76 @@ function addDays(date, days) {
   return next;
 }
 
+function monthDate(baseDate, monthOffset, day) {
+  return formatDate(new Date(baseDate.getFullYear(), baseDate.getMonth() + monthOffset, day));
+}
+
 function makeId(prefix) {
   return `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 }
 
 function createSeedStore() {
   const today = new Date();
-  const dates = [1, 2, 3, 5, 7, 9, 12].map((days) => formatDate(addDays(today, days)));
+  const futureDates = [1, 2, 3, 5, 7, 9, 12, 15, 18, 21].map((days) => formatDate(addDays(today, days)));
 
   const treatments = [
     { id: "treatment_laser", name: "טיפול לייזר", description: "טיפול אסתטי ממוקד", price: 350, duration: 45, is_active: true },
-    { id: "treatment_facial", name: "טיפול פנים", description: "ניקוי, הזנה ולחות לעור", price: 280, duration: 60, is_active: true },
+    { id: "treatment_facial", name: "טיפול פנים קלאסי", description: "ניקוי, הזנה ולחות לעור", price: 280, duration: 60, is_active: true },
     { id: "treatment_consult", name: "פגישת ייעוץ", description: "אבחון והתאמת תכנית טיפול", price: 150, duration: 30, is_active: true },
+    { id: "treatment_peeling", name: "פילינג רפואי", description: "חידוש מרקם העור והבהרה", price: 420, duration: 50, is_active: true },
+    { id: "treatment_brows", name: "עיצוב גבות", description: "עיצוב והתאמה למבנה הפנים", price: 120, duration: 30, is_active: true },
   ];
 
-  const availability = dates.map((date, index) => ({
+  const availability = futureDates.map((date, index) => ({
     id: `availability_${index}`,
     date,
     slots: ["09:00", "10:30", "12:00", "14:00", "16:00", "17:30"],
     is_active: true,
   }));
 
-  const appointments = [
-    {
-      id: "appointment_demo_1",
-      patient_name: "נועה כהן",
-      patient_phone: "050-1234567",
-      patient_email: "noa@example.com",
-      treatment_id: "treatment_facial",
-      treatment_name: "טיפול פנים",
-      treatment_price: 280,
-      date: dates[0],
-      time: "10:30",
-      status: "confirmed",
-      paid: true,
-      marketing_consent: true,
-      notes: "עור רגיש",
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: "appointment_demo_2",
-      patient_name: "דנה לוי",
-      patient_phone: "052-7654321",
-      patient_email: "dana@example.com",
-      treatment_id: "treatment_laser",
-      treatment_name: "טיפול לייזר",
-      treatment_price: 350,
-      date: dates[2],
-      time: "14:00",
-      status: "pending",
-      paid: false,
-      marketing_consent: false,
-      notes: "",
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: "appointment_demo_3",
-      patient_name: "נועה כהן",
-      patient_phone: "050-1234567",
-      patient_email: "noa@example.com",
-      treatment_id: "treatment_consult",
-      treatment_name: "פגישת ייעוץ",
-      treatment_price: 150,
-      date: dates[4],
-      time: "12:00",
-      status: "completed",
-      paid: true,
-      marketing_consent: true,
-      notes: "המשך טיפול",
-      created_at: new Date().toISOString(),
-    },
+  const appointmentRows = [
+    ["נועה כהן", "050-1234567", "noa@example.com", "treatment_facial", -2, 8, "10:30", "completed", true, true, "עור רגיש"],
+    ["נועה כהן", "050-1234567", "noa@example.com", "treatment_peeling", -1, 14, "12:00", "completed", true, true, "מעקב לאחר טיפול"],
+    ["נועה כהן", "050-1234567", "noa@example.com", "treatment_consult", 0, 22, "16:00", "confirmed", false, true, "המשך תכנית טיפול"],
+    ["דנה לוי", "052-7654321", "dana@example.com", "treatment_laser", -2, 18, "14:00", "completed", true, false, ""],
+    ["דנה לוי", "052-7654321", "dana@example.com", "treatment_laser", -1, 21, "14:00", "completed", true, false, "סדרה חודשית"],
+    ["דנה לוי", "052-7654321", "dana@example.com", "treatment_laser", 0, 28, "14:00", "pending", false, false, ""],
+    ["מיכל אברהם", "054-2223344", "michal@example.com", "treatment_facial", -1, 4, "09:00", "completed", true, true, "לקוחה חדשה"],
+    ["מיכל אברהם", "054-2223344", "michal@example.com", "treatment_brows", 0, 12, "10:30", "confirmed", true, true, ""],
+    ["יעל מזרחי", "053-9988776", "yael@example.com", "treatment_peeling", -3, 11, "12:00", "completed", true, true, "רוצה לקבל מבצעים"],
+    ["יעל מזרחי", "053-9988776", "yael@example.com", "treatment_facial", -2, 24, "09:00", "completed", true, true, ""],
+    ["שירה ביטון", "058-1112233", "shira@example.com", "treatment_consult", -1, 9, "17:30", "cancelled", false, false, "ביטלה טלפונית"],
+    ["שירה ביטון", "058-1112233", "shira@example.com", "treatment_facial", 0, 18, "17:30", "pending", false, false, ""],
+    ["רוני פרץ", "050-5550199", "roni@example.com", "treatment_laser", -3, 7, "16:00", "completed", true, true, "שילמה במקום"],
+    ["רוני פרץ", "050-5550199", "roni@example.com", "treatment_peeling", -2, 6, "10:30", "completed", true, true, ""],
+    ["אורטל שלום", "052-4448899", "ortal@example.com", "treatment_brows", -1, 26, "12:00", "completed", true, true, ""],
+    ["אורטל שלום", "052-4448899", "ortal@example.com", "treatment_brows", 0, 25, "12:00", "confirmed", false, true, "תזכורת יום לפני"],
+    ["ליאת בר", "054-7776655", "liat@example.com", "treatment_facial", -3, 19, "09:00", "completed", true, false, ""],
+    ["ליאת בר", "054-7776655", "liat@example.com", "treatment_consult", -1, 17, "16:00", "completed", true, false, "ייעוץ המשך"],
   ];
+
+  const treatmentById = Object.fromEntries(treatments.map((treatment) => [treatment.id, treatment]));
+  const appointments = appointmentRows.map((row, index) => {
+    const [name, phone, email, treatmentId, monthOffset, day, time, status, paid, marketingConsent, notes] = row;
+    const treatment = treatmentById[treatmentId];
+
+    return {
+      id: `appointment_demo_${index + 1}`,
+      patient_name: name,
+      patient_phone: phone,
+      patient_email: email,
+      treatment_id: treatmentId,
+      treatment_name: treatment.name,
+      treatment_price: treatment.price,
+      date: monthDate(today, monthOffset, day),
+      time,
+      status,
+      paid,
+      marketing_consent: marketingConsent,
+      notes,
+      created_at: new Date(today.getFullYear(), today.getMonth() + monthOffset, Math.max(day - 3, 1), 9).toISOString(),
+    };
+  });
 
   return { treatments, availability, appointments };
 }
