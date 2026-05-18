@@ -15,8 +15,9 @@ const STATUS_MAP = {
 };
 
 export default function BookingSuccess({ appointment, onReset }) {
-  const price = appointment.treatment_price ?? DEFAULT_PRICE;
-  const status = STATUS_MAP[appointment.status] || STATUS_MAP.pending;
+  const appointments = appointment.appointments || [appointment];
+  const price = (appointment.treatment_price ?? DEFAULT_PRICE) * appointments.length;
+  const status = STATUS_MAP[appointments[0]?.status] || STATUS_MAP.pending;
 
   return (
     <motion.div
@@ -28,22 +29,29 @@ export default function BookingSuccess({ appointment, onReset }) {
         <CheckCircle2 className="w-10 h-10 text-primary" />
       </div>
 
-      <h2 className="text-3xl font-bold text-foreground mb-3">התור נקבע בהצלחה!</h2>
+      <h2 className="text-3xl font-bold text-foreground mb-3">התורים נקבעו בהצלחה!</h2>
       <p className="text-muted-foreground text-lg mb-8">נשלח אליכם אישור בקרוב</p>
 
       <div className="bg-muted/50 rounded-xl p-6 max-w-sm mx-auto mb-6 text-right" dir="rtl">
         <div className="space-y-3 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">טיפול:</span>
-            <span className="font-medium text-foreground">{appointment.treatment_name}</span>
+            <span className="font-medium text-foreground">{appointment.treatment_name || appointments[0]?.treatment_name}</span>
+          </div>
+          <div className="space-y-2">
+            <span className="text-muted-foreground">תורים:</span>
+            <div className="space-y-1">
+              {appointments.map((item) => (
+                <div key={item.id || `${item.date}-${item.time}`} className="flex justify-between">
+                  <span className="font-medium text-foreground">{format(new Date(item.date + "T00:00:00"), "dd/MM/yyyy")}</span>
+                  <span className="font-medium text-foreground">{item.time}</span>
+                </div>
+              ))}
+            </div>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">תאריך:</span>
-            <span className="font-medium text-foreground">{format(new Date(appointment.date), "dd/MM/yyyy")}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">שעה:</span>
-            <span className="font-medium text-foreground">{appointment.time}</span>
+            <span className="text-muted-foreground">כמות תורים:</span>
+            <span className="font-medium text-foreground">{appointments.length}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">סטטוס:</span>

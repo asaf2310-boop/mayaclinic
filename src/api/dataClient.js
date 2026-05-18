@@ -82,6 +82,16 @@ function createEntity(tableName) {
       return data?.[0] ?? data;
     },
 
+    async bulkCreate(rows) {
+      if (!rows?.length) return [];
+
+      return (await requestJson(buildUrl(tableName, {}, { select: "*" }), {
+        method: "POST",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify(rows),
+      })) ?? [];
+    },
+
     async update(id, row) {
       const data = await requestJson(buildUrl(tableName, { id }, { select: "*" }), {
         method: "PATCH",

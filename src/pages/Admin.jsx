@@ -20,7 +20,20 @@ export default function Admin() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Appointment.update(id, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["appointments"] }),
+    onSuccess: (updatedAppointment) => {
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      if (updatedAppointment?.date) {
+        queryClient.invalidateQueries({ queryKey: ["appointments-for-date", updatedAppointment.date] });
+      }
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.Appointment.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["appointments-for-date"] });
+    },
   });
 
   const filteredAppointments = (statusFilter === "all"
@@ -95,6 +108,9 @@ export default function Admin() {
                   appointments={filteredAppointments}
                   onStatusChange={(id, status) => updateMutation.mutate({ id, data: { status } })}
                   onPaidChange={(id, paid) => updateMutation.mutate({ id, data: { paid } })}
+                  onUpdate={(id, data) => updateMutation.mutate({ id, data })}
+                  onDelete={(id) => deleteMutation.mutate(id)}
+                  isMutating={updateMutation.isPending || deleteMutation.isPending}
                 />
               )}
             </TabsContent>

@@ -28,11 +28,35 @@ export default function Book() {
   }, [treatments]);
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Appointment.create(data),
+    mutationFn: async (data) => {
+      const rows = data.appointments.map((appointment) => ({
+        patient_name: data.patient_name,
+        patient_phone: data.patient_phone,
+        patient_email: data.patient_email,
+        notes: data.notes,
+        treatment_id: data.treatment_id,
+        treatment_name: data.treatment_name,
+        date: appointment.date,
+        time: appointment.time,
+      }));
+
+      if (typeof base44.entities.Appointment.bulkCreate === "function") {
+        return base44.entities.Appointment.bulkCreate(rows);
+      }
+
+      return Promise.all(rows.map((row) => base44.entities.Appointment.create(row)));
+    },
     onSuccess: (data) => {
+      const createdAppointments = Array.isArray(data) ? data : [data];
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
-      queryClient.invalidateQueries({ queryKey: ["appointments-for-date", data?.date] });
-      setBookedAppointment({ ...data, treatment_price: selectedTreatment?.price });
+      createdAppointments.forEach((appointment) => {
+        queryClient.invalidateQueries({ queryKey: ["appointments-for-date", appointment?.date] });
+      });
+      setBookedAppointment({
+        appointments: createdAppointments,
+        treatment_name: selectedTreatment?.name,
+        treatment_price: selectedTreatment?.price,
+      });
       setPendingFormData(null);
     },
     onError: (error) => {

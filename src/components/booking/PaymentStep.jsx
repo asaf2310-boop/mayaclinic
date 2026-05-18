@@ -7,10 +7,12 @@ import { motion } from "framer-motion";
 const PHONE = "0549000301";
 
 export default function PaymentStep({ formData, treatment, onConfirm, onBack, isSubmitting }) {
-  const price = treatment?.price ?? 250;
+  const appointments = formData.appointments || [];
+  const unitPrice = treatment?.price ?? 250;
+  const totalPrice = unitPrice * appointments.length;
 
-  const bitUrl = `https://www.bitpay.co.il/app/pay?phone=${PHONE}&amount=${price}`;
-  const payboxUrl = `https://payboxapp.page.link/?link=https://payboxapp.com/pay?to%3D${PHONE}%26amount%3D${price}&apn=com.paybox.www&isi=1163995014&ibi=com.paybox.app`;
+  const bitUrl = `https://www.bitpay.co.il/app/pay?phone=${PHONE}&amount=${totalPrice}`;
+  const payboxUrl = `https://payboxapp.page.link/?link=https://payboxapp.com/pay?to%3D${PHONE}%26amount%3D${totalPrice}&apn=com.paybox.www&isi=1163995014&ibi=com.paybox.app`;
 
   return (
     <motion.div
@@ -33,17 +35,24 @@ export default function PaymentStep({ formData, treatment, onConfirm, onBack, is
           <span className="text-muted-foreground">טיפול:</span>
           <span className="font-medium">{treatment?.name}</span>
         </div>
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">תאריך:</span>
-          <span className="font-medium">{format(new Date(formData.date + "T00:00:00"), "dd/MM/yyyy")}</span>
+        <div className="space-y-2">
+          <span className="text-muted-foreground">תורים:</span>
+          <div className="space-y-1">
+            {appointments.map((appointment) => (
+              <div key={`${appointment.date}-${appointment.time}`} className="flex justify-between">
+                <span className="font-medium">{format(new Date(appointment.date + "T00:00:00"), "dd/MM/yyyy")}</span>
+                <span className="font-medium">{appointment.time}</span>
+              </div>
+            ))}
+          </div>
         </div>
         <div className="flex justify-between">
-          <span className="text-muted-foreground">שעה:</span>
-          <span className="font-medium">{formData.time}</span>
+          <span className="text-muted-foreground">כמות תורים:</span>
+          <span className="font-medium">{appointments.length}</span>
         </div>
         <div className="flex justify-between border-t border-border pt-2 mt-2">
           <span className="text-muted-foreground">לתשלום:</span>
-          <span className="font-bold text-lg">₪{price}</span>
+          <span className="font-bold text-lg">₪{totalPrice}</span>
         </div>
       </div>
 

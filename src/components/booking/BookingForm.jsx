@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { CalendarPlus, Loader2, ChevronRight, ChevronLeft } from "lucide-react";
+import { CalendarPlus, Loader2, ChevronRight, ChevronLeft, Plus, Trash2 } from "lucide-react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isBefore, startOfDay, isSameDay } from "date-fns";
 import { he } from "date-fns/locale";
 
@@ -30,7 +30,14 @@ const isTooCloseToBookedAppointment = (slot, appointments) => {
     });
 };
 
+const isTooCloseToSelectedAppointment = (date, slot, selectedAppointments) => {
+  return selectedAppointments
+    .filter((appointment) => appointment.date === date)
+    .some((appointment) => isTooCloseToBookedAppointment(slot, [appointment]));
+};
+
 export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting }) {
+  const [selectedAppointments, setSelectedAppointments] = useState([]);
   const [form, setForm] = useState({
     patient_name: "",
     patient_phone: "",
@@ -58,13 +65,16 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
     );
   }, [availabilityRecords]);
 
-  // Available slots for the chosen date, excluding any slot less than one hour from an existing appointment.
+  // Available slots for the chosen date, excluding any slot less than one hour from existing or selected appointments.
   const availableSlots = useMemo(() => {
     if (!form.date) return [];
     const rec = availabilityRecords.find((r) => r.date === form.date && r.is_active);
     if (!rec) return [];
-    return (rec.slots || []).filter((slot) => !isTooCloseToBookedAppointment(slot, existingAppointments));
-  }, [form.date, availabilityRecords, existingAppointments]);
+    return (rec.slots || []).filter((slot) =>
+      !isTooCloseToBookedAppointment(slot, existingAppointments) &&
+      !isTooCloseToSelectedAppointment(form.date, slot, selectedAppointments)
+    );
+  }, [form.date, availabilityRecords, existingAppointments, selectedAppointments]);
 
   const handleChange = (field, value) => {
     setForm((prev) => {
@@ -80,13 +90,40 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
     }
   }, [form.time, isFetchingAppointments, availableSlots]);
 
+  const handleAddAppointment = () => {
+    if (!form.date || !form.time) return;
+
+    setSelectedAppointments((prev) => [
+      ...prev,
+      { date: form.date, time: form.time },
+    ].sort((a, b) => {
+      const dateCompare = a.date.localeCompare(b.date);
+      if (dateCompare !== 0) return dateCompare;
+      return a.time.localeCompare(b.time);
+    }));
+
+    handleChange("time", "");
+  };
+
+  const handleRemoveAppointment = (appointmentToRemove) => {
+    setSelectedAppointments((prev) =>
+      prev.filter((appointment) =>
+        appointment.date !== appointmentToRemove.date || appointment.time !== appointmentToRemove.time
+      )
+    );
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!selectedTreatment || !form.patient_name || !form.patient_phone || !form.date || !form.time) return;
+    if (!selectedTreatment || !form.patient_name || !form.patient_phone || selectedAppointments.length === 0) return;
     onSubmit({
-      ...form,
+      patient_name: form.patient_name,
+      patient_phone: form.patient_phone,
+      patient_email: form.patient_email,
+      notes: form.notes,
       treatment_id: selectedTreatment.id,
       treatment_name: selectedTreatment.name,
+      appointments: selectedAppointments,
     });
   };
 
@@ -235,8 +272,47 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
           ) : (
             <p className="text-sm text-destructive">אין שעות פנויות בתאריך זה, בחרו תאריך אחר.</p>
           )}
+          {form.time && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleAddAppointment}
+              className="w-full gap-2 rounded-xl"
+            >
+              <Plus className="w-4 h-4" />
+              הוסף תור לרשימה
+            </Button>
+          )}
         </div>
       )}
+
+      <div className="space-y-2">
+        <Label>התורים שבחרתם *</Label>
+        {selectedAppointments.length > 0 ? (
+          <div className="space-y-2">
+            {selectedAppointments.map((appointment) => (
+              <div
+                key={`${appointment.date}-${appointment.time}`}
+                className="flex items-center justify-between rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm"
+              >
+                <button
+                  type="button"
+                  onClick={() => handleRemoveAppointment(appointment)}
+                  className="text-destructive hover:text-destructive/80"
+                  aria-label="הסר תור"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+                <span className="font-medium">
+                  {format(new Date(appointment.date + "T00:00:00"), "dd/MM/yyyy")} בשעה {appointment.time}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">בחרו תאריך ושעה ואז לחצו "הוסף תור לרשימה".</p>
+        )}
+      </div>
 
       <div className="space-y-2">
         <Label htmlFor="notes">הערות נוספות</Label>
@@ -249,14 +325,14 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
         />
       </div>
 
-      {selectedTreatment && (!form.date || !form.time) && (
-        <p className="text-sm text-amber-600 text-center">יש לבחור תאריך ושעה</p>
+      {selectedTreatment && selectedAppointments.length === 0 && (
+        <p className="text-sm text-amber-600 text-center">יש להוסיף לפחות תור אחד לרשימה</p>
       )}
       <Button
         type="submit"
         size="lg"
         className="w-full rounded-xl text-lg py-6 gap-2"
-        disabled={!selectedTreatment || !form.patient_name || !form.patient_phone || !form.date || !form.time || isSubmitting}
+        disabled={!selectedTreatment || !form.patient_name || !form.patient_phone || selectedAppointments.length === 0 || isSubmitting}
       >
         {isSubmitting ? (
           <Loader2 className="w-5 h-5 animate-spin" />
