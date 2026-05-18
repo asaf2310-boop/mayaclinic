@@ -3,15 +3,16 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import Navbar from "../components/layout/Navbar";
 import AppointmentTable from "../components/admin/AppointmentTable";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import AvailabilityManager from "../components/admin/AvailabilityManager";
 import RevenueReport from "../components/admin/RevenueReport";
 import CustomerManagement from "../components/admin/CustomerManagement";
 import { Card } from "@/components/ui/card";
-import { CalendarDays, Clock, CheckCircle2, Users } from "lucide-react";
+import { BarChart3, CalendarCheck, CalendarDays, CheckCircle2, Clock, Settings2, Users } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Admin() {
+  const [activeAdminTab, setActiveAdminTab] = useState("appointments");
   const [statusFilter, setStatusFilter] = useState("all");
   const queryClient = useQueryClient();
 
@@ -66,6 +67,21 @@ export default function Admin() {
     { label: "הושלמו", value: stats.completed, icon: CheckCircle2, color: "text-green-600" },
   ];
 
+  const adminTabs = [
+    { value: "appointments", label: "תורים", icon: CalendarCheck },
+    { value: "availability", label: "זמינות", icon: Settings2 },
+    { value: "customers", label: "לקוחות", icon: Users },
+    { value: "revenue", label: "דוח הכנסות", icon: BarChart3 },
+  ];
+
+  const statusTabs = [
+    { value: "all", label: "הכל" },
+    { value: "pending", label: "ממתינים" },
+    { value: "confirmed", label: "מאושרים" },
+    { value: "completed", label: "הושלמו" },
+    { value: "cancelled", label: "בוטלו" },
+  ];
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -73,13 +89,26 @@ export default function Admin() {
         <div className="max-w-6xl mx-auto">
           <h1 className="text-3xl font-bold text-foreground mb-8">ניהול</h1>
 
-          <Tabs defaultValue="appointments">
-            <TabsList className="mb-6 h-auto flex-wrap justify-start">
-              <TabsTrigger value="appointments">תורים</TabsTrigger>
-              <TabsTrigger value="availability">זמינות</TabsTrigger>
-              <TabsTrigger value="customers">לקוחות</TabsTrigger>
-              <TabsTrigger value="revenue">דוח הכנסות</TabsTrigger>
-            </TabsList>
+          <Tabs value={activeAdminTab} onValueChange={setActiveAdminTab} dir="rtl">
+            <div className="mb-8 grid w-full grid-cols-1 gap-3 rounded-2xl border border-border/60 bg-card p-3 shadow-sm sm:grid-cols-2 lg:grid-cols-4" role="tablist" aria-label="ניווט אדמין">
+              {adminTabs.map((tab) => (
+                <button
+                  key={tab.value}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeAdminTab === tab.value}
+                  onClick={() => setActiveAdminTab(tab.value)}
+                  className={`flex h-16 w-full items-center justify-center gap-2 rounded-xl border px-4 text-base font-semibold transition-all ${
+                    activeAdminTab === tab.value
+                      ? "border-primary/30 bg-primary text-primary-foreground shadow-md"
+                      : "border-transparent bg-muted/40 text-foreground hover:border-primary/20 hover:bg-muted"
+                  }`}
+                >
+                  <tab.icon className="h-4 w-4" />
+                  {tab.label}
+                </button>
+              ))}
+            </div>
 
             <TabsContent value="appointments">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -99,15 +128,22 @@ export default function Admin() {
               </div>
 
               <div className="mb-6">
-                <Tabs value={statusFilter} onValueChange={setStatusFilter}>
-                  <TabsList>
-                    <TabsTrigger value="all">הכל</TabsTrigger>
-                    <TabsTrigger value="pending">ממתינים</TabsTrigger>
-                    <TabsTrigger value="confirmed">מאושרים</TabsTrigger>
-                    <TabsTrigger value="completed">הושלמו</TabsTrigger>
-                    <TabsTrigger value="cancelled">בוטלו</TabsTrigger>
-                  </TabsList>
-                </Tabs>
+                <div className="flex w-full flex-wrap justify-end gap-2 rounded-xl bg-muted/50 p-2 sm:w-fit" role="tablist" aria-label="סינון סטטוס תורים">
+                  {statusTabs.map((tab) => (
+                    <button
+                      key={tab.value}
+                      type="button"
+                      onClick={() => setStatusFilter(tab.value)}
+                      className={`min-w-24 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                        statusFilter === tab.value
+                          ? "bg-background text-foreground shadow"
+                          : "text-muted-foreground hover:bg-background/70 hover:text-foreground"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {isLoading ? (
