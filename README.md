@@ -1,10 +1,17 @@
-**Welcome to your Base44 project** 
+**Maya Clinic**
 
 **About**
 
-View and Edit  your app on [Base44.com](http://Base44.com) 
+מערכת לקביעת תורים, ניהול זמינות, ניהול לקוחות ודוחות הכנסות לקליניקה.
 
 This project contains everything you need to run your app locally.
+
+## Backend modes
+
+המערכת תומכת בשתי סביבות:
+
+- `Supabase` לפרודקשן עם דאטה אמיתי.
+- `VITE_DEMO_MODE=true` לסביבת דמו עם נתונים פיקטיביים ב־localStorage, בלי חיבור ל־Supabase.
 
 **Edit the code in your local development environment**
 
@@ -18,22 +25,32 @@ Any change pushed to the repo will also be reflected in the Base44 Builder.
 4. Create an `.env.local` file and set the right environment variables
 
 ```
-VITE_BASE44_APP_ID=your_app_id
-VITE_BASE44_APP_BASE_URL=your_backend_url
+VITE_SUPABASE_URL=https://xxxxx.supabase.co
+VITE_SUPABASE_ANON_KEY=...
+```
 
-e.g.
-VITE_BASE44_APP_ID=cbef744a8545c389ef439ea6
-VITE_BASE44_APP_BASE_URL=https://my-to-do-list-81bfaad7.base44.app
+For a local demo environment:
+
+```env
+VITE_DEMO_MODE=true
 ```
 
 Run the app: `npm run dev`
 
-**Publish your changes**
+## Demo deployment
 
-Open [Base44.com](http://Base44.com) and click on Publish.
+הדמו לא צריך GitHub repo נפרד. משתמשים באותו repo של `mayaclinic`, ויוצרים ממנו Project נוסף ב־Vercel.
 
-**Docs & Support**
+For the separate Vercel demo project, set only:
 
-Documentation: [https://docs.base44.com/Integrations/Using-GitHub](https://docs.base44.com/Integrations/Using-GitHub)
+```env
+VITE_DEMO_MODE=true
+```
 
-Support: [https://app.base44.com/support](https://app.base44.com/support)
+Do not set `VITE_SUPABASE_URL` or `VITE_SUPABASE_ANON_KEY` in the demo project.
+
+Upload code changes to the regular GitHub repo:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\upload-mayaclinic-to-github.ps1
+```

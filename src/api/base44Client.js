@@ -1,6 +1,7 @@
 import { createClient } from '@base44/sdk';
 import { appParams } from '@/lib/app-params';
 import { createSupabaseDataClient, useSupabaseBackend } from './dataClient';
+import { createDemoDataClient, demoModeEnabled } from './demoClient';
 
 const { appId, token, functionsVersion, appBaseUrl } = appParams;
 
@@ -65,8 +66,10 @@ const rawBase44 = createClient({
   appBaseUrl
 });
 
-export const base44 = useSupabaseBackend()
-  ? createSupabaseDataClient()
-  : createCollectionSafeClient(rawBase44);
+export const base44 = demoModeEnabled
+  ? createDemoDataClient()
+  : useSupabaseBackend()
+    ? createSupabaseDataClient()
+    : createCollectionSafeClient(rawBase44);
 
-export const backendMode = useSupabaseBackend() ? 'supabase' : 'base44';
+export const backendMode = demoModeEnabled ? 'demo' : useSupabaseBackend() ? 'supabase' : 'base44';

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X, Shield } from "lucide-react";
 import { base44 } from "@/api/base44Client";
+import { demoModeEnabled } from "@/api/demoClient";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -28,6 +29,11 @@ export default function Navbar() {
           <Link to="/" className="text-xl font-bold text-foreground">
             הקליניקה
           </Link>
+          {demoModeEnabled && (
+            <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">
+              סביבת דמו
+            </span>
+          )}
 
           {/* Desktop nav */}
           <div className="hidden md:flex items-center gap-2 rounded-full bg-muted/40 p-1">
