@@ -34,6 +34,7 @@ export default function Book() {
         patient_phone: data.patient_phone,
         patient_email: data.patient_email,
         notes: data.notes,
+        marketing_consent: Boolean(data.marketing_consent),
         treatment_id: data.treatment_id,
         treatment_name: data.treatment_name,
         treatment_price: selectedTreatment?.price,

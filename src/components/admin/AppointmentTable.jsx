@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 import { CheckCircle2, Circle, Pencil, Trash2 } from "lucide-react";
 
@@ -27,6 +28,7 @@ const EMPTY_EDIT_FORM = {
   notes: "",
   status: "pending",
   paid: false,
+  marketing_consent: false,
 };
 
 export default function AppointmentTable({ appointments, onStatusChange, onPaidChange, onUpdate, onDelete, isMutating }) {
@@ -51,6 +53,7 @@ export default function AppointmentTable({ appointments, onStatusChange, onPaidC
       notes: editingAppointment.notes || "",
       status: editingAppointment.status || "pending",
       paid: Boolean(editingAppointment.paid),
+      marketing_consent: Boolean(editingAppointment.marketing_consent),
     });
   }, [editingAppointment]);
 
@@ -73,6 +76,7 @@ export default function AppointmentTable({ appointments, onStatusChange, onPaidC
       notes: editForm.notes,
       status: editForm.status,
       paid: editForm.paid,
+      marketing_consent: editForm.marketing_consent,
     });
 
     setEditingAppointment(null);
@@ -230,6 +234,14 @@ export default function AppointmentTable({ appointments, onStatusChange, onPaidC
               <Label htmlFor="edit-notes">הערות</Label>
               <Textarea id="edit-notes" value={editForm.notes} onChange={(e) => handleEditChange("notes", e.target.value)} rows={3} />
             </div>
+
+            <label className="flex items-center gap-3 rounded-xl border border-border p-3 text-sm">
+              <Checkbox
+                checked={editForm.marketing_consent}
+                onCheckedChange={(checked) => handleEditChange("marketing_consent", Boolean(checked))}
+              />
+              <span>אישר/ה קבלת דיוור שיווקי</span>
+            </label>
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEditingAppointment(null)}>ביטול</Button>

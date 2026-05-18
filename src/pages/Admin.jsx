@@ -6,6 +6,7 @@ import AppointmentTable from "../components/admin/AppointmentTable";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import AvailabilityManager from "../components/admin/AvailabilityManager";
 import RevenueReport from "../components/admin/RevenueReport";
+import CustomerManagement from "../components/admin/CustomerManagement";
 import { Card } from "@/components/ui/card";
 import { CalendarDays, Clock, CheckCircle2, Users } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -76,6 +77,7 @@ export default function Admin() {
             <TabsList className="mb-6 h-auto flex-wrap justify-start">
               <TabsTrigger value="appointments">תורים</TabsTrigger>
               <TabsTrigger value="availability">זמינות</TabsTrigger>
+              <TabsTrigger value="customers">לקוחות</TabsTrigger>
               <TabsTrigger value="revenue">דוח הכנסות</TabsTrigger>
             </TabsList>
 
@@ -127,6 +129,14 @@ export default function Admin() {
                 <p className="text-muted-foreground mb-6">בחרי את הימים והשעות שבהם את זמינה לטיפולים. המטופלים יראו רק שעות פנויות.</p>
                 <AvailabilityManager />
               </div>
+            </TabsContent>
+
+            <TabsContent value="customers">
+              {isLoading ? (
+                <Skeleton className="h-64 rounded-xl" />
+              ) : (
+                <CustomerManagement appointments={appointments} />
+              )}
             </TabsContent>
 
             <TabsContent value="revenue">

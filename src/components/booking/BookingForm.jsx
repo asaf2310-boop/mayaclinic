@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { CalendarPlus, Loader2, ChevronRight, ChevronLeft, Plus, Trash2 } from "lucide-react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isBefore, startOfDay, isSameDay } from "date-fns";
 import { he } from "date-fns/locale";
@@ -45,6 +46,7 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
     date: "",
     time: "",
     notes: "",
+    marketing_consent: false,
   });
 
   const { data: availabilityRecords = [] } = useQuery({
@@ -121,6 +123,7 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
       patient_phone: form.patient_phone,
       patient_email: form.patient_email,
       notes: form.notes,
+      marketing_consent: form.marketing_consent,
       treatment_id: selectedTreatment.id,
       treatment_name: selectedTreatment.name,
       appointments: selectedAppointments,
@@ -324,6 +327,17 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
           rows={3}
         />
       </div>
+
+      <label className="flex items-start gap-3 rounded-xl border border-border bg-muted/20 p-4 text-sm leading-6">
+        <Checkbox
+          checked={form.marketing_consent}
+          onCheckedChange={(checked) => handleChange("marketing_consent", Boolean(checked))}
+          className="mt-1"
+        />
+        <span className="text-muted-foreground">
+          אני מאשר/ת קבלת עדכונים, מבצעים ותזכורות שיווקיות ממאיה קליניק.
+        </span>
+      </label>
 
       {selectedTreatment && selectedAppointments.length === 0 && (
         <p className="text-sm text-amber-600 text-center">יש להוסיף לפחות תור אחד לרשימה</p>

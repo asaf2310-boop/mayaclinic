@@ -33,11 +33,13 @@ create table if not exists appointments (
   time text not null,
   status text not null default 'pending' check (status in ('pending', 'confirmed', 'cancelled', 'completed')),
   paid boolean not null default false,
+  marketing_consent boolean not null default false,
   notes text,
   created_at timestamptz not null default now()
 );
 
 alter table appointments add column if not exists treatment_price numeric(10, 2);
+alter table appointments add column if not exists marketing_consent boolean not null default false;
 
 create index if not exists idx_treatments_created_at on treatments(created_at);
 create index if not exists idx_availability_date on availability(date);
