@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,27 @@ import { Label } from "@/components/ui/label";
 import { CalendarPlus, Loader2, ChevronRight, ChevronLeft } from "lucide-react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isBefore, startOfDay, isSameDay } from "date-fns";
 import { he } from "date-fns/locale";
+
+const MIN_APPOINTMENT_GAP_MINUTES = 60;
+
+const timeToMinutes = (time) => {
+  const [hours, minutes] = String(time || "").split(":").map(Number);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+  return hours * 60 + minutes;
+};
+
+const isTooCloseToBookedAppointment = (slot, appointments) => {
+  const slotMinutes = timeToMinutes(slot);
+  if (slotMinutes === null) return true;
+
+  return appointments
+    .filter((appointment) => appointment.status !== "cancelled")
+    .some((appointment) => {
+      const appointmentMinutes = timeToMinutes(appointment.time);
+      return appointmentMinutes !== null &&
+        Math.abs(slotMinutes - appointmentMinutes) < MIN_APPOINTMENT_GAP_MINUTES;
+    });
+};
 
 export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting }) {
   const [form, setForm] = useState({
@@ -24,7 +45,7 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
     queryFn: () => base44.entities.Availability.list(),
   });
 
-  const { data: existingAppointments = [] } = useQuery({
+  const { data: existingAppointments = [], isFetching: isFetchingAppointments } = useQuery({
     queryKey: ["appointments-for-date", form.date],
     queryFn: () => base44.entities.Appointment.filter({ date: form.date }),
     enabled: !!form.date,
@@ -37,17 +58,12 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
     );
   }, [availabilityRecords]);
 
-  // Available slots for the chosen date (minus already booked)
+  // Available slots for the chosen date, excluding any slot less than one hour from an existing appointment.
   const availableSlots = useMemo(() => {
     if (!form.date) return [];
     const rec = availabilityRecords.find((r) => r.date === form.date && r.is_active);
     if (!rec) return [];
-    const booked = new Set(
-      existingAppointments
-        .filter((a) => a.status !== "cancelled")
-        .map((a) => a.time)
-    );
-    return (rec.slots || []).filter((s) => !booked.has(s));
+    return (rec.slots || []).filter((slot) => !isTooCloseToBookedAppointment(slot, existingAppointments));
   }, [form.date, availabilityRecords, existingAppointments]);
 
   const handleChange = (field, value) => {
@@ -57,6 +73,12 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
       return next;
     });
   };
+
+  useEffect(() => {
+    if (form.time && !isFetchingAppointments && !availableSlots.includes(form.time)) {
+      handleChange("time", "");
+    }
+  }, [form.time, isFetchingAppointments, availableSlots]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -188,7 +210,12 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
       {form.date && (
         <div className="space-y-2">
           <Label>שעה *</Label>
-          {availableSlots.length > 0 ? (
+          {isFetchingAppointments ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              בודק שעות זמינות...
+            </div>
+          ) : availableSlots.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {availableSlots.map((slot) => (
                 <button

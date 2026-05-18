@@ -55,6 +55,36 @@ create policy "anon_all_treatments" on treatments for all using (true) with chec
 create policy "anon_all_availability" on availability for all using (true) with check (true);
 create policy "anon_all_appointments" on appointments for all using (true) with check (true);
 
+create or replace function prevent_close_appointments()
+returns trigger as $$
+begin
+  if new.status = 'cancelled' then
+    return new;
+  end if;
+
+  if exists (
+    select 1
+    from appointments existing
+    where existing.date = new.date
+      and existing.status <> 'cancelled'
+      and existing.id <> coalesce(new.id, '00000000-0000-0000-0000-000000000000'::uuid)
+      and abs(
+        (split_part(existing.time, ':', 1)::integer * 60 + split_part(existing.time, ':', 2)::integer) -
+        (split_part(new.time, ':', 1)::integer * 60 + split_part(new.time, ':', 2)::integer)
+      ) < 60
+  ) then
+    raise exception 'appointment_time_conflict';
+  end if;
+
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists trg_prevent_close_appointments on appointments;
+create trigger trg_prevent_close_appointments
+before insert or update on appointments
+for each row execute function prevent_close_appointments();
+
 -- Optional starter rows. Edit these in Supabase or from the admin UI later.
 insert into treatments (name, description, duration_minutes, price, icon)
 select * from (values

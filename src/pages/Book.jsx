@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import Navbar from "../components/layout/Navbar";
 import TreatmentSelector from "../components/booking/TreatmentSelector";
@@ -7,11 +7,14 @@ import BookingForm from "../components/booking/BookingForm";
 import BookingSuccess from "../components/booking/BookingSuccess";
 import PaymentStep from "../components/booking/PaymentStep";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function Book() {
   const [selectedTreatment, setSelectedTreatment] = useState(null);
   const [pendingFormData, setPendingFormData] = useState(null);
   const [bookedAppointment, setBookedAppointment] = useState(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: treatments = [], isLoading } = useQuery({
     queryKey: ["treatments"],
@@ -27,8 +30,22 @@ export default function Book() {
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Appointment.create(data),
     onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["appointments-for-date", data?.date] });
       setBookedAppointment({ ...data, treatment_price: selectedTreatment?.price });
       setPendingFormData(null);
+    },
+    onError: (error) => {
+      const message = String(error?.message || "");
+      const isTimeConflict = message.includes("appointment_time_conflict");
+
+      toast({
+        title: isTimeConflict ? "השעה כבר לא זמינה" : "לא ניתן לאשר את התור",
+        description: isTimeConflict
+          ? "נבחר תור אחר בטווח של פחות משעה. חזרו לבחירת שעה אחרת."
+          : "נסו שוב בעוד רגע או צרו קשר טלפוני.",
+        variant: "destructive",
+      });
     },
   });
 
