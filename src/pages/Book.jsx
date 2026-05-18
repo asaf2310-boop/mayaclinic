@@ -36,6 +36,7 @@ export default function Book() {
         notes: data.notes,
         treatment_id: data.treatment_id,
         treatment_name: data.treatment_name,
+        treatment_price: selectedTreatment?.price,
         date: appointment.date,
         time: appointment.time,
       }));

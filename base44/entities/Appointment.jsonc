@@ -22,6 +22,10 @@
       "type": "string",
       "description": "\u05e9\u05dd \u05d4\u05d8\u05d9\u05e4\u05d5\u05dc"
     },
+    "treatment_price": {
+      "type": "number",
+      "description": "\u05de\u05d7\u05d9\u05e8 \u05d4\u05d8\u05d9\u05e4\u05d5\u05dc \u05d1\u05d6\u05de\u05df \u05d4\u05d4\u05d6\u05de\u05e0\u05d4"
+    },
     "date": {
       "type": "string",
       "format": "date",

@@ -5,6 +5,7 @@ import Navbar from "../components/layout/Navbar";
 import AppointmentTable from "../components/admin/AppointmentTable";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import AvailabilityManager from "../components/admin/AvailabilityManager";
+import RevenueReport from "../components/admin/RevenueReport";
 import { Card } from "@/components/ui/card";
 import { CalendarDays, Clock, CheckCircle2, Users } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,6 +17,11 @@ export default function Admin() {
   const { data: appointments = [], isLoading } = useQuery({
     queryKey: ["appointments"],
     queryFn: () => base44.entities.Appointment.list("date"),
+  });
+
+  const { data: treatments = [] } = useQuery({
+    queryKey: ["treatments"],
+    queryFn: () => base44.entities.Treatment.list(),
   });
 
   const updateMutation = useMutation({
@@ -67,9 +73,10 @@ export default function Admin() {
           <h1 className="text-3xl font-bold text-foreground mb-8">ניהול</h1>
 
           <Tabs defaultValue="appointments">
-            <TabsList className="mb-6">
+            <TabsList className="mb-6 h-auto flex-wrap justify-start">
               <TabsTrigger value="appointments">תורים</TabsTrigger>
               <TabsTrigger value="availability">זמינות</TabsTrigger>
+              <TabsTrigger value="revenue">דוח הכנסות</TabsTrigger>
             </TabsList>
 
             <TabsContent value="appointments">
@@ -120,6 +127,14 @@ export default function Admin() {
                 <p className="text-muted-foreground mb-6">בחרי את הימים והשעות שבהם את זמינה לטיפולים. המטופלים יראו רק שעות פנויות.</p>
                 <AvailabilityManager />
               </div>
+            </TabsContent>
+
+            <TabsContent value="revenue">
+              {isLoading ? (
+                <Skeleton className="h-64 rounded-xl" />
+              ) : (
+                <RevenueReport appointments={appointments} treatments={treatments} />
+              )}
             </TabsContent>
           </Tabs>
         </div>

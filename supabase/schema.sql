@@ -28,6 +28,7 @@ create table if not exists appointments (
   patient_email text,
   treatment_id uuid references treatments(id) on delete set null,
   treatment_name text not null,
+  treatment_price numeric(10, 2),
   date date not null,
   time text not null,
   status text not null default 'pending' check (status in ('pending', 'confirmed', 'cancelled', 'completed')),
@@ -35,6 +36,8 @@ create table if not exists appointments (
   notes text,
   created_at timestamptz not null default now()
 );
+
+alter table appointments add column if not exists treatment_price numeric(10, 2);
 
 create index if not exists idx_treatments_created_at on treatments(created_at);
 create index if not exists idx_availability_date on availability(date);
