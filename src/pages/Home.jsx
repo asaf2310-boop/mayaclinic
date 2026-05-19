@@ -1,13 +1,28 @@
-import React from "react";
+import React, { useMemo } from "react";
 import Navbar from "../components/layout/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { demoModeEnabled } from "@/api/demoClient";
 import { BarChart3, CalendarCheck, CheckCircle2, ExternalLink, Megaphone, MonitorSmartphone, Users } from "lucide-react";
 
-const demoUrl = import.meta.env.VITE_DEMO_URL || "https://mayaclinic-demo.vercel.app";
-const demoBookingUrl = `${demoUrl.replace(/\/$/, "")}/book`;
-const demoAdminUrl = `${demoUrl.replace(/\/$/, "")}/admin`;
+const DEFAULT_DEMO_URL = "https://karinshinanit-demo.vercel.app";
+
+function getDemoUrls() {
+  if (demoModeEnabled && typeof window !== "undefined") {
+    const base = window.location.origin;
+    return {
+      booking: `${base}/book`,
+      admin: `${base}/admin`,
+    };
+  }
+
+  const base = (import.meta.env.VITE_DEMO_URL || DEFAULT_DEMO_URL).replace(/\/$/, "");
+  return {
+    booking: `${base}/book`,
+    admin: `${base}/admin`,
+  };
+}
 
 const features = [
   {
@@ -42,6 +57,8 @@ const adminHighlights = [
 ];
 
 export default function Home() {
+  const { booking: demoBookingUrl, admin: demoAdminUrl } = useMemo(() => getDemoUrls(), []);
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
