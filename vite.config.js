@@ -4,7 +4,16 @@ import { defineConfig } from 'vite'
 import fs from 'node:fs'
 import path from 'node:path'
 
-const isDemoBuild = process.env.VITE_DEMO_MODE === 'true'
+const vercelHostHint = [
+  process.env.VERCEL_URL,
+  process.env.VERCEL_BRANCH_URL,
+  process.env.VERCEL_PROJECT_PRODUCTION_URL,
+].filter(Boolean).join(' ')
+
+const isDemoBuild =
+  process.env.VITE_DEMO_MODE === 'true' ||
+  vercelHostHint.includes('karinshinanit-demo') ||
+  vercelHostHint.includes('mayaclinic-demo')
 
 function getDemoBaseUrl() {
   if (process.env.VITE_DEMO_URL) {
@@ -34,18 +43,23 @@ function demoBrandingPlugin() {
         )
         .replace(
           /<link rel="apple-touch-icon" href="[^"]*" \/>/,
-          '<link rel="apple-touch-icon" href="/demo-icon.svg" />'
+          ''
         )
         .replace(
           '</head>',
-          `    <meta name="description" content="${demoDescription}" />
+          `    <link rel="icon" href="/demo-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/demo-icon.svg" />
+    <meta name="description" content="${demoDescription}" />
     <meta property="og:title" content="${demoTitle}" />
     <meta property="og:description" content="${demoDescription}" />
     <meta property="og:type" content="website" />
+    <meta property="og:url" content="${getDemoBaseUrl()}/" />
     <meta property="og:image" content="${demoImage}" />
+    <meta property="og:image:alt" content="${demoTitle}" />
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content="${demoTitle}" />
     <meta name="twitter:description" content="${demoDescription}" />
+    <meta name="twitter:image" content="${demoImage}" />
   </head>`
         )
     },
@@ -81,7 +95,6 @@ function demoBrandingPlugin() {
 export default defineConfig({
   logLevel: 'error', // Suppress warnings, only show errors
   plugins: [
-    demoBrandingPlugin(),
     base44({
       // Support for legacy code that imports the base44 SDK with @/integrations, @/entities, etc.
       // can be removed if the code has been updated to use the new SDK imports from @base44/sdk
@@ -92,5 +105,6 @@ export default defineConfig({
       visualEditAgent: true
     }),
     react(),
+    demoBrandingPlugin(),
   ]
 });
