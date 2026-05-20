@@ -71,7 +71,9 @@ powershell -ExecutionPolicy Bypass -File .\upload-mayaclinic-to-github.ps1
 ```
 
 - `karinshinanit-demo.vercel.app` = דף נחיתה רגיל (קארין).
-- `michal-demo.vercel.app` = בוואטסאפ יופיע **הקליניקה של מיכל**, ואז מעבר לדמו הראשי.
+- `michal-demo.vercel.app` = בוואטסאפ יופיע **הקליניקה של מיכל**, ואז מעבר לדמו הראשי (קובץ סטטי `landing-michal.html`).
+
+אחרי פריסה, בדיקה מהירה: `https://michal-demo.vercel.app/landing-michal.html` — אם רואים "מיכל" בכותרת, זה עובד.
 
 אופציונלי ב־Vercel:
 

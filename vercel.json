@@ -1,5 +1,5 @@
 {
-  "buildCommand": "node scripts/patch-vercel-demo-hosts.mjs && npm run build",
+  "buildCommand": "node scripts/patch-vercel-demo-hosts.mjs && node scripts/generate-demo-landing-pages.mjs && npm run build",
   "outputDirectory": "dist",
   "framework": "vite",
   "rewrites": [
@@ -11,14 +11,14 @@
           "value": "michal-demo.vercel.app"
         }
       ],
-      "destination": "/api/share/michal?to=/book"
+      "destination": "/landing-michal.html"
     },
     {
       "source": "/share/:client",
       "destination": "/api/share/:client"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!api|assets|landing-).*)",
       "destination": "/index.html"
     }
   ]

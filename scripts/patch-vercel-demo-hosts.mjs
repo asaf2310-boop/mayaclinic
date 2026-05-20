@@ -9,7 +9,6 @@ const vercelPath = path.join(root, "vercel.json");
 const config = JSON.parse(fs.readFileSync(clientsPath, "utf8"));
 const vercel = JSON.parse(fs.readFileSync(vercelPath, "utf8"));
 
-const spaHomeHosts = config.spaHomeHosts ?? ["karinshinanit-demo.vercel.app"];
 const clients = config.clients ?? [];
 
 const clientRewrites = clients.flatMap((slug) => {
@@ -18,7 +17,7 @@ const clientRewrites = clients.flatMap((slug) => {
     {
       source: "/",
       has: [{ type: "host", value: host }],
-      destination: `/api/share/${slug}?to=/book`,
+      destination: `/landing-${String(slug).toLowerCase()}.html`,
     },
   ];
 });
@@ -29,7 +28,7 @@ const tailRewrites = [
     destination: "/api/share/:client",
   },
   {
-    source: "/(.*)",
+    source: "/((?!api|assets|landing-).*)",
     destination: "/index.html",
   },
 ];
@@ -39,5 +38,5 @@ vercel.rewrites = [...clientRewrites, ...tailRewrites];
 fs.writeFileSync(vercelPath, `${JSON.stringify(vercel, null, 2)}\n`);
 
 console.log(
-  `Patched vercel.json with ${clientRewrites.length} client host rule(s). SPA home: ${spaHomeHosts.join(", ")}`
+  `Patched vercel.json with ${clientRewrites.length} static landing rule(s).`
 );
