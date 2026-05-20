@@ -4,6 +4,20 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "michal-demo.vercel.app"
+        }
+      ],
+      "destination": "/api/share/michal?to=/book"
+    },
+    {
+      "source": "/share/:client",
+      "destination": "/api/share/:client"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
