@@ -8,6 +8,7 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import Home from './pages/Home';
 import Book from './pages/Book';
 import Admin from './pages/Admin';
+import DemoDocumentTitle from './components/DemoDocumentTitle';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -45,6 +46,7 @@ function App() {
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
+        <DemoDocumentTitle />
         <Router>
           <AuthenticatedApp />
         </Router>

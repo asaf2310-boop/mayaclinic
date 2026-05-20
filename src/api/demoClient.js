@@ -1,10 +1,9 @@
 const DEMO_STORE_KEY = "mayaclinic-demo-store-v3";
 
 const demoEnvEnabled = import.meta.env.VITE_DEMO_MODE === "true";
-const demoHostEnabled = typeof window !== "undefined" && (
-  window.location.hostname.includes("mayaclinic-demo") ||
-  window.location.hostname.includes("karinshinanit-demo")
-);
+const demoHostEnabled =
+  typeof window !== "undefined" &&
+  /-demo\.vercel\.app$/i.test(window.location.hostname);
 
 export const demoModeEnabled = demoEnvEnabled || demoHostEnabled;
 

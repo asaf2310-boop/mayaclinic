@@ -50,8 +50,8 @@ for (const rawSlug of clients) {
   const title = `הקליניקה של ${clientLabel}`;
   const description = "מערכת דמו לקביעת תורים וניהול קליניקה";
   const canonicalUrl = `https://${host}/`;
-  const imageUrl = `${primaryOrigin}/demo-icon.svg`;
-  const redirectTarget = `${primaryOrigin}/book`;
+  const imageUrl = `https://${host}/demo-icon.svg`;
+  const redirectTarget = `https://${host}/book`;
 
   const html = `<!doctype html>
 <html lang="he" dir="rtl">
@@ -69,11 +69,11 @@ for (const rawSlug of clients) {
     <meta name="twitter:title" content="${escapeHtml(title)}" />
     <meta name="twitter:description" content="${escapeHtml(description)}" />
     <meta name="twitter:image" content="${escapeHtml(imageUrl)}" />
-    <meta http-equiv="refresh" content="0; url=${escapeHtml(redirectTarget)}" />
   </head>
   <body>
-    <p>מעביר לדמו...</p>
-    <p><a href="${escapeHtml(redirectTarget)}">לחץ כאן אם לא הועברת אוטומטית</a></p>
+    <p>${escapeHtml(title)} — ${escapeHtml(description)}</p>
+    <p><a href="${escapeHtml(redirectTarget)}">לקביעת תור בדמו</a></p>
+    <script>window.location.replace(${JSON.stringify(redirectTarget)});</script>
   </body>
 </html>
 `;

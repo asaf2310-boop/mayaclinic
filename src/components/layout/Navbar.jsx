@@ -3,11 +3,13 @@ import { Link, useLocation } from "react-router-dom";
 import { Menu, X, Shield } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { demoModeEnabled } from "@/api/demoClient";
+import { getDemoBrand } from "@/lib/demoBrand";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const location = useLocation();
+  const demoBrand = getDemoBrand();
 
   useEffect(() => {
     base44.auth.me().then((user) => {
@@ -27,11 +29,11 @@ export default function Navbar() {
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-8">
           <Link to="/" className="text-xl font-bold text-foreground">
-            הקליניקה
+            {demoModeEnabled ? demoBrand.clinicTitle : "הקליניקה"}
           </Link>
           {demoModeEnabled && (
             <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">
-              סביבת דמו
+              סביבת דמו{demoBrand.isClientAlias ? ` · ${demoBrand.clientLabel}` : ""}
             </span>
           )}
 

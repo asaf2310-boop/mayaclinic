@@ -8,7 +8,12 @@ function decodeSlug(value = "") {
 function displayNameFromSlug(slug) {
   const known = {
     karin: "קארין",
+    karinshinanit: "קארין",
     michal: "מיכל",
+    yael: "יעל",
+    noa: "נועה",
+    shiran: "שירן",
+    dana: "דנה",
   };
 
   if (known[slug]) return known[slug];
@@ -23,12 +28,11 @@ function displayNameFromSlug(slug) {
 
 function slugFromHost(host = "") {
   const hostname = String(host).toLowerCase().split(":")[0];
-  if (!hostname.endsWith(".vercel.app")) return "";
+  const match = /^([a-z0-9]+)-demo\.vercel\.app$/.exec(hostname);
+  if (match) return decodeSlug(match[1]);
 
-  const firstPart = hostname.split(".")[0] || "";
-  if (!firstPart.includes("-demo")) return "";
-
-  return decodeSlug(firstPart.replace(/-demo.*$/, ""));
+  if (hostname.includes("karinshinanit-demo")) return "karinshinanit";
+  return "";
 }
 
 export default function handler(req, res) {
@@ -37,18 +41,13 @@ export default function handler(req, res) {
 
   const host = req.headers["x-forwarded-host"] || req.headers.host;
   const proto = req.headers["x-forwarded-proto"] || "https";
-  const baseUrl = `${proto}://${host}`;
+  const baseUrl = `${proto}://${host}`.replace(/\/$/, "");
   const hostSlug = slugFromHost(host);
   const slug = decodeSlug(clientSlug) || hostSlug;
 
-  const demoRoot = process.env.VITE_DEMO_URL?.replace(/\/$/, "") || baseUrl;
-  const shareUrl = slug ? `${baseUrl}/share/${slug}` : `${baseUrl}/`;
-  const rawRedirectPath = Array.isArray(req.query?.to) ? req.query.to[0] : req.query?.to;
-  const redirectPath = String(rawRedirectPath || "/").startsWith("/")
-    ? String(rawRedirectPath || "/")
-    : "/";
-  const redirectTarget = `${demoRoot}${redirectPath}`;
-  const imageUrl = `${demoRoot}/demo-icon.svg`;
+  const canonicalUrl = `${baseUrl}/`;
+  const bookUrl = `${baseUrl}/book`;
+  const imageUrl = `${baseUrl}/demo-icon.svg`;
   const clientLabel = displayNameFromSlug(slug);
 
   const title = `הקליניקה של ${clientLabel}`;
@@ -64,20 +63,23 @@ export default function handler(req, res) {
     <meta property="og:title" content="${title}" />
     <meta property="og:description" content="${description}" />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="${shareUrl}" />
+    <meta property="og:url" content="${canonicalUrl}" />
     <meta property="og:image" content="${imageUrl}" />
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content="${title}" />
     <meta name="twitter:description" content="${description}" />
     <meta name="twitter:image" content="${imageUrl}" />
-    <meta http-equiv="refresh" content="0; url=${redirectTarget}" />
   </head>
   <body>
-    <p>מעביר לדמו...</p>
+    <p>${title} — ${description}</p>
+    <p><a href="${bookUrl}">לקביעת תור בדמו</a></p>
+    <script>
+      window.location.replace(${JSON.stringify(bookUrl)});
+    </script>
   </body>
 </html>`;
 
   res.setHeader("content-type", "text/html; charset=utf-8");
-  res.setHeader("cache-control", "public, max-age=0, s-maxage=60");
+  res.setHeader("cache-control", "public, max-age=0, s-maxage=300");
   res.status(200).send(html);
 }

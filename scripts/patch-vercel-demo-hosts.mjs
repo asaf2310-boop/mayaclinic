@@ -17,7 +17,7 @@ const clientRewrites = clients.flatMap((slug) => {
     {
       source: "/",
       has: [{ type: "host", value: host }],
-      destination: `/landing-${String(slug).toLowerCase()}.html`,
+      destination: `/api/share/${String(slug).toLowerCase()}`,
     },
   ];
 });

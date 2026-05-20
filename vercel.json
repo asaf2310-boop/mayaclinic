@@ -11,7 +11,7 @@
           "value": "michal-demo.vercel.app"
         }
       ],
-      "destination": "/landing-michal.html"
+      "destination": "/api/share/michal"
     },
     {
       "source": "/share/:client",
