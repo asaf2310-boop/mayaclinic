@@ -36,10 +36,17 @@ export function getDemoBrand(hostname = typeof window !== "undefined" ? window.l
   const clientLabel = labelFromSlug(slug);
   const clinicTitle = `הקליניקה של ${clientLabel}`;
 
+  const sharePath = slug ? `/api/share/${slug}` : "/";
+
   return {
     slug,
     clientLabel,
     clinicTitle,
+    sharePath,
+    shareUrl:
+      typeof window !== "undefined"
+        ? `${window.location.origin}${sharePath}`
+        : "",
     isClientAlias: Boolean(slug) && slug !== "karinshinanit" && slug !== "karin",
   };
 }

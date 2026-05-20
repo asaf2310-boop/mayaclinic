@@ -45,7 +45,10 @@ export default function handler(req, res) {
   const hostSlug = slugFromHost(host);
   const slug = decodeSlug(clientSlug) || hostSlug;
 
-  const canonicalUrl = `${baseUrl}/`;
+  const query = req.url?.includes("?") ? req.url.slice(req.url.indexOf("?")) : "";
+  const sharePath = slug ? `/api/share/${slug}` : "/";
+  const publicPath = slug && hostSlug === slug ? "/" : sharePath;
+  const canonicalUrl = `${baseUrl}${publicPath}${query}`;
   const bookUrl = `${baseUrl}/book`;
   const imageUrl = `${baseUrl}/demo-icon.svg`;
   const clientLabel = displayNameFromSlug(slug);

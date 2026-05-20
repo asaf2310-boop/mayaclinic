@@ -11,32 +11,46 @@ const vercel = JSON.parse(fs.readFileSync(vercelPath, "utf8"));
 
 const clients = config.clients ?? [];
 
-const clientRewrites = clients.flatMap((slug) => {
+const clientRootRoutes = clients.flatMap((slug) => {
   const host = `${String(slug).toLowerCase()}-demo.vercel.app`;
+  const client = String(slug).toLowerCase();
+  const shareDest = `/api/share/${client}`;
+
   return [
     {
-      source: "/",
+      src: "/",
       has: [{ type: "host", value: host }],
-      destination: `/api/share/${String(slug).toLowerCase()}`,
+      dest: shareDest,
+    },
+    {
+      src: `/${client.charAt(0)}`,
+      has: [{ type: "host", value: host }],
+      dest: shareDest,
     },
   ];
 });
 
-const tailRewrites = [
+const tailRoutes = [
   {
-    source: "/share/:client",
-    destination: "/api/share/:client",
+    src: "/share/(.*)",
+    dest: "/api/share/$1",
   },
   {
-    source: "/((?!api|assets|landing-).*)",
-    destination: "/index.html",
+    handle: "filesystem",
+  },
+  {
+    src: "/(.*)",
+    dest: "/index.html",
   },
 ];
 
-vercel.rewrites = [...clientRewrites, ...tailRewrites];
+vercel.routes = [...clientRootRoutes, ...tailRoutes];
+delete vercel.redirects;
+delete vercel.rewrites;
+delete vercel.framework;
 
 fs.writeFileSync(vercelPath, `${JSON.stringify(vercel, null, 2)}\n`);
 
 console.log(
-  `Patched vercel.json with ${clientRewrites.length} static landing rule(s).`
+  `Patched vercel.json with ${clientRootRoutes.length} client route(s) (root + short letter).`
 );

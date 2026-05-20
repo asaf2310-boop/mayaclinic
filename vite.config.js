@@ -31,7 +31,7 @@ function demoBrandingPlugin() {
     transformIndexHtml(html) {
       if (!isDemoBuild) return html
 
-      const demoTitle = 'הקליניקה של קארין'
+      const demoTitle = 'מערכת דמו לקליניקה'
       const demoDescription = 'מערכת דמו לקביעת תורים וניהול קליניקה'
       const demoImage = `${getDemoBaseUrl()}/demo-icon.svg`
 
@@ -68,8 +68,8 @@ function demoBrandingPlugin() {
 
       const manifestPath = path.resolve('dist/manifest.json')
       const demoManifest = {
-        name: 'הקליניקה של קארין - דמו',
-        short_name: 'קארין דמו',
+        name: 'מערכת דמו לקליניקה',
+        short_name: 'דמו קליניקה',
         description: 'מערכת דמו לקביעת תורים וניהול קליניקה',
         start_url: '/',
         display: 'standalone',
