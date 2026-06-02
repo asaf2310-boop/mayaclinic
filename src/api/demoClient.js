@@ -1,11 +1,18 @@
+import { supabaseConfigured } from "./supabase";
+
 const DEMO_STORE_KEY = "mayaclinic-demo-store-v3";
 
 const demoEnvEnabled = import.meta.env.VITE_DEMO_MODE === "true";
-const demoHostEnabled =
-  typeof window !== "undefined" &&
-  /-demo\.vercel\.app$/i.test(window.location.hostname);
+const forceDemoEnabled = import.meta.env.VITE_FORCE_DEMO === "true";
+const hostname = typeof window !== "undefined" ? String(window.location.hostname).toLowerCase() : "";
+const isLocalHost = hostname === "localhost" || hostname === "127.0.0.1";
+const demoHostEnabled = /-demo\.vercel\.app$/i.test(hostname);
 
-export const demoModeEnabled = demoEnvEnabled || demoHostEnabled;
+// Guardrail: don't activate demo on real clinic domains when Supabase is configured.
+export const demoModeEnabled =
+  forceDemoEnabled ||
+  demoHostEnabled ||
+  (demoEnvEnabled && (isLocalHost || !supabaseConfigured));
 
 const ENTITY_KEYS = {
   Treatment: "treatments",
