@@ -1,22 +1,19 @@
 import React, { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Copy, CreditCard, CheckCircle2, Loader2 } from "lucide-react";
+import { ArrowRight, CreditCard, CheckCircle2, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
 import { getClinicSite } from "@/lib/clinicSite";
 import {
   buildDynamicPayboxUrl,
-  copyText,
   getPayboxPaymentDetails,
   openPayboxLink,
 } from "@/lib/paymentLinks";
 import { useToast } from "@/components/ui/use-toast";
 
 const PHONE = "0549000301";
-const BIT_LOGO =
-  "https://upload.wikimedia.org/wikipedia/he/thumb/b/b5/Bit_by_Bank_Hapoalim_logo.svg/512px-Bit_by_Bank_Hapoalim_logo.svg.png";
-const PAYBOX_LOGO =
-  "https://play-lh.googleusercontent.com/EHQ_r2MYpH1N6FWjQVMvwMfHVWRgJq-HNnfakm4fKlJp0x8Fjbw5RvX7jAcFU3qS5Q=w240-h480-rw";
+const BIT_LOGO = "/payment/bit-logo.png";
+const PAYBOX_LOGO = "/payment/paybox-logo.png";
 
 function tryOpenBitApp() {
   if (typeof navigator === "undefined") return "desktop";
@@ -75,35 +72,38 @@ export default function PaymentStep({ formData, treatment, onConfirm, onBack, is
     }
   };
 
-  const handleCopyPaybox = async () => {
-    try {
-      await copyText(payboxDetails.url || payboxUrl);
-      toast({ title: "קישור PayBox הועתק" });
-    } catch {
-      toast({
-        title: "לא ניתן להעתיק",
-        description: "העתיקו ידנית מהמסך.",
-        variant: "destructive",
-      });
-    }
-  };
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="py-8 px-2"
+      className={`py-8 px-2 ${clinicSite ? "rounded-3xl border border-white/70 bg-white/70 p-6 shadow-xl shadow-emerald-900/5 backdrop-blur-xl md:p-8" : ""}`}
       dir="rtl"
     >
       <div className="text-center mb-8">
-        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-          <CreditCard className="w-8 h-8 text-primary" />
+        <div
+          className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 ${
+            clinicSite
+              ? "bg-gradient-to-br from-emerald-50 to-teal-50 shadow-inner"
+              : "bg-primary/10"
+          }`}
+        >
+          <CreditCard className={`w-8 h-8 ${clinicSite ? "text-emerald-600" : "text-primary"}`} />
         </div>
-        <h2 className="text-2xl font-bold text-foreground mb-2">תשלום מקדמה</h2>
-        <p className="text-muted-foreground">לפני אישור התור, יש לשלם מקדמה</p>
+        <h2 className={`text-2xl font-extrabold mb-2 tracking-tight ${clinicSite ? "text-[#1a2e28]" : "text-foreground"}`}>
+          תשלום על התור
+        </h2>
+        <p className={clinicSite ? "text-[#4a6b5f]" : "text-muted-foreground"}>
+          לפני אישור התור, יש לשלם את עלות הטיפול
+        </p>
       </div>
 
-      <div className="bg-muted/50 rounded-xl p-5 mb-6 space-y-2 text-sm">
+      <div
+        className={`rounded-2xl p-5 mb-6 space-y-2 text-sm ${
+          clinicSite
+            ? "border border-emerald-100/80 bg-gradient-to-br from-white to-emerald-50/40"
+            : "bg-muted/50"
+        }`}
+      >
         <div className="flex justify-between">
           <span className="text-muted-foreground">טיפול:</span>
           <span className="font-medium">{treatment?.name}</span>
@@ -123,9 +123,9 @@ export default function PaymentStep({ formData, treatment, onConfirm, onBack, is
           <span className="text-muted-foreground">כמות תורים:</span>
           <span className="font-medium">{appointments.length}</span>
         </div>
-        <div className="flex justify-between border-t border-border pt-2 mt-2">
+        <div className="flex justify-between border-t border-emerald-100 pt-2 mt-2">
           <span className="text-muted-foreground">לתשלום:</span>
-          <span className="font-bold text-lg">₪{totalPrice}</span>
+          <span className="font-bold text-lg text-emerald-700">₪{totalPrice}</span>
         </div>
       </div>
 
@@ -166,28 +166,16 @@ export default function PaymentStep({ formData, treatment, onConfirm, onBack, is
         )}
 
         {payboxLink ? (
-          <div className="flex flex-col gap-2">
-            <button
-              type="button"
-              onClick={handleOpenPaybox}
-              className="w-full py-3 px-4 rounded-xl font-bold text-white text-sm flex items-center justify-center gap-2 transition-opacity hover:opacity-90"
-              style={{ backgroundColor: "#7B3FBE" }}
-              aria-label="תשלום ב-PayBox"
-            >
-              <img src={PAYBOX_LOGO} alt="" className="h-5 w-5 object-contain rounded" />
-              שלם ב-Paybox
-            </button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="gap-2 w-full text-xs"
-              onClick={handleCopyPaybox}
-            >
-              <Copy className="h-3.5 w-3.5" />
-              העתק קישור
-            </Button>
-          </div>
+          <button
+            type="button"
+            onClick={handleOpenPaybox}
+            className="w-full py-3 px-4 rounded-xl font-bold text-white text-sm flex items-center justify-center gap-2 transition-opacity hover:opacity-90"
+            style={{ backgroundColor: "#7B3FBE" }}
+            aria-label="תשלום ב-PayBox"
+          >
+            <img src={PAYBOX_LOGO} alt="" className="h-5 w-5 object-contain rounded" />
+            שלם ב-Paybox
+          </button>
         ) : (
           <a href={payboxUrl} target="_blank" rel="noopener noreferrer">
             <button
@@ -203,18 +191,20 @@ export default function PaymentStep({ formData, treatment, onConfirm, onBack, is
       </div>
 
       {bitQrImage && bitGuideOpen && (
-        <div className="mb-6 rounded-xl border-2 border-[#0079C1]/30 bg-[#0079C1]/5 p-4 text-sm">
-          <p className="mb-3 text-center font-semibold text-[#0079C1]">
+        <div className="mb-6 flex flex-col items-center rounded-xl border-2 border-[#0079C1]/30 bg-[#0079C1]/5 p-4 text-center text-sm">
+          <p className="mb-3 font-semibold text-[#0079C1]">
             סרקו את הברקוד לתשלום בביט על סך ₪{totalPrice.toLocaleString("he-IL")}
           </p>
-          <div className="mx-auto max-w-xs overflow-hidden rounded-xl border border-[#0079C1]/30 bg-white p-2">
-            <img
-              src={bitQrImage}
-              alt="ברקוד לתשלום בביט"
-              className="mx-auto block h-auto w-full object-contain"
-            />
+          <div className="flex w-full justify-center">
+            <div className="mx-auto max-w-[200px] overflow-hidden rounded-xl border border-[#0079C1]/30 bg-white p-2">
+              <img
+                src={bitQrImage}
+                alt="ברקוד לתשלום בביט"
+                className="mx-auto block h-auto w-full object-contain"
+              />
+            </div>
           </div>
-          <p className="mt-3 text-center text-xs text-muted-foreground">
+          <p className="mt-3 text-xs text-muted-foreground">
             פתחו ביט בטלפון וסרקו את הקוד. לאחר התשלום לחצו "שילמתי — אשר את התור".
           </p>
         </div>
@@ -230,7 +220,11 @@ export default function PaymentStep({ formData, treatment, onConfirm, onBack, is
         onClick={onConfirm}
         disabled={isSubmitting}
         size="lg"
-        className="w-full rounded-xl text-lg py-6 gap-2 mb-3"
+        className={`w-full text-lg py-6 gap-2 mb-3 ${
+          clinicSite
+            ? "rounded-full bg-gradient-to-l from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/25 transition-all duration-200 hover:scale-[1.01] hover:shadow-xl hover:shadow-emerald-500/35 hover:from-emerald-500 hover:to-teal-600"
+            : "rounded-xl"
+        }`}
       >
         {isSubmitting ? (
           <Loader2 className="w-5 h-5 animate-spin" />

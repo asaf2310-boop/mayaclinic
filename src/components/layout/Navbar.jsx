@@ -19,18 +19,34 @@ export default function Navbar() {
     }).catch(() => {});
   }, []);
 
+  const isClinic = Boolean(clinicSite);
+
   const linkClass = (path) =>
-    `rounded-full px-4 py-2 text-sm font-semibold transition-all ${
+    `rounded-full px-4 py-2 text-sm font-semibold transition-all duration-200 ${
       location.pathname === path
-        ? "bg-primary/10 text-primary shadow-sm"
-        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+        ? isClinic
+          ? "bg-emerald-500/15 text-emerald-700 shadow-sm"
+          : "bg-primary/10 text-primary shadow-sm"
+        : isClinic
+          ? "text-emerald-900/60 hover:bg-white/60 hover:text-emerald-800"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground"
     }`;
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50" dir="rtl">
+    <nav
+      className={`fixed top-0 left-0 right-0 z-50 backdrop-blur-xl ${
+        isClinic
+          ? "border-b border-white/60 bg-white/70 shadow-sm shadow-emerald-900/5"
+          : "border-b border-border/50 bg-background/80"
+      }`}
+      dir="rtl"
+    >
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-8">
-          <Link to="/" className="text-xl font-bold text-foreground">
+          <Link
+            to="/"
+            className={`text-xl font-bold ${isClinic ? "text-emerald-950" : "text-foreground"}`}
+          >
             {clinicSite?.clinicTitle || (demoModeEnabled ? demoBrand.clinicTitle : "הקליניקה")}
           </Link>
           {demoModeEnabled && (
@@ -40,11 +56,24 @@ export default function Navbar() {
           )}
 
           {/* Desktop nav */}
-          <div className="hidden md:flex items-center gap-2 rounded-full bg-muted/40 p-1">
+          <div
+            className={`hidden md:flex items-center gap-2 rounded-full p-1 ${
+              isClinic ? "bg-emerald-50/80 ring-1 ring-white/60" : "bg-muted/40"
+            }`}
+          >
             <Link to="/" className={linkClass("/")}>
               עמוד הבית
             </Link>
-            <Link to="/book" className={linkClass("/book")}>
+            <Link
+              to="/book"
+              className={
+                location.pathname === "/book"
+                  ? linkClass("/book")
+                  : isClinic
+                    ? "rounded-full bg-gradient-to-l from-emerald-500 to-teal-600 px-5 py-2 text-sm font-semibold text-white shadow-md shadow-emerald-500/25 transition-all duration-200 hover:scale-[1.02] hover:shadow-lg"
+                    : linkClass("/book")
+              }
+            >
               קביעת תור
             </Link>
             {isAdmin && (
@@ -57,16 +86,45 @@ export default function Navbar() {
         </div>
 
         {/* Mobile toggle */}
-        <button className="md:hidden rounded-full bg-muted/60 p-2" onClick={() => setIsOpen(!isOpen)}>
+        <button
+          className={`md:hidden rounded-full p-2 ${
+            isClinic ? "bg-emerald-50/80 text-emerald-800" : "bg-muted/60"
+          }`}
+          onClick={() => setIsOpen(!isOpen)}
+        >
           {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
       </div>
 
       {/* Mobile menu */}
       {isOpen && (
-        <div className="md:hidden border-t border-border/50 bg-background/95 backdrop-blur-xl px-6 py-4 space-y-2 text-right">
-          <Link to="/" onClick={() => setIsOpen(false)} className="block rounded-xl px-4 py-3 text-sm font-semibold text-foreground hover:bg-muted">עמוד הבית</Link>
-          <Link to="/book" onClick={() => setIsOpen(false)} className="block rounded-xl px-4 py-3 text-sm font-semibold text-foreground hover:bg-muted">קביעת תור</Link>
+        <div
+          className={`md:hidden border-t backdrop-blur-xl px-6 py-4 space-y-2 text-right ${
+            isClinic
+              ? "border-white/60 bg-white/90"
+              : "border-border/50 bg-background/95"
+          }`}
+        >
+          <Link
+            to="/"
+            onClick={() => setIsOpen(false)}
+            className={`block rounded-xl px-4 py-3 text-sm font-semibold ${
+              isClinic ? "text-emerald-900 hover:bg-emerald-50" : "text-foreground hover:bg-muted"
+            }`}
+          >
+            עמוד הבית
+          </Link>
+          <Link
+            to="/book"
+            onClick={() => setIsOpen(false)}
+            className={`block rounded-xl px-4 py-3 text-sm font-semibold ${
+              isClinic
+                ? "bg-gradient-to-l from-emerald-500 to-teal-600 text-white text-center shadow-md"
+                : "text-foreground hover:bg-muted"
+            }`}
+          >
+            קביעת תור
+          </Link>
           {isAdmin && (
             <Link to="/admin" onClick={() => setIsOpen(false)} className="block rounded-xl px-4 py-3 text-sm font-semibold text-foreground hover:bg-muted">ניהול</Link>
           )}

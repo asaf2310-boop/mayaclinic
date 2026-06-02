@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { CalendarPlus, Loader2, ChevronRight, ChevronLeft, Plus, Trash2 } from "lucide-react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isBefore, startOfDay, isSameDay } from "date-fns";
 import { he } from "date-fns/locale";
+import { getClinicSite } from "@/lib/clinicSite";
 
 const MIN_APPOINTMENT_GAP_MINUTES = 60;
 
@@ -38,6 +39,7 @@ const isTooCloseToSelectedAppointment = (date, slot, selectedAppointments) => {
 };
 
 export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting }) {
+  const clinicSite = getClinicSite();
   const [selectedAppointments, setSelectedAppointments] = useState([]);
   const [form, setForm] = useState({
     patient_name: "",
@@ -345,7 +347,11 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
       <Button
         type="submit"
         size="lg"
-        className="w-full rounded-xl text-lg py-6 gap-2"
+        className={`w-full text-lg py-6 gap-2 ${
+          clinicSite
+            ? "rounded-full bg-gradient-to-l from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/25 transition-all duration-200 hover:scale-[1.01] hover:shadow-xl hover:shadow-emerald-500/35"
+            : "rounded-xl"
+        }`}
         disabled={!selectedTreatment || !form.patient_name || !form.patient_phone || selectedAppointments.length === 0 || isSubmitting}
       >
         {isSubmitting ? (

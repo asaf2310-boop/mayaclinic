@@ -68,48 +68,45 @@ export default function Home() {
       <div className="min-h-screen font-sans">
         <Navbar />
         <main>
-          <section className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-[#f4f7f5] via-[#edf2ee] to-[#e4ebe6] pt-16">
-            <div className="pointer-events-none absolute left-[-10%] top-[-10%] h-[500px] w-[500px] rounded-full bg-[#e2ece5] opacity-70 blur-[120px]" />
-            <div className="pointer-events-none absolute bottom-[-10%] right-[-10%] h-[600px] w-[600px] rounded-full bg-[#d6e4db] opacity-60 blur-[150px]" />
+          <section className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-[#fafffe] via-[#f0faf5] to-[#e4f4ec] pt-16">
+            <div className="pointer-events-none absolute -left-24 top-0 h-[520px] w-[520px] rounded-full bg-teal-200/40 blur-[100px]" />
+            <div className="pointer-events-none absolute -right-32 top-1/4 h-[480px] w-[480px] rounded-full bg-emerald-100/60 blur-[110px]" />
+            <div className="pointer-events-none absolute bottom-0 left-1/3 h-[400px] w-[400px] rounded-full bg-cyan-100/50 blur-[90px]" />
 
-            <div className="container relative z-10 mx-auto grid min-h-[calc(100vh-4rem)] grid-cols-1 items-center gap-8 px-4 py-12 lg:grid-cols-2 lg:gap-12 lg:px-8">
-              <div className="order-2 flex flex-col justify-center space-y-8 text-right lg:order-1" dir="rtl">
-                <div className="inline-flex items-center gap-2 self-start rounded-full border border-white/50 bg-white/70 px-4 py-1.5 shadow-sm backdrop-blur-md">
-                  <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-[#4a7c6a]" />
-                  <span className="text-xs font-semibold tracking-wide text-[#355245]">{clinicSite.heroBadge}</span>
+            <div className="container relative z-10 mx-auto grid min-h-[calc(100vh-4rem)] grid-cols-1 items-center gap-10 px-4 py-16 lg:grid-cols-2 lg:gap-16 lg:px-8">
+              <div className="order-2 flex flex-col justify-center space-y-10 text-right lg:order-1" dir="rtl">
+                <div className="inline-flex items-center gap-2.5 self-start rounded-full border border-white/80 bg-white/70 px-5 py-2 shadow-sm shadow-emerald-900/5 backdrop-blur-xl">
+                  <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
+                  <span className="text-xs font-semibold tracking-wide text-emerald-800">{clinicSite.heroBadge}</span>
                 </div>
 
-                <h1 className="text-4xl font-black leading-[1.2] text-[#22332a] md:text-5xl lg:text-6xl">
-                  {clinicSite.heroHeading}{" "}
-                  <br className="hidden md:inline" />
-                  {clinicSite.heroHeadingMid}{" "}
-                  <span className="bg-gradient-to-r from-[#4a7c6a] to-[#2d5244] bg-clip-text text-transparent">
-                    {clinicSite.heroHeadingHighlight}
-                  </span>
-                </h1>
+                <div className="space-y-6">
+                  <h1 className="text-4xl font-extrabold leading-[1.15] tracking-tight text-[#1a2e28] md:text-5xl lg:text-[3.5rem]">
+                    {clinicSite.heroHeading}{" "}
+                    <br className="hidden md:inline" />
+                    {clinicSite.heroHeadingMid}{" "}
+                    <span className="bg-gradient-to-l from-emerald-600 via-teal-600 to-emerald-500 bg-clip-text text-transparent">
+                      {clinicSite.heroHeadingHighlight}
+                    </span>
+                  </h1>
 
-                <p className="max-w-xl text-base font-normal leading-relaxed text-[#4a5f54] md:text-lg">
-                  {clinicSite.heroSubtext}
-                </p>
+                  <p className="max-w-xl text-base font-normal leading-relaxed text-[#4a6b5f] md:text-lg md:leading-8">
+                    {clinicSite.heroSubtext}
+                  </p>
+                </div>
 
-                <div className="flex flex-col justify-start gap-4 pt-4 sm:flex-row">
+                <div className="pt-2">
                   <Link
                     to="/book"
-                    className="rounded-2xl bg-gradient-to-r from-[#4a7c6a] to-[#3b6355] px-8 py-4 text-center font-medium text-white shadow-md shadow-[#4a7c6a]/20 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg"
+                    className="group inline-flex items-center justify-center rounded-full bg-gradient-to-l from-emerald-500 to-teal-600 px-10 py-4 text-base font-semibold text-white shadow-lg shadow-emerald-500/30 transition-all duration-300 hover:scale-[1.03] hover:shadow-xl hover:shadow-emerald-500/40 active:scale-[0.98]"
                   >
                     {clinicSite.heroCtaPrimary}
-                  </Link>
-                  <Link
-                    to="/book"
-                    className="rounded-2xl border border-[#c8d6cc] bg-white/60 px-8 py-4 text-center font-medium text-[#22332a] shadow-sm backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:bg-white/90"
-                  >
-                    {clinicSite.heroCtaSecondary}
                   </Link>
                 </div>
               </div>
 
               <div className="relative order-1 flex h-[400px] w-full items-center justify-center md:h-[500px] lg:order-2 lg:h-[600px]">
-                <div className="relative h-full w-full overflow-hidden rounded-[2.5rem] border border-white/40 shadow-xl">
+                <div className="relative h-full w-full overflow-hidden rounded-[2.5rem] border border-white/70 bg-white/30 shadow-2xl shadow-emerald-900/10 ring-1 ring-white/50 backdrop-blur-sm">
                   {!heroImageMissing ? (
                     <img
                       src={clinicSite.heroImage}
@@ -120,37 +117,37 @@ export default function Home() {
                       onError={() => setHeroImageMissing(true)}
                     />
                   ) : (
-                    <div className="flex h-full items-center justify-center bg-white/50 px-6 text-center text-[#4a5f54]">
+                    <div className="flex h-full items-center justify-center bg-white/60 px-6 text-center text-[#4a6b5f]">
                       לא נטענה תמונת הקליניקה
                     </div>
                   )}
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#22332a]/20 via-transparent to-transparent" />
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-emerald-950/15 via-transparent to-white/10" />
                 </div>
 
                 <div
-                  className="absolute top-1/2 -left-4 hidden max-w-[160px] -translate-y-1/2 rounded-2xl border border-white/60 bg-white/75 p-4 text-center shadow-xl backdrop-blur-xl sm:block"
+                  className="absolute top-1/2 -left-4 hidden max-w-[170px] -translate-y-1/2 rounded-2xl border border-white/80 bg-white/75 p-5 text-center shadow-xl shadow-emerald-900/10 backdrop-blur-2xl transition-transform duration-300 hover:-translate-y-[calc(50%+4px)] sm:block"
                   dir="rtl"
                 >
-                  <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-[#edf5ef] text-xl">
+                  <div className="mx-auto mb-2.5 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 text-xl shadow-inner">
                     🌱
                   </div>
-                  <h4 className="text-xs font-bold text-[#22332a]">{clinicSite.heroFloatingTitle}</h4>
-                  <p className="mt-0.5 text-[11px] text-[#4a5f54]">{clinicSite.heroFloatingSubtitle}</p>
+                  <h4 className="text-xs font-bold text-[#1a2e28]">{clinicSite.heroFloatingTitle}</h4>
+                  <p className="mt-1 text-[11px] leading-relaxed text-[#4a6b5f]">{clinicSite.heroFloatingSubtitle}</p>
                 </div>
 
                 <div
-                  className="absolute bottom-6 right-6 flex items-center gap-3 rounded-2xl border border-white/60 bg-white/75 px-5 py-3 shadow-lg backdrop-blur-xl"
+                  className="absolute bottom-6 right-6 flex items-center gap-3 rounded-2xl border border-white/80 bg-white/80 px-5 py-3.5 shadow-lg shadow-emerald-900/10 backdrop-blur-2xl"
                   dir="ltr"
                 >
                   <div className="relative flex h-2.5 w-2.5 items-center justify-center">
-                    <span className="absolute h-2.5 w-2.5 animate-ping rounded-full bg-[#22c55e]" />
-                    <span className="h-2.5 w-2.5 rounded-full bg-[#22c55e]" />
+                    <span className="absolute h-2.5 w-2.5 animate-ping rounded-full bg-emerald-400" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
                   </div>
                   <div className="text-right" dir="rtl">
-                    <span className="block text-[10px] font-semibold uppercase tracking-wider text-[#4a5f54] opacity-75">
+                    <span className="block text-[10px] font-semibold uppercase tracking-wider text-emerald-700/70">
                       {clinicSite.heroLiveStatusLabel}
                     </span>
-                    <span className="text-xs font-bold text-[#22332a]">{clinicSite.heroLiveStatusText}</span>
+                    <span className="text-xs font-bold text-[#1a2e28]">{clinicSite.heroLiveStatusText}</span>
                   </div>
                 </div>
               </div>

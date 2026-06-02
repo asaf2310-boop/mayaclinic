@@ -113,10 +113,22 @@ export default function Book() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div
+      className={`min-h-screen ${
+        clinicSite
+          ? "bg-gradient-to-b from-[#fafffe] via-[#f0faf5] to-[#e8f5ef]"
+          : "bg-background"
+      }`}
+    >
       <Navbar />
-      <main className="pt-24 pb-16 px-6" dir="rtl">
-        <div className="max-w-2xl mx-auto">
+      <main className="relative pt-24 pb-16 px-6" dir="rtl">
+        {clinicSite && (
+          <>
+            <div className="pointer-events-none absolute left-0 top-24 h-64 w-64 rounded-full bg-teal-200/30 blur-3xl" />
+            <div className="pointer-events-none absolute right-0 top-40 h-72 w-72 rounded-full bg-emerald-100/40 blur-3xl" />
+          </>
+        )}
+        <div className="relative max-w-2xl mx-auto">
           {bookedAppointment ? (
             <BookingSuccess appointment={bookedAppointment} onReset={handleReset} />
           ) : pendingFormData ? (
@@ -130,17 +142,29 @@ export default function Book() {
           ) : (
             <>
               <div className="text-center mb-10">
-                <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-3">קביעת תור</h1>
-                <p className="text-muted-foreground text-lg">
+                <h1
+                  className={`text-3xl md:text-4xl font-extrabold mb-3 tracking-tight ${
+                    clinicSite ? "text-[#1a2e28]" : "text-foreground"
+                  }`}
+                >
+                  קביעת תור
+                </h1>
+                <p className={`text-lg ${clinicSite ? "text-[#4a6b5f]" : "text-muted-foreground"}`}>
                   {clinicSite ? "בחרו תאריך ושעה נוחים לטיפול" : "בחרו טיפול, תאריך ושעה נוחים"}
                 </p>
               </div>
 
-              <div className="space-y-8">
+              <div
+                className={`space-y-8 ${
+                  clinicSite
+                    ? "rounded-3xl border border-white/70 bg-white/70 p-6 shadow-xl shadow-emerald-900/5 backdrop-blur-xl md:p-8"
+                    : ""
+                }`}
+              >
                 {isLoading ? (
                   <div className="space-y-3">
                     {[1, 2, 3].map((i) => (
-                      <Skeleton key={i} className="h-20 rounded-xl" />
+                      <Skeleton key={i} className="h-20 rounded-2xl" />
                     ))}
                   </div>
                 ) : visibleTreatments.length === 0 ? (
@@ -150,10 +174,16 @@ export default function Book() {
                 ) : (
                   <>
                     {visibleTreatments.length === 1 ? (
-                      <Card className="p-4">
+                      <Card
+                        className={`p-5 ${
+                          clinicSite
+                            ? "rounded-2xl border-emerald-100/80 bg-gradient-to-br from-white to-emerald-50/50 shadow-sm"
+                            : ""
+                        }`}
+                      >
                         <p className="text-sm text-muted-foreground">הטיפול שלך</p>
-                        <p className="mt-1 text-xl font-bold">{visibleTreatments[0].name}</p>
-                        <p className="mt-2 text-sm text-muted-foreground">
+                        <p className="mt-1 text-xl font-bold text-[#1a2e28]">{visibleTreatments[0].name}</p>
+                        <p className="mt-2 text-sm text-[#4a6b5f]">
                           {visibleTreatments[0].duration_minutes} דקות · ₪{visibleTreatments[0].price}
                         </p>
                       </Card>
@@ -165,7 +195,7 @@ export default function Book() {
                       />
                     )}
 
-                    <div className="h-px bg-border" />
+                    <div className={`h-px ${clinicSite ? "bg-emerald-100" : "bg-border"}`} />
 
                     <BookingForm
                       selectedTreatment={selectedTreatment}
