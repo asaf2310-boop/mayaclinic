@@ -1,4 +1,5 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import Navbar from "../components/layout/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -57,7 +58,18 @@ const adminHighlights = [
 ];
 
 export default function Home() {
+  const navigate = useNavigate();
   const { booking: demoBookingUrl, admin: demoAdminUrl } = useMemo(() => getDemoUrls(), []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const host = window.location.hostname.toLowerCase();
+    const shouldOpenBookingDirectly = host === "maya-clinic.vercel.app";
+
+    if (shouldOpenBookingDirectly) {
+      navigate("/book", { replace: true });
+    }
+  }, [navigate]);
 
   return (
     <div className="min-h-screen bg-background">
