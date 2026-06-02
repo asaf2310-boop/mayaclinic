@@ -30,3 +30,15 @@ export function getClinicSite(hostname = typeof window !== "undefined" ? window.
 export function isProductionClinicHost(hostname = typeof window !== "undefined" ? window.location.hostname : "") {
   return Boolean(getClinicSite(hostname));
 }
+
+export function getAllowedTreatmentNames(site = getClinicSite()) {
+  if (!site) return null;
+  return site.seedTreatments.map((treatment) => treatment.name);
+}
+
+export function filterTreatmentsForClinic(treatments = [], site = getClinicSite()) {
+  if (!site) return treatments;
+
+  const allowedNames = new Set(getAllowedTreatmentNames(site));
+  return treatments.filter((treatment) => allowedNames.has(String(treatment?.name || "").trim()));
+}

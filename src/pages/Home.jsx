@@ -65,51 +65,25 @@ export default function Home() {
 
   if (clinicSite) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-black">
         <Navbar />
-        <main className="pt-20" dir="rtl">
-          <section className="relative overflow-hidden px-6 py-20">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-muted/40" />
-            <div className="relative mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-[0.9fr_1.1fr]">
-              <Card className="overflow-hidden rounded-3xl border-border/60 bg-card/90 p-3 shadow-2xl">
-                <div className="aspect-[4/5] w-full rounded-2xl bg-gradient-to-b from-primary/10 to-muted/40 p-6">
-                  {!heroImageMissing ? (
-                    <img
-                      src={clinicSite.heroImage}
-                      alt={clinicSite.clinicTitle}
-                      className="h-full w-full rounded-xl object-cover"
-                      onError={() => setHeroImageMissing(true)}
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-border/60 bg-background/70 text-center">
-                      <div>
-                        <p className="text-lg font-semibold">{clinicSite.clinicTitle}</p>
-                        <p className="mt-2 text-sm text-muted-foreground">לא נטענה תמונת הקליניקה</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </Card>
+        <main className="relative min-h-[calc(100vh-4rem)] pt-16" dir="rtl">
+          {!heroImageMissing ? (
+            <img
+              src={clinicSite.heroImage}
+              alt={clinicSite.clinicTitle}
+              className="absolute inset-0 top-16 h-[calc(100vh-4rem)] w-full object-cover object-center"
+              onError={() => setHeroImageMissing(true)}
+            />
+          ) : (
+            <div className="absolute inset-0 top-16 h-[calc(100vh-4rem)] bg-gradient-to-br from-primary/20 via-background to-muted/50" />
+          )}
 
-              <div className="space-y-6">
-                <Badge className="w-fit rounded-full px-4 py-1.5 text-sm">{clinicSite.heroBadge}</Badge>
-                <h1 className="max-w-3xl text-4xl font-black leading-tight text-foreground md:text-6xl">
-                  {clinicSite.heroHeading}
-                </h1>
-                <p className="max-w-2xl text-lg leading-8 text-muted-foreground md:text-xl">
-                  אפשר לקבוע תור אונליין במהירות, לבחור טיפול ושעה פנויה, ולקבל תזכורת מסודרת.
-                </p>
-                <div className="flex flex-col gap-3 sm:flex-row">
-                  <Button asChild size="lg" className="h-12 rounded-xl px-6 text-base">
-                    <Link to="/book">לקביעת תור</Link>
-                  </Button>
-                  <Button asChild size="lg" variant="outline" className="h-12 rounded-xl px-6 text-base">
-                    <Link to="/admin">כניסה לניהול</Link>
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </section>
+          <div className="absolute inset-x-0 bottom-0 top-16 flex items-end justify-center bg-gradient-to-t from-black/60 via-black/10 to-transparent px-6 pb-10">
+            <Button asChild size="lg" className="h-14 min-w-56 rounded-full px-10 text-lg shadow-xl">
+              <Link to="/book">לקביעת תור</Link>
+            </Button>
+          </div>
         </main>
       </div>
     );

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import Navbar from "../components/layout/Navbar";
@@ -8,7 +8,8 @@ import BookingSuccess from "../components/booking/BookingSuccess";
 import PaymentStep from "../components/booking/PaymentStep";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
-import { getClinicSite } from "@/lib/clinicSite";
+import { filterTreatmentsForClinic, getClinicSite } from "@/lib/clinicSite";
+import { Card } from "@/components/ui/card";
 
 export default function Book() {
   const [selectedTreatment, setSelectedTreatment] = useState(null);
@@ -23,11 +24,16 @@ export default function Book() {
     queryFn: () => base44.entities.Treatment.list(),
   });
 
+  const visibleTreatments = useMemo(
+    () => filterTreatmentsForClinic(treatments, clinicSite),
+    [treatments, clinicSite]
+  );
+
   useEffect(() => {
-    if (!treatments.length || selectedTreatment) return;
+    if (!visibleTreatments.length || selectedTreatment) return;
 
     if (clinicSite?.defaultTreatmentName) {
-      const preferred = treatments.find(
+      const preferred = visibleTreatments.find(
         (treatment) => String(treatment?.name || "").trim() === clinicSite.defaultTreatmentName
       );
       if (preferred) {
@@ -36,8 +42,8 @@ export default function Book() {
       }
     }
 
-    setSelectedTreatment(treatments[0]);
-  }, [clinicSite, selectedTreatment, treatments]);
+    setSelectedTreatment(visibleTreatments[0]);
+  }, [clinicSite, selectedTreatment, visibleTreatments]);
 
   const createMutation = useMutation({
     mutationFn: async (data) => {
@@ -120,7 +126,9 @@ export default function Book() {
             <>
               <div className="text-center mb-10">
                 <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-3">קביעת תור</h1>
-                <p className="text-muted-foreground text-lg">בחרו טיפול, תאריך ושעה נוחים</p>
+                <p className="text-muted-foreground text-lg">
+                  {clinicSite ? "בחרו תאריך ושעה נוחים לטיפול" : "בחרו טיפול, תאריך ושעה נוחים"}
+                </p>
               </div>
 
               <div className="space-y-8">
@@ -130,17 +138,27 @@ export default function Book() {
                       <Skeleton key={i} className="h-20 rounded-xl" />
                     ))}
                   </div>
-                ) : treatments.length === 0 ? (
+                ) : visibleTreatments.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
                     אין טיפולים זמינים כרגע
                   </div>
                 ) : (
                   <>
-                    <TreatmentSelector
-                      treatments={treatments}
-                      selectedId={selectedTreatment?.id}
-                      onSelect={setSelectedTreatment}
-                    />
+                    {visibleTreatments.length === 1 ? (
+                      <Card className="p-4">
+                        <p className="text-sm text-muted-foreground">הטיפול שלך</p>
+                        <p className="mt-1 text-xl font-bold">{visibleTreatments[0].name}</p>
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          {visibleTreatments[0].duration_minutes} דקות · ₪{visibleTreatments[0].price}
+                        </p>
+                      </Card>
+                    ) : (
+                      <TreatmentSelector
+                        treatments={visibleTreatments}
+                        selectedId={selectedTreatment?.id}
+                        onSelect={setSelectedTreatment}
+                      />
+                    )}
 
                     <div className="h-px bg-border" />
 
