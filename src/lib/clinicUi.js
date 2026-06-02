@@ -29,13 +29,26 @@ export const clinicBadgeText = "text-xs font-medium text-[#2d473d]";
 export const clinicHeadingHighlight =
   "bg-gradient-to-r from-[#4a7c6a] to-[#2d5244] bg-clip-text text-transparent";
 
-export const clinicHeroTitleBlock = "mb-8 flex flex-col items-center";
+export const clinicHeroTitleBlock = "text-center space-y-3 mb-8";
+
+export const clinicHeroEyebrow =
+  "text-xs uppercase tracking-[0.2em] text-[#4a6d5c]/70 font-semibold block";
 
 export const clinicHeroTitle =
-  "max-w-2xl text-balance text-center text-4xl font-extrabold leading-[1.12] tracking-tight md:text-5xl bg-gradient-to-br from-[#1e2f27] via-[#2d473d] to-[#3d6b58] bg-clip-text text-transparent";
+  "text-3xl md:text-4xl lg:text-5xl font-black tracking-tight text-[#1e2f27] relative inline-block";
 
-export const clinicHeroTitleRule =
-  "mx-auto mt-5 h-[2px] w-14 rounded-full bg-gradient-to-r from-transparent via-[#4a7c6a]/75 to-transparent";
+export const clinicHeroTitleGradient =
+  "bg-gradient-to-r from-[#2d473d] via-[#416d5c] to-[#2d473d] bg-clip-text text-transparent";
+
+export const clinicHeroTitleDecor = "flex items-center justify-center gap-2 pt-1";
+
+export const clinicHeroTitleRuleLeft =
+  "w-8 h-[1px] bg-gradient-to-r from-transparent to-[#416d5c]/40";
+
+export const clinicHeroTitleRuleDot = "w-1.5 h-1.5 rounded-full bg-[#416d5c]/60";
+
+export const clinicHeroTitleRuleRight =
+  "w-8 h-[1px] bg-gradient-to-l from-transparent to-[#416d5c]/40";
 
 export const clinicNavGlass =
   "border-b border-white/50 bg-white/40 backdrop-blur-xl";
@@ -81,4 +94,4 @@ export const clinicTimeSlotBtn =
   "rounded-xl border border-[#d4cfc4]/70 bg-white py-3 text-center text-sm font-medium text-[#1e2f27] transition-all hover:border-[#4a7c6a]/40";
 
 export const clinicTimeSlotBtnSelected =
-  "border-[#4a7c6a] bg-[#e8f2ed] text-[#2f5245]";
+  "border-2 border-[#416d5c] bg-[#416d5c] text-white shadow-sm ring-2 ring-[#416d5c]/25";

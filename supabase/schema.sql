@@ -74,10 +74,23 @@ begin
     where existing.date = new.date
       and existing.status <> 'cancelled'
       and existing.id <> coalesce(new.id, '00000000-0000-0000-0000-000000000000'::uuid)
-      and abs(
-        (split_part(existing.time, ':', 1)::integer * 60 + split_part(existing.time, ':', 2)::integer) -
-        (split_part(new.time, ':', 1)::integer * 60 + split_part(new.time, ':', 2)::integer)
-      ) < 60
+      and (
+        -- Forward: new slot within 90 minutes after an existing booking start
+        (
+          (split_part(new.time, ':', 1)::integer * 60 + split_part(new.time, ':', 2)::integer) >=
+          (split_part(existing.time, ':', 1)::integer * 60 + split_part(existing.time, ':', 2)::integer)
+          and (split_part(new.time, ':', 1)::integer * 60 + split_part(new.time, ':', 2)::integer) <=
+          (split_part(existing.time, ':', 1)::integer * 60 + split_part(existing.time, ':', 2)::integer) + 90
+        )
+        or
+        -- Backward: new slot starts within 90 minutes before an existing booking
+        (
+          (split_part(new.time, ':', 1)::integer * 60 + split_part(new.time, ':', 2)::integer) <
+          (split_part(existing.time, ':', 1)::integer * 60 + split_part(existing.time, ':', 2)::integer)
+          and (split_part(existing.time, ':', 1)::integer * 60 + split_part(existing.time, ':', 2)::integer) -
+          (split_part(new.time, ':', 1)::integer * 60 + split_part(new.time, ':', 2)::integer) < 90
+        )
+      )
   ) then
     raise exception 'appointment_time_conflict';
   end if;

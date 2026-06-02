@@ -1,5 +1,6 @@
 import { supabaseConfigured } from "./supabase";
 import { isProductionClinicHost } from "@/lib/clinicSite";
+import { hasAppointmentTimeConflict } from "@/lib/bookingSlots";
 
 const DEMO_STORE_KEY = "mayaclinic-demo-store-v4";
 
@@ -163,6 +164,12 @@ function createEntity(entityName) {
 
     async create(row) {
       const store = readStore();
+      if (entityName === "Appointment") {
+        const existing = store[storeKey] || [];
+        if (hasAppointmentTimeConflict(row, existing)) {
+          throw new Error("appointment_time_conflict");
+        }
+      }
       const saved = {
         id: row.id || makeId(storeKey),
         created_at: row.created_at || new Date().toISOString(),
@@ -175,6 +182,15 @@ function createEntity(entityName) {
 
     async bulkCreate(rows) {
       const store = readStore();
+      if (entityName === "Appointment") {
+        const existing = [...(store[storeKey] || [])];
+        for (const row of rows) {
+          if (hasAppointmentTimeConflict(row, existing)) {
+            throw new Error("appointment_time_conflict");
+          }
+          existing.push(row);
+        }
+      }
       const saved = rows.map((row) => ({
         id: row.id || makeId(storeKey),
         created_at: row.created_at || new Date().toISOString(),

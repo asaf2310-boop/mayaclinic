@@ -9,9 +9,14 @@ import { getClinicSite } from "@/lib/clinicSite";
 import {
   clinicHeroImageFrame,
   clinicHeroSection,
+  clinicHeroEyebrow,
   clinicHeroTitle,
   clinicHeroTitleBlock,
-  clinicHeroTitleRule,
+  clinicHeroTitleDecor,
+  clinicHeroTitleGradient,
+  clinicHeroTitleRuleDot,
+  clinicHeroTitleRuleLeft,
+  clinicHeroTitleRuleRight,
   clinicOrbBottom,
   clinicOrbMid,
   clinicOrbTop,
@@ -89,9 +94,16 @@ export default function Home() {
               className="container relative z-10 mx-auto flex flex-col items-center justify-center px-6 py-12 text-center"
               dir="rtl"
             >
-              <div className={clinicHeroTitleBlock}>
-                <h1 className={clinicHeroTitle}>{clinicSite.clinicTitle}</h1>
-                <span className={clinicHeroTitleRule} aria-hidden="true" />
+              <div className={clinicHeroTitleBlock} dir="rtl">
+                <span className={clinicHeroEyebrow}>ABOUT THE CLINIC</span>
+                <h2 className={clinicHeroTitle}>
+                  <span className={clinicHeroTitleGradient}>{clinicSite.clinicTitle}</span>
+                </h2>
+                <div className={clinicHeroTitleDecor} aria-hidden="true">
+                  <div className={clinicHeroTitleRuleLeft} />
+                  <div className={clinicHeroTitleRuleDot} />
+                  <div className={clinicHeroTitleRuleRight} />
+                </div>
               </div>
 
               <div className="mb-8 w-full max-w-sm md:max-w-md">

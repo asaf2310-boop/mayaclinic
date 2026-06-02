@@ -3,30 +3,15 @@ import { Loader2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { clinicTimeSlotBtn, clinicTimeSlotBtnSelected } from "@/lib/clinicUi";
 
-const DEFAULT_HOURS_HINT =
-  "שעות פעילות: א'-ה' 08:30-12:00, 16:00-19:00. ימי ו' 10:00-12:00 לחיילים בלבד.";
-
 export default function TimeSlotSelector({
   slots = [],
   selectedSlot,
   onSelect,
   isLoading = false,
-  durationMinutes,
-  hoursHint = DEFAULT_HOURS_HINT,
 }) {
-  const durationText = durationMinutes
-    ? ` משך תור ${durationMinutes} דקות.`
-    : "";
-
   return (
     <div className="space-y-3">
-      <div>
-        <Label className="text-base font-bold text-[#1e2f27]">בחרו שעה *</Label>
-        <p className="mt-1.5 text-sm leading-relaxed text-[#8a958f]">
-          {hoursHint}
-          {durationText}
-        </p>
-      </div>
+      <Label className="text-base font-bold text-[#1e2f27]">בחרו שעה *</Label>
 
       {isLoading ? (
         <div className="flex items-center gap-2 text-sm text-[#8a958f]">
@@ -40,6 +25,7 @@ export default function TimeSlotSelector({
               key={slot}
               type="button"
               onClick={() => onSelect(slot)}
+              aria-pressed={selectedSlot === slot}
               className={`${clinicTimeSlotBtn} ${
                 selectedSlot === slot ? clinicTimeSlotBtnSelected : ""
               }`}

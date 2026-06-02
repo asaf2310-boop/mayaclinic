@@ -97,6 +97,7 @@ export default function BookingCalendar({
                 type="button"
                 onClick={() => onDateSelect(date)}
                 disabled={!available}
+                aria-selected={selected}
                 className={`${clinicCalendarDayBase}
                   ${selected ? clinicCalendarDaySelected : ""}
                   ${!selected && available ? clinicCalendarDayAvailable : ""}

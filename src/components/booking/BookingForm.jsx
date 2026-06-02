@@ -6,43 +6,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CalendarPlus, Loader2, Plus, Trash2 } from "lucide-react";
+import { CalendarPlus, CalendarCheck, Loader2 } from "lucide-react";
 import { format, isBefore, startOfDay } from "date-fns";
 import { getClinicSite } from "@/lib/clinicSite";
-import { clinicOutlineBtn, clinicPrimaryBtn } from "@/lib/clinicUi";
+import { clinicPrimaryBtn } from "@/lib/clinicUi";
 import BookingCalendar from "@/components/booking/BookingCalendar";
 import TimeSlotSelector from "@/components/booking/TimeSlotSelector";
-
-const MIN_APPOINTMENT_GAP_MINUTES = 60;
-
-const timeToMinutes = (time) => {
-  const [hours, minutes] = String(time || "").split(":").map(Number);
-  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
-  return hours * 60 + minutes;
-};
-
-const isTooCloseToBookedAppointment = (slot, appointments) => {
-  const slotMinutes = timeToMinutes(slot);
-  if (slotMinutes === null) return true;
-
-  return appointments
-    .filter((appointment) => appointment.status !== "cancelled")
-    .some((appointment) => {
-      const appointmentMinutes = timeToMinutes(appointment.time);
-      return appointmentMinutes !== null &&
-        Math.abs(slotMinutes - appointmentMinutes) < MIN_APPOINTMENT_GAP_MINUTES;
-    });
-};
-
-const isTooCloseToSelectedAppointment = (date, slot, selectedAppointments) => {
-  return selectedAppointments
-    .filter((appointment) => appointment.date === date)
-    .some((appointment) => isTooCloseToBookedAppointment(slot, [appointment]));
-};
+import {
+  countAvailableSlotsByDate,
+  filterAvailableSlots,
+} from "@/lib/bookingSlots";
 
 export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting }) {
   const clinicSite = getClinicSite();
-  const [selectedAppointments, setSelectedAppointments] = useState([]);
   const [form, setForm] = useState({
     patient_name: "",
     patient_phone: "",
@@ -58,44 +34,56 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
     queryFn: () => base44.entities.Availability.list(),
   });
 
+  const { data: allAppointments = [] } = useQuery({
+    queryKey: ["appointments-for-booking"],
+    queryFn: () => base44.entities.Appointment.list(),
+  });
+
   const { data: existingAppointments = [], isFetching: isFetchingAppointments } = useQuery({
     queryKey: ["appointments-for-date", form.date],
     queryFn: () => base44.entities.Appointment.filter({ date: form.date }),
     enabled: !!form.date,
   });
 
-  // Dates that have availability configured (as a Set of dateStrings)
+  const bookingDurationMinutes = selectedTreatment?.duration_minutes ?? 60;
+
+  const appointmentsByDate = useMemo(() => {
+    const byDate = {};
+    for (const appointment of allAppointments) {
+      if (!appointment.date) continue;
+      if (!byDate[appointment.date]) byDate[appointment.date] = [];
+      byDate[appointment.date].push(appointment);
+    }
+    return byDate;
+  }, [allAppointments]);
+
   const activeDates = useMemo(() => {
     return new Set(
       availabilityRecords.filter((r) => r.is_active && r.slots?.length > 0).map((r) => r.date)
     );
   }, [availabilityRecords]);
 
-  const slotCountByDate = useMemo(() => {
-    const counts = {};
-    availabilityRecords.forEach((record) => {
-      if (record.is_active && record.slots?.length > 0) {
-        counts[record.date] = record.slots.length;
-      }
-    });
-    return counts;
-  }, [availabilityRecords]);
+  const slotCountByDate = useMemo(
+    () =>
+      countAvailableSlotsByDate(availabilityRecords, appointmentsByDate, {
+        bookingDurationMinutes,
+      }),
+    [availabilityRecords, appointmentsByDate, bookingDurationMinutes]
+  );
 
-  // Available slots for the chosen date, excluding any slot less than one hour from existing or selected appointments.
   const availableSlots = useMemo(() => {
     if (!form.date) return [];
     const rec = availabilityRecords.find((r) => r.date === form.date && r.is_active);
     if (!rec) return [];
-    return (rec.slots || []).filter((slot) =>
-      !isTooCloseToBookedAppointment(slot, existingAppointments) &&
-      !isTooCloseToSelectedAppointment(form.date, slot, selectedAppointments)
-    );
-  }, [form.date, availabilityRecords, existingAppointments, selectedAppointments]);
+    return filterAvailableSlots(rec.slots, existingAppointments, {
+      bookingDurationMinutes,
+    });
+  }, [form.date, availabilityRecords, existingAppointments, bookingDurationMinutes]);
 
   const handleChange = (field, value) => {
     setForm((prev) => {
       const next = { ...prev, [field]: value };
-      if (field === "date") next.time = ""; // reset time on date change
+      if (field === "date") next.time = "";
       return next;
     });
   };
@@ -106,32 +94,11 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
     }
   }, [form.time, isFetchingAppointments, availableSlots]);
 
-  const handleAddAppointment = () => {
-    if (!form.date || !form.time) return;
-
-    setSelectedAppointments((prev) => [
-      ...prev,
-      { date: form.date, time: form.time },
-    ].sort((a, b) => {
-      const dateCompare = a.date.localeCompare(b.date);
-      if (dateCompare !== 0) return dateCompare;
-      return a.time.localeCompare(b.time);
-    }));
-
-    handleChange("time", "");
-  };
-
-  const handleRemoveAppointment = (appointmentToRemove) => {
-    setSelectedAppointments((prev) =>
-      prev.filter((appointment) =>
-        appointment.date !== appointmentToRemove.date || appointment.time !== appointmentToRemove.time
-      )
-    );
-  };
+  const hasCompleteSelection = Boolean(form.date && form.time);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!selectedTreatment || !form.patient_name || !form.patient_phone || selectedAppointments.length === 0) return;
+    if (!selectedTreatment || !form.patient_name || !form.patient_phone || !hasCompleteSelection) return;
     onSubmit({
       patient_name: form.patient_name,
       patient_phone: form.patient_phone,
@@ -140,7 +107,7 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
       marketing_consent: form.marketing_consent,
       treatment_id: selectedTreatment.id,
       treatment_name: selectedTreatment.name,
-      appointments: selectedAppointments,
+      appointments: [{ date: form.date, time: form.time }],
     });
   };
 
@@ -159,6 +126,9 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
   };
 
   const selectedDate = form.date ? new Date(form.date + "T00:00:00") : null;
+  const formattedSelectedDate = form.date
+    ? format(new Date(form.date + "T00:00:00"), "dd/MM/yyyy")
+    : null;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -201,67 +171,53 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
         />
       </div>
 
-      <BookingCalendar
-        viewMonth={viewMonth}
-        onViewMonthChange={setViewMonth}
-        selectedDate={selectedDate}
-        onDateSelect={handleDateSelect}
-        slotCountByDate={slotCountByDate}
-        isDateAvailable={isDateAvailable}
-        selectedDaySlotCount={form.date ? availableSlots.length : 0}
-      />
+      <div className="space-y-2">
+        <Label>בחרו תאריך *</Label>
+        <BookingCalendar
+          viewMonth={viewMonth}
+          onViewMonthChange={setViewMonth}
+          selectedDate={selectedDate}
+          onDateSelect={handleDateSelect}
+          slotCountByDate={slotCountByDate}
+          isDateAvailable={isDateAvailable}
+          selectedDaySlotCount={form.date ? availableSlots.length : 0}
+        />
+      </div>
 
       {form.date && (
-        <div className="space-y-4">
-          <TimeSlotSelector
-            slots={availableSlots}
-            selectedSlot={form.time}
-            onSelect={(slot) => handleChange("time", slot)}
-            isLoading={isFetchingAppointments}
-            durationMinutes={selectedTreatment?.duration_minutes}
-            hoursHint={clinicSite?.bookingHoursHint}
-          />
-          {form.time && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleAddAppointment}
-              className={`w-full gap-2 ${clinicSite ? clinicOutlineBtn : "rounded-xl"}`}
-            >
-              <Plus className="w-4 h-4" />
-              הוסף תור לרשימה
-            </Button>
-          )}
-        </div>
+        <TimeSlotSelector
+          slots={availableSlots}
+          selectedSlot={form.time}
+          onSelect={(slot) => handleChange("time", slot)}
+          isLoading={isFetchingAppointments}
+          durationMinutes={selectedTreatment?.duration_minutes}
+          hoursHint={clinicSite?.bookingHoursHint}
+        />
       )}
 
-      <div className="space-y-2">
-        <Label>התורים שבחרתם *</Label>
-        {selectedAppointments.length > 0 ? (
-          <div className="space-y-2">
-            {selectedAppointments.map((appointment) => (
-              <div
-                key={`${appointment.date}-${appointment.time}`}
-                className="flex items-center justify-between rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm"
-              >
-                <button
-                  type="button"
-                  onClick={() => handleRemoveAppointment(appointment)}
-                  className="text-destructive hover:text-destructive/80"
-                  aria-label="הסר תור"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-                <span className="font-medium">
-                  {format(new Date(appointment.date + "T00:00:00"), "dd/MM/yyyy")} בשעה {appointment.time}
-                </span>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">בחרו תאריך ושעה ואז לחצו "הוסף תור לרשימה".</p>
-        )}
-      </div>
+      {form.date && (
+        <div
+          className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-sm ${
+            hasCompleteSelection
+              ? "border-[#416d5c]/50 bg-[#e8f2ed] text-[#2f5245]"
+              : "border-border bg-muted/30 text-muted-foreground"
+          }`}
+          role="status"
+          aria-live="polite"
+        >
+          <CalendarCheck
+            className={`h-5 w-5 shrink-0 ${hasCompleteSelection ? "text-[#416d5c]" : "text-muted-foreground"}`}
+            aria-hidden
+          />
+          <p className="font-medium">
+            {hasCompleteSelection ? (
+              <>נבחר: {formattedSelectedDate} בשעה {form.time}</>
+            ) : (
+              <>נבחר תאריך: {formattedSelectedDate} — בחרו שעה מהרשימה למעלה</>
+            )}
+          </p>
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label htmlFor="notes">הערות נוספות</Label>
@@ -285,14 +241,20 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
         </span>
       </label>
 
-      {selectedTreatment && selectedAppointments.length === 0 && (
-        <p className="text-sm text-amber-600 text-center">יש להוסיף לפחות תור אחד לרשימה</p>
+      {selectedTreatment && !hasCompleteSelection && (
+        <p className="text-sm text-amber-600 text-center">יש לבחור תאריך ושעה לתור</p>
       )}
       <Button
         type="submit"
         size="lg"
         className={`w-full gap-2 text-lg ${clinicSite ? clinicPrimaryBtn : "rounded-xl py-6"}`}
-        disabled={!selectedTreatment || !form.patient_name || !form.patient_phone || selectedAppointments.length === 0 || isSubmitting}
+        disabled={
+          !selectedTreatment ||
+          !form.patient_name ||
+          !form.patient_phone ||
+          !hasCompleteSelection ||
+          isSubmitting
+        }
       >
         {isSubmitting ? (
           <Loader2 className="w-5 h-5 animate-spin" />

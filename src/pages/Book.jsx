@@ -78,6 +78,7 @@ export default function Book() {
     onSuccess: (data) => {
       const createdAppointments = Array.isArray(data) ? data : [data];
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["appointments-for-booking"] });
       createdAppointments.forEach((appointment) => {
         queryClient.invalidateQueries({ queryKey: ["appointments-for-date", appointment?.date] });
       });
@@ -99,7 +100,7 @@ export default function Book() {
       toast({
         title: isTimeConflict ? "השעה כבר לא זמינה" : "לא ניתן לאשר את התור",
         description: isTimeConflict
-          ? "נבחר תור אחר בטווח של פחות משעה. חזרו לבחירת שעה אחרת."
+          ? "נבחר תור אחר בטווח של שעה וחצי מהתור הקיים. חזרו לבחירת שעה אחרת."
           : "נסו שוב בעוד רגע או צרו קשר טלפוני.",
         variant: "destructive",
       });
