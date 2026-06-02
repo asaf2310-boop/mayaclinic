@@ -40,6 +40,7 @@ create table if not exists appointments (
 
 alter table appointments add column if not exists treatment_price numeric(10, 2);
 alter table appointments add column if not exists marketing_consent boolean not null default false;
+alter table appointments add column if not exists reminder_sent_at timestamptz;
 
 create index if not exists idx_treatments_created_at on treatments(created_at);
 create index if not exists idx_availability_date on availability(date);

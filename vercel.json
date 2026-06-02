@@ -1,37 +1,26 @@
-{
+﻿{
   "buildCommand": "node scripts/patch-vercel-demo-hosts.mjs && node scripts/generate-demo-landing-pages.mjs && npm run build",
   "outputDirectory": "dist",
+  "crons": [
+    {
+      "path": "/api/send-reminders",
+      "schedule": "0 6 * * *"
+    }
+  ],
   "routes": [
     {
       "src": "/",
-      "has": [
-        {
-          "type": "host",
-          "value": "michal-demo.vercel.app"
-        }
-      ],
+      "has": [{ "type": "host", "value": "michal-demo.vercel.app" }],
       "dest": "/api/share/michal"
     },
     {
       "src": "/m",
-      "has": [
-        {
-          "type": "host",
-          "value": "michal-demo.vercel.app"
-        }
-      ],
+      "has": [{ "type": "host", "value": "michal-demo.vercel.app" }],
       "dest": "/api/share/michal"
     },
-    {
-      "src": "/share/(.*)",
-      "dest": "/api/share/$1"
-    },
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
+    { "src": "/share/(.*)", "dest": "/api/share/$1" },
+    { "src": "/api/(.*)", "dest": "/api/$1" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }

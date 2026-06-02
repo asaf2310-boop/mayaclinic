@@ -65,31 +65,97 @@ export default function Home() {
 
   if (clinicSite) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen font-sans">
         <Navbar />
-        <main className="px-6 pb-16 pt-24" dir="rtl">
-          <div className="mx-auto flex max-w-lg flex-col items-center gap-8">
-            <Card className="w-full overflow-hidden border-border/60 bg-card p-3 shadow-lg">
-              {!heroImageMissing ? (
-                <img
-                  src={clinicSite.heroImage}
-                  alt={clinicSite.clinicTitle}
-                  className="mx-auto block max-h-[min(72vh,820px)] w-auto max-w-full rounded-xl object-contain"
-                  loading="eager"
-                  decoding="async"
-                  onError={() => setHeroImageMissing(true)}
-                />
-              ) : (
-                <div className="flex min-h-[320px] items-center justify-center rounded-xl bg-muted/40 px-6 text-center text-muted-foreground">
-                  לא נטענה תמונת הקליניקה
-                </div>
-              )}
-            </Card>
+        <main>
+          <section className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-[#f4f7f5] via-[#edf2ee] to-[#e4ebe6] pt-16">
+            <div className="pointer-events-none absolute left-[-10%] top-[-10%] h-[500px] w-[500px] rounded-full bg-[#e2ece5] opacity-70 blur-[120px]" />
+            <div className="pointer-events-none absolute bottom-[-10%] right-[-10%] h-[600px] w-[600px] rounded-full bg-[#d6e4db] opacity-60 blur-[150px]" />
 
-            <Button asChild size="lg" className="h-12 min-w-52 rounded-xl px-8 text-base">
-              <Link to="/book">לקביעת תור</Link>
-            </Button>
-          </div>
+            <div className="container relative z-10 mx-auto grid min-h-[calc(100vh-4rem)] grid-cols-1 items-center gap-8 px-4 py-12 lg:grid-cols-2 lg:gap-12 lg:px-8">
+              <div className="order-2 flex flex-col justify-center space-y-8 text-right lg:order-1" dir="rtl">
+                <div className="inline-flex items-center gap-2 self-start rounded-full border border-white/50 bg-white/70 px-4 py-1.5 shadow-sm backdrop-blur-md">
+                  <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-[#4a7c6a]" />
+                  <span className="text-xs font-semibold tracking-wide text-[#355245]">{clinicSite.heroBadge}</span>
+                </div>
+
+                <h1 className="text-4xl font-black leading-[1.2] text-[#22332a] md:text-5xl lg:text-6xl">
+                  {clinicSite.heroHeading}{" "}
+                  <br className="hidden md:inline" />
+                  {clinicSite.heroHeadingMid}{" "}
+                  <span className="bg-gradient-to-r from-[#4a7c6a] to-[#2d5244] bg-clip-text text-transparent">
+                    {clinicSite.heroHeadingHighlight}
+                  </span>
+                </h1>
+
+                <p className="max-w-xl text-base font-normal leading-relaxed text-[#4a5f54] md:text-lg">
+                  {clinicSite.heroSubtext}
+                </p>
+
+                <div className="flex flex-col justify-start gap-4 pt-4 sm:flex-row">
+                  <Link
+                    to="/book"
+                    className="rounded-2xl bg-gradient-to-r from-[#4a7c6a] to-[#3b6355] px-8 py-4 text-center font-medium text-white shadow-md shadow-[#4a7c6a]/20 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg"
+                  >
+                    {clinicSite.heroCtaPrimary}
+                  </Link>
+                  <Link
+                    to="/book"
+                    className="rounded-2xl border border-[#c8d6cc] bg-white/60 px-8 py-4 text-center font-medium text-[#22332a] shadow-sm backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:bg-white/90"
+                  >
+                    {clinicSite.heroCtaSecondary}
+                  </Link>
+                </div>
+              </div>
+
+              <div className="relative order-1 flex h-[400px] w-full items-center justify-center md:h-[500px] lg:order-2 lg:h-[600px]">
+                <div className="relative h-full w-full overflow-hidden rounded-[2.5rem] border border-white/40 shadow-xl">
+                  {!heroImageMissing ? (
+                    <img
+                      src={clinicSite.heroImage}
+                      alt={clinicSite.clinicTitle}
+                      className="h-full w-full object-cover transition-transform duration-700 hover:scale-[1.03]"
+                      loading="eager"
+                      decoding="async"
+                      onError={() => setHeroImageMissing(true)}
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center bg-white/50 px-6 text-center text-[#4a5f54]">
+                      לא נטענה תמונת הקליניקה
+                    </div>
+                  )}
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#22332a]/20 via-transparent to-transparent" />
+                </div>
+
+                <div
+                  className="absolute top-1/2 -left-4 hidden max-w-[160px] -translate-y-1/2 rounded-2xl border border-white/60 bg-white/75 p-4 text-center shadow-xl backdrop-blur-xl sm:block"
+                  dir="rtl"
+                >
+                  <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-[#edf5ef] text-xl">
+                    🌱
+                  </div>
+                  <h4 className="text-xs font-bold text-[#22332a]">{clinicSite.heroFloatingTitle}</h4>
+                  <p className="mt-0.5 text-[11px] text-[#4a5f54]">{clinicSite.heroFloatingSubtitle}</p>
+                </div>
+
+                <div
+                  className="absolute bottom-6 right-6 flex items-center gap-3 rounded-2xl border border-white/60 bg-white/75 px-5 py-3 shadow-lg backdrop-blur-xl"
+                  dir="ltr"
+                >
+                  <div className="relative flex h-2.5 w-2.5 items-center justify-center">
+                    <span className="absolute h-2.5 w-2.5 animate-ping rounded-full bg-[#22c55e]" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-[#22c55e]" />
+                  </div>
+                  <div className="text-right" dir="rtl">
+                    <span className="block text-[10px] font-semibold uppercase tracking-wider text-[#4a5f54] opacity-75">
+                      {clinicSite.heroLiveStatusLabel}
+                    </span>
+                    <span className="text-xs font-bold text-[#22332a]">{clinicSite.heroLiveStatusText}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
         </main>
       </div>
     );

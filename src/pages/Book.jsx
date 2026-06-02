@@ -7,9 +7,10 @@ import BookingForm from "../components/booking/BookingForm";
 import BookingSuccess from "../components/booking/BookingSuccess";
 import PaymentStep from "../components/booking/PaymentStep";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { filterTreatmentsForClinic, getClinicSite } from "@/lib/clinicSite";
-import { Card } from "@/components/ui/card";
+import { sendBookingConfirmationEmail } from "@/api/bookingEmail";
 
 export default function Book() {
   const [selectedTreatment, setSelectedTreatment] = useState(null);
@@ -78,6 +79,10 @@ export default function Book() {
         treatment_price: selectedTreatment?.price,
       });
       setPendingFormData(null);
+
+      sendBookingConfirmationEmail(
+        createdAppointments.map((appointment) => appointment?.id).filter(Boolean)
+      );
     },
     onError: (error) => {
       const message = String(error?.message || "");
