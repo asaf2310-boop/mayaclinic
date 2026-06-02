@@ -8,6 +8,7 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import Home from './pages/Home';
 import Book from './pages/Book';
 import Admin from './pages/Admin';
+import AdminPatient from './pages/AdminPatient';
 import DemoDocumentTitle from './components/DemoDocumentTitle';
 
 const AuthenticatedApp = () => {
@@ -35,6 +36,7 @@ const AuthenticatedApp = () => {
       <Route path="/" element={<Home />} />
       <Route path="/book" element={<Book />} />
       <Route path="/admin" element={<Admin />} />
+      <Route path="/admin/patient/:patientKey" element={<AdminPatient />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
