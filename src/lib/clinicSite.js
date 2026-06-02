@@ -1,13 +1,10 @@
-const MAYA_HERO_IMAGE =
-  "https://media.base44.com/images/public/69ff3dea5e105013fde56ce0/e149fd61a_IMG_8737.jpg";
-
 export const CLINIC_SITES = {
   "maya-clinic.vercel.app": {
     id: "maya",
     clinicTitle: "הקליניקה של מאיה",
     heroBadge: "ברוכים הבאים לקליניקה של מאיה",
     heroHeading: "טיפול מקצועי, יחס אישי ותהליך הזמנה פשוט",
-    heroImage: MAYA_HERO_IMAGE,
+    heroImage: "/maya-hero.png",
     defaultTreatmentName: "מגע שיקומי",
     seedTreatments: [
       {

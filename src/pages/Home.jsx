@@ -59,28 +59,34 @@ const adminHighlights = [
 ];
 
 export default function Home() {
-  const [heroImageMissing, setHeroImageMissing] = useState(false);
   const clinicSite = getClinicSite();
+  const [heroImageMissing, setHeroImageMissing] = useState(false);
   const { booking: demoBookingUrl, admin: demoAdminUrl } = useMemo(() => getDemoUrls(), []);
 
   if (clinicSite) {
     return (
-      <div className="min-h-screen bg-black">
+      <div className="min-h-screen bg-background">
         <Navbar />
-        <main className="relative min-h-[calc(100vh-4rem)] pt-16" dir="rtl">
-          {!heroImageMissing ? (
-            <img
-              src={clinicSite.heroImage}
-              alt={clinicSite.clinicTitle}
-              className="absolute inset-0 top-16 h-[calc(100vh-4rem)] w-full object-cover object-center"
-              onError={() => setHeroImageMissing(true)}
-            />
-          ) : (
-            <div className="absolute inset-0 top-16 h-[calc(100vh-4rem)] bg-gradient-to-br from-primary/20 via-background to-muted/50" />
-          )}
+        <main className="px-6 pb-16 pt-24" dir="rtl">
+          <div className="mx-auto flex max-w-lg flex-col items-center gap-8">
+            <Card className="w-full overflow-hidden border-border/60 bg-card p-3 shadow-lg">
+              {!heroImageMissing ? (
+                <img
+                  src={clinicSite.heroImage}
+                  alt={clinicSite.clinicTitle}
+                  className="mx-auto block max-h-[min(72vh,820px)] w-auto max-w-full rounded-xl object-contain"
+                  loading="eager"
+                  decoding="async"
+                  onError={() => setHeroImageMissing(true)}
+                />
+              ) : (
+                <div className="flex min-h-[320px] items-center justify-center rounded-xl bg-muted/40 px-6 text-center text-muted-foreground">
+                  לא נטענה תמונת הקליניקה
+                </div>
+              )}
+            </Card>
 
-          <div className="absolute inset-x-0 bottom-0 top-16 flex items-end justify-center bg-gradient-to-t from-black/60 via-black/10 to-transparent px-6 pb-10">
-            <Button asChild size="lg" className="h-14 min-w-56 rounded-full px-10 text-lg shadow-xl">
+            <Button asChild size="lg" className="h-12 min-w-52 rounded-xl px-8 text-base">
               <Link to="/book">לקביעת תור</Link>
             </Button>
           </div>
