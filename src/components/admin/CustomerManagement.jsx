@@ -22,7 +22,12 @@ import {
   UserRound,
 } from "lucide-react";
 import { buildCustomers, buildWhatsAppUrl, formatDate, statusMeta } from "@/lib/customers";
+import { getClinicSite } from "@/lib/clinicSite";
 
+const clinicCardClass =
+  "border-white/70 bg-white/75 shadow-[0_4px_12px_rgba(0,0,0,0.02)] backdrop-blur-xl";
+const clinicOutlineBtnClass =
+  "rounded-2xl border-[#bcd0c4] bg-white/40 backdrop-blur-md hover:bg-white/60";
 function PatientDetailsDialog({ customer, open, onOpenChange }) {
   if (!customer) return null;
 
@@ -157,6 +162,7 @@ function PatientDetailsDialog({ customer, open, onOpenChange }) {
 }
 
 export default function CustomerManagement({ appointments }) {
+  const clinicSite = getClinicSite();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const customers = useMemo(() => buildCustomers(appointments), [appointments]);
@@ -182,17 +188,17 @@ export default function CustomerManagement({ appointments }) {
   return (
     <div className="space-y-6" dir="rtl">
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="p-5">
+        <Card className={`p-5 ${clinicSite ? clinicCardClass : ""}`}>
           <p className="text-sm text-muted-foreground">סה"כ לקוחות</p>
           <p className="mt-2 text-3xl font-bold">{customers.length}</p>
         </Card>
-        <Card className="p-5">
+        <Card className={`p-5 ${clinicSite ? clinicCardClass : ""}`}>
           <p className="text-sm text-muted-foreground">אישרו דיוור</p>
           <p className="mt-2 text-3xl font-bold">
             {customers.filter((customer) => customer.marketingConsent).length}
           </p>
         </Card>
-        <Card className="p-5">
+        <Card className={`p-5 ${clinicSite ? clinicCardClass : ""}`}>
           <p className="text-sm text-muted-foreground">לקוחות עם יותר מתור אחד</p>
           <p className="mt-2 text-3xl font-bold">
             {customers.filter((customer) => customer.activeAppointmentsCount > 1).length}
@@ -223,8 +229,15 @@ export default function CustomerManagement({ appointments }) {
               : null;
 
             return (
-              <Card key={customer.key} className="overflow-hidden border-border/70">
-                <div className="border-b border-border/60 bg-muted/30 px-5 py-4">
+              <Card
+                key={customer.key}
+                className={`overflow-hidden ${clinicSite ? clinicCardClass : "border-border/70"}`}
+              >
+                <div
+                  className={`border-b px-5 py-4 ${
+                    clinicSite ? "border-white/60 bg-white/40" : "border-border/60 bg-muted/30"
+                  }`}
+                >
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div className="flex min-w-0 items-start gap-3">
                       <div className="mt-1 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-background shadow-sm">
@@ -248,11 +261,17 @@ export default function CustomerManagement({ appointments }) {
                       <Button
                         variant="outline"
                         size="sm"
+                        className={clinicSite ? clinicOutlineBtnClass : ""}
                         onClick={() => setSelectedCustomer(customer)}
                       >
                         כרטיס מלא
                       </Button>
-                      <Button asChild variant="outline" size="sm">
+                      <Button
+                        asChild
+                        variant="outline"
+                        size="sm"
+                        className={clinicSite ? clinicOutlineBtnClass : ""}
+                      >
                         <Link to={`/admin/patient/${encodeURIComponent(customer.key)}`}>לעמוד מטופל</Link>
                       </Button>
                       <Badge variant={customer.marketingConsent ? "default" : "secondary"}>
@@ -346,34 +365,50 @@ export default function CustomerManagement({ appointments }) {
                     <div className="space-y-3 xl:border-r xl:border-border/60 xl:pr-5">
                       <p className="text-sm font-semibold text-foreground">פעולות מהירות</p>
                       {mailtoUrl ? (
-                        <Button asChild variant="outline" className="w-full justify-start gap-2">
+                        <Button
+                          asChild
+                          variant="outline"
+                          className={`w-full justify-start gap-2 ${clinicSite ? clinicOutlineBtnClass : ""}`}
+                        >
                           <a href={mailtoUrl}>
                             <Mail className="h-4 w-4" />
                             שליחת אימייל
                           </a>
                         </Button>
                       ) : (
-                        <Button disabled variant="outline" className="w-full justify-start gap-2">
+                        <Button
+                          disabled
+                          variant="outline"
+                          className={`w-full justify-start gap-2 ${clinicSite ? clinicOutlineBtnClass : ""}`}
+                        >
                           <Mail className="h-4 w-4" />
                           אין אימייל
                         </Button>
                       )}
                       {whatsappUrl ? (
-                        <Button asChild variant="outline" className="w-full justify-start gap-2">
+                        <Button
+                          asChild
+                          variant="outline"
+                          className={`w-full justify-start gap-2 ${clinicSite ? clinicOutlineBtnClass : ""}`}
+                        >
                           <a href={whatsappUrl} target="_blank" rel="noreferrer">
                             <MessageCircle className="h-4 w-4" />
                             שליחה בוואטסאפ
                           </a>
                         </Button>
                       ) : (
-                        <Button disabled variant="outline" className="w-full justify-start gap-2">
+                        <Button
+                          disabled
+                          variant="outline"
+                          className={`w-full justify-start gap-2 ${clinicSite ? clinicOutlineBtnClass : ""}`}
+                        >
                           <MessageCircle className="h-4 w-4" />
                           אין טלפון
                         </Button>
                       )}
                       <div className="rounded-xl bg-muted/40 p-3 text-xs text-muted-foreground">
                         <p className="mb-1 inline-flex items-center gap-1 font-medium text-foreground">
-                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                          <CheckCircle2 className={`h-3.5 w-3.5 ${clinicSite ? "text-[#416d5c]" : "text-emerald-600"}`} />
                           הערות מטופל
                         </p>
                         <p className="leading-5">{customer.notes || "לא הוזנו הערות עבור מטופל זה."}</p>

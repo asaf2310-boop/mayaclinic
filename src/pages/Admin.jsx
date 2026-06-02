@@ -10,8 +10,10 @@ import CustomerManagement from "../components/admin/CustomerManagement";
 import { Card } from "@/components/ui/card";
 import { BarChart3, CalendarCheck, CalendarDays, CheckCircle2, Clock, Settings2, Users } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getClinicSite } from "@/lib/clinicSite";
 
 export default function Admin() {
+  const clinicSite = getClinicSite();
   const [activeAdminTab, setActiveAdminTab] = useState("appointments");
   const [statusFilter, setStatusFilter] = useState("all");
   const queryClient = useQueryClient();
@@ -83,14 +85,34 @@ export default function Admin() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div
+      className={`min-h-screen ${
+        clinicSite ? "bg-gradient-to-tr from-[#f3f7f4] via-[#edf3ee] to-[#e6ece7]" : "bg-background"
+      }`}
+    >
       <Navbar />
-      <main className="pt-24 pb-16 px-6" dir="rtl">
-        <div className="max-w-6xl mx-auto">
-          <h1 className="text-3xl font-bold text-foreground mb-8">ניהול</h1>
+      <main className="relative pt-24 pb-16 px-6" dir="rtl">
+        {clinicSite && (
+          <>
+            <div className="pointer-events-none absolute left-0 top-24 h-[280px] w-[280px] rounded-full bg-[#e1eae2] blur-[130px]" />
+            <div className="pointer-events-none absolute right-0 top-40 h-[320px] w-[320px] rounded-full bg-[#d7e4dc] blur-[140px]" />
+          </>
+        )}
+        <div className="relative max-w-6xl mx-auto">
+          <h1 className={`text-3xl font-bold mb-8 ${clinicSite ? "text-[#1a2e28]" : "text-foreground"}`}>
+            ניהול
+          </h1>
 
           <Tabs value={activeAdminTab} onValueChange={setActiveAdminTab} dir="rtl">
-            <div className="mb-8 grid w-full grid-cols-1 gap-3 rounded-2xl border border-border/60 bg-card p-3 shadow-sm sm:grid-cols-2 lg:grid-cols-4" role="tablist" aria-label="ניווט אדמין">
+            <div
+              className={`mb-8 grid w-full grid-cols-1 gap-3 rounded-2xl border p-3 shadow-sm sm:grid-cols-2 lg:grid-cols-4 ${
+                clinicSite
+                  ? "border-white/70 bg-white/75 backdrop-blur-xl shadow-[0_8px_30px_rgba(0,0,0,0.04)]"
+                  : "border-border/60 bg-card"
+              }`}
+              role="tablist"
+              aria-label="ניווט אדמין"
+            >
               {adminTabs.map((tab) => (
                 <button
                   key={tab.value}
@@ -98,10 +120,14 @@ export default function Admin() {
                   role="tab"
                   aria-selected={activeAdminTab === tab.value}
                   onClick={() => setActiveAdminTab(tab.value)}
-                  className={`flex h-16 w-full items-center justify-center gap-2 rounded-xl border px-4 text-base font-semibold transition-all ${
+                  className={`flex h-16 w-full items-center justify-center gap-2 rounded-xl border px-4 text-base font-semibold transition-all duration-300 ${
                     activeAdminTab === tab.value
-                      ? "border-primary/30 bg-primary text-primary-foreground shadow-md"
-                      : "border-transparent bg-muted/40 text-foreground hover:border-primary/20 hover:bg-muted"
+                      ? clinicSite
+                        ? "border-transparent bg-gradient-to-r from-[#416d5c] to-[#2f5245] text-white shadow-[0_10px_25px_rgba(65,109,92,0.2)]"
+                        : "border-primary/30 bg-primary text-primary-foreground shadow-md"
+                      : clinicSite
+                        ? "border-transparent bg-white/40 text-[#1a2e28] hover:bg-white/60"
+                        : "border-transparent bg-muted/40 text-foreground hover:border-primary/20 hover:bg-muted"
                   }`}
                 >
                   <tab.icon className="h-4 w-4" />
@@ -113,7 +139,10 @@ export default function Admin() {
             <TabsContent value="appointments">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                 {statCards.map((s) => (
-                  <Card key={s.label} className="p-5">
+                  <Card
+                    key={s.label}
+                    className={`p-5 ${clinicSite ? "border-white/70 bg-white/75 shadow-[0_4px_12px_rgba(0,0,0,0.02)] backdrop-blur-xl" : ""}`}
+                  >
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center">
                         <s.icon className={`w-5 h-5 ${s.color}`} />

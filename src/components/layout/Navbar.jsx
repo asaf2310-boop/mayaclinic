@@ -25,10 +25,10 @@ export default function Navbar() {
     `rounded-full px-4 py-2 text-sm font-semibold transition-all duration-200 ${
       location.pathname === path
         ? isClinic
-          ? "bg-emerald-500/15 text-emerald-700 shadow-sm"
+          ? "bg-[#416d5c]/15 text-[#2f5245] shadow-sm"
           : "bg-primary/10 text-primary shadow-sm"
         : isClinic
-          ? "text-emerald-900/60 hover:bg-white/60 hover:text-emerald-800"
+          ? "text-[#2f5245]/70 hover:bg-white/60 hover:text-[#416d5c]"
           : "text-muted-foreground hover:bg-muted hover:text-foreground"
     }`;
 
@@ -36,7 +36,7 @@ export default function Navbar() {
     <nav
       className={`fixed top-0 left-0 right-0 z-50 backdrop-blur-xl ${
         isClinic
-          ? "border-b border-white/60 bg-white/70 shadow-sm shadow-emerald-900/5"
+          ? "border-b border-white/60 bg-white/70 shadow-[0_4px_12px_rgba(0,0,0,0.02)]"
           : "border-b border-border/50 bg-background/80"
       }`}
       dir="rtl"
@@ -45,7 +45,7 @@ export default function Navbar() {
         <div className="flex items-center gap-8">
           <Link
             to="/"
-            className={`text-xl font-bold ${isClinic ? "text-emerald-950" : "text-foreground"}`}
+            className={`text-xl font-bold ${isClinic ? "text-[#1a2e28]" : "text-foreground"}`}
           >
             {clinicSite?.clinicTitle || (demoModeEnabled ? demoBrand.clinicTitle : "הקליניקה")}
           </Link>
@@ -58,7 +58,7 @@ export default function Navbar() {
           {/* Desktop nav */}
           <div
             className={`hidden md:flex items-center gap-2 rounded-full p-1 ${
-              isClinic ? "bg-emerald-50/80 ring-1 ring-white/60" : "bg-muted/40"
+              isClinic ? "bg-white/50 ring-1 ring-white/60" : "bg-muted/40"
             }`}
           >
             <Link to="/" className={linkClass("/")}>
@@ -70,7 +70,7 @@ export default function Navbar() {
                 location.pathname === "/book"
                   ? linkClass("/book")
                   : isClinic
-                    ? "rounded-full bg-gradient-to-l from-emerald-500 to-teal-600 px-5 py-2 text-sm font-semibold text-white shadow-md shadow-emerald-500/25 transition-all duration-200 hover:scale-[1.02] hover:shadow-lg"
+                    ? "rounded-2xl bg-gradient-to-r from-[#416d5c] to-[#2f5245] px-5 py-2 text-sm font-semibold text-white shadow-[0_10px_25px_rgba(65,109,92,0.2)] transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_12px_30px_rgba(65,109,92,0.3)] active:scale-[0.98]"
                     : linkClass("/book")
               }
             >
@@ -88,7 +88,7 @@ export default function Navbar() {
         {/* Mobile toggle */}
         <button
           className={`md:hidden rounded-full p-2 ${
-            isClinic ? "bg-emerald-50/80 text-emerald-800" : "bg-muted/60"
+            isClinic ? "bg-white/50 text-[#2f5245]" : "bg-muted/60"
           }`}
           onClick={() => setIsOpen(!isOpen)}
         >
@@ -109,7 +109,7 @@ export default function Navbar() {
             to="/"
             onClick={() => setIsOpen(false)}
             className={`block rounded-xl px-4 py-3 text-sm font-semibold ${
-              isClinic ? "text-emerald-900 hover:bg-emerald-50" : "text-foreground hover:bg-muted"
+              isClinic ? "text-[#1a2e28] hover:bg-white/60" : "text-foreground hover:bg-muted"
             }`}
           >
             עמוד הבית
@@ -119,7 +119,7 @@ export default function Navbar() {
             onClick={() => setIsOpen(false)}
             className={`block rounded-xl px-4 py-3 text-sm font-semibold ${
               isClinic
-                ? "bg-gradient-to-l from-emerald-500 to-teal-600 text-white text-center shadow-md"
+                ? "rounded-2xl bg-gradient-to-r from-[#416d5c] to-[#2f5245] text-white text-center shadow-[0_10px_25px_rgba(65,109,92,0.2)]"
                 : "text-foreground hover:bg-muted"
             }`}
           >

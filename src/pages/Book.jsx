@@ -116,7 +116,7 @@ export default function Book() {
     <div
       className={`min-h-screen ${
         clinicSite
-          ? "bg-gradient-to-b from-[#fafffe] via-[#f0faf5] to-[#e8f5ef]"
+          ? "bg-gradient-to-tr from-[#f3f7f4] via-[#edf3ee] to-[#e6ece7]"
           : "bg-background"
       }`}
     >
@@ -124,8 +124,9 @@ export default function Book() {
       <main className="relative pt-24 pb-16 px-6" dir="rtl">
         {clinicSite && (
           <>
-            <div className="pointer-events-none absolute left-0 top-24 h-64 w-64 rounded-full bg-teal-200/30 blur-3xl" />
-            <div className="pointer-events-none absolute right-0 top-40 h-72 w-72 rounded-full bg-emerald-100/40 blur-3xl" />
+            <div className="pointer-events-none absolute left-0 top-24 h-[320px] w-[320px] rounded-full bg-[#e1eae2] blur-[130px]" />
+            <div className="pointer-events-none absolute right-0 bottom-0 h-[360px] w-[360px] rounded-full bg-[#d7e4dc] blur-[140px]" />
+            <div className="pointer-events-none absolute left-1/2 top-1/2 h-[240px] w-[240px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white blur-[90px]" />
           </>
         )}
         <div className="relative max-w-2xl mx-auto">
@@ -157,7 +158,7 @@ export default function Book() {
               <div
                 className={`space-y-8 ${
                   clinicSite
-                    ? "rounded-3xl border border-white/70 bg-white/70 p-6 shadow-xl shadow-emerald-900/5 backdrop-blur-xl md:p-8"
+                    ? "rounded-3xl border border-white/70 bg-white/75 p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)] backdrop-blur-xl md:p-8"
                     : ""
                 }`}
               >
@@ -177,7 +178,7 @@ export default function Book() {
                       <Card
                         className={`p-5 ${
                           clinicSite
-                            ? "rounded-2xl border-emerald-100/80 bg-gradient-to-br from-white to-emerald-50/50 shadow-sm"
+                            ? "rounded-2xl border-white/70 bg-white/75 shadow-[0_8px_30px_rgba(0,0,0,0.04)] backdrop-blur-xl"
                             : ""
                         }`}
                       >
@@ -195,7 +196,7 @@ export default function Book() {
                       />
                     )}
 
-                    <div className={`h-px ${clinicSite ? "bg-emerald-100" : "bg-border"}`} />
+                    <div className={`h-px ${clinicSite ? "bg-[#bcd0c4]/50" : "bg-border"}`} />
 
                     <BookingForm
                       selectedTreatment={selectedTreatment}

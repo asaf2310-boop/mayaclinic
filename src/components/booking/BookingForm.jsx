@@ -282,7 +282,11 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
               type="button"
               variant="outline"
               onClick={handleAddAppointment}
-              className="w-full gap-2 rounded-xl"
+              className={`w-full gap-2 ${
+                clinicSite
+                  ? "rounded-2xl border-[#bcd0c4] bg-white/40 backdrop-blur-md hover:bg-white/60"
+                  : "rounded-xl"
+              }`}
             >
               <Plus className="w-4 h-4" />
               הוסף תור לרשימה
@@ -349,7 +353,7 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
         size="lg"
         className={`w-full text-lg py-6 gap-2 ${
           clinicSite
-            ? "rounded-full bg-gradient-to-l from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/25 transition-all duration-200 hover:scale-[1.01] hover:shadow-xl hover:shadow-emerald-500/35"
+            ? "rounded-2xl bg-gradient-to-r from-[#416d5c] to-[#2f5245] text-white shadow-[0_10px_25px_rgba(65,109,92,0.2)] transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_12px_30px_rgba(65,109,92,0.3)] active:scale-[0.98]"
             : "rounded-xl"
         }`}
         disabled={!selectedTreatment || !form.patient_name || !form.patient_phone || selectedAppointments.length === 0 || isSubmitting}

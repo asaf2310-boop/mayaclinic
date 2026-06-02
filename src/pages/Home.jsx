@@ -68,16 +68,16 @@ export default function Home() {
       <div className="min-h-screen font-sans">
         <Navbar />
         <main>
-          <section className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-[#fafffe] via-[#f0faf5] to-[#e4f4ec] pt-16">
-            <div className="pointer-events-none absolute -left-24 top-0 h-[520px] w-[520px] rounded-full bg-teal-200/40 blur-[100px]" />
-            <div className="pointer-events-none absolute -right-32 top-1/4 h-[480px] w-[480px] rounded-full bg-emerald-100/60 blur-[110px]" />
-            <div className="pointer-events-none absolute bottom-0 left-1/3 h-[400px] w-[400px] rounded-full bg-cyan-100/50 blur-[90px]" />
+          <section className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-tr from-[#f3f7f4] via-[#edf3ee] to-[#e6ece7] pt-16">
+            <div className="pointer-events-none absolute -left-24 top-0 h-[520px] w-[520px] rounded-full bg-[#e1eae2] blur-[130px]" />
+            <div className="pointer-events-none absolute -right-32 bottom-0 h-[480px] w-[480px] rounded-full bg-[#d7e4dc] blur-[140px]" />
+            <div className="pointer-events-none absolute left-1/2 top-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white blur-[90px]" />
 
             <div className="container relative z-10 mx-auto grid min-h-[calc(100vh-4rem)] grid-cols-1 items-center gap-10 px-4 py-16 lg:grid-cols-2 lg:gap-16 lg:px-8">
               <div className="order-2 flex flex-col justify-center space-y-10 text-right lg:order-1" dir="rtl">
-                <div className="inline-flex items-center gap-2.5 self-start rounded-full border border-white/80 bg-white/70 px-5 py-2 shadow-sm shadow-emerald-900/5 backdrop-blur-xl">
-                  <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
-                  <span className="text-xs font-semibold tracking-wide text-emerald-800">{clinicSite.heroBadge}</span>
+                <div className="inline-flex items-center gap-2.5 self-start rounded-full border border-white/60 bg-white/70 px-5 py-2 shadow-[0_4px_12px_rgba(0,0,0,0.02)] backdrop-blur-xl">
+                  <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-[#416d5c]" />
+                  <span className="text-xs font-semibold tracking-wide text-[#2f5245]">{clinicSite.heroBadge}</span>
                 </div>
 
                 <div className="space-y-6">
@@ -85,7 +85,7 @@ export default function Home() {
                     {clinicSite.heroHeading}{" "}
                     <br className="hidden md:inline" />
                     {clinicSite.heroHeadingMid}{" "}
-                    <span className="bg-gradient-to-l from-emerald-600 via-teal-600 to-emerald-500 bg-clip-text text-transparent">
+                    <span className="bg-gradient-to-l from-[#416d5c] via-[#3a6354] to-[#2f5245] bg-clip-text text-transparent">
                       {clinicSite.heroHeadingHighlight}
                     </span>
                   </h1>
@@ -98,7 +98,7 @@ export default function Home() {
                 <div className="pt-2">
                   <Link
                     to="/book"
-                    className="group inline-flex items-center justify-center rounded-full bg-gradient-to-l from-emerald-500 to-teal-600 px-10 py-4 text-base font-semibold text-white shadow-lg shadow-emerald-500/30 transition-all duration-300 hover:scale-[1.03] hover:shadow-xl hover:shadow-emerald-500/40 active:scale-[0.98]"
+                    className="group inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-[#416d5c] to-[#2f5245] px-10 py-4 text-base font-semibold text-white shadow-[0_10px_25px_rgba(65,109,92,0.2)] transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_12px_30px_rgba(65,109,92,0.3)] active:scale-[0.98]"
                   >
                     {clinicSite.heroCtaPrimary}
                   </Link>
@@ -106,7 +106,7 @@ export default function Home() {
               </div>
 
               <div className="relative order-1 flex h-[400px] w-full items-center justify-center md:h-[500px] lg:order-2 lg:h-[600px]">
-                <div className="relative h-full w-full overflow-hidden rounded-[2.5rem] border border-white/70 bg-white/30 shadow-2xl shadow-emerald-900/10 ring-1 ring-white/50 backdrop-blur-sm">
+                <div className="relative h-full w-full overflow-hidden rounded-[2.5rem] border border-white/50 shadow-[0_20px_50px_rgba(0,0,0,0.05)]">
                   {!heroImageMissing ? (
                     <img
                       src={clinicSite.heroImage}
@@ -121,14 +121,14 @@ export default function Home() {
                       לא נטענה תמונת הקליניקה
                     </div>
                   )}
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-emerald-950/15 via-transparent to-white/10" />
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#2f5245]/10 via-transparent to-white/10" />
                 </div>
 
                 <div
-                  className="absolute top-1/2 -left-4 hidden max-w-[170px] -translate-y-1/2 rounded-2xl border border-white/80 bg-white/75 p-5 text-center shadow-xl shadow-emerald-900/10 backdrop-blur-2xl transition-transform duration-300 hover:-translate-y-[calc(50%+4px)] sm:block"
+                  className="absolute top-1/2 -left-4 hidden max-w-[170px] -translate-y-1/2 rounded-2xl border border-white/70 bg-white/75 p-5 text-center shadow-[0_8px_30px_rgba(0,0,0,0.04)] backdrop-blur-xl transition-transform duration-300 hover:-translate-y-[calc(50%+4px)] sm:block"
                   dir="rtl"
                 >
-                  <div className="mx-auto mb-2.5 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 text-xl shadow-inner">
+                  <div className="mx-auto mb-2.5 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#edf3ee] to-[#e6ece7] text-xl shadow-inner">
                     🌱
                   </div>
                   <h4 className="text-xs font-bold text-[#1a2e28]">{clinicSite.heroFloatingTitle}</h4>
@@ -136,15 +136,15 @@ export default function Home() {
                 </div>
 
                 <div
-                  className="absolute bottom-6 right-6 flex items-center gap-3 rounded-2xl border border-white/80 bg-white/80 px-5 py-3.5 shadow-lg shadow-emerald-900/10 backdrop-blur-2xl"
+                  className="absolute bottom-6 right-6 flex items-center gap-3 rounded-2xl border border-white/70 bg-white/75 px-5 py-3.5 shadow-[0_8px_30px_rgba(0,0,0,0.04)] backdrop-blur-xl"
                   dir="ltr"
                 >
                   <div className="relative flex h-2.5 w-2.5 items-center justify-center">
-                    <span className="absolute h-2.5 w-2.5 animate-ping rounded-full bg-emerald-400" />
-                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                    <span className="absolute h-2.5 w-2.5 animate-ping rounded-full bg-[#416d5c]/40" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-[#416d5c]" />
                   </div>
                   <div className="text-right" dir="rtl">
-                    <span className="block text-[10px] font-semibold uppercase tracking-wider text-emerald-700/70">
+                    <span className="block text-[10px] font-semibold uppercase tracking-wider text-[#416d5c]/70">
                       {clinicSite.heroLiveStatusLabel}
                     </span>
                     <span className="text-xs font-bold text-[#1a2e28]">{clinicSite.heroLiveStatusText}</span>
@@ -159,7 +159,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-tr from-[#f3f7f4] via-[#edf3ee] to-[#e6ece7]">
       <Navbar />
       <main className="pt-16" dir="rtl">
         <section className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-background to-muted/40 px-6 py-20">

@@ -76,18 +76,18 @@ export default function PaymentStep({ formData, treatment, onConfirm, onBack, is
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`py-8 px-2 ${clinicSite ? "rounded-3xl border border-white/70 bg-white/70 p-6 shadow-xl shadow-emerald-900/5 backdrop-blur-xl md:p-8" : ""}`}
+      className={`py-8 px-2 ${clinicSite ? "rounded-3xl border border-white/70 bg-white/75 p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)] backdrop-blur-xl md:p-8" : ""}`}
       dir="rtl"
     >
       <div className="text-center mb-8">
         <div
           className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 ${
             clinicSite
-              ? "bg-gradient-to-br from-emerald-50 to-teal-50 shadow-inner"
+              ? "bg-gradient-to-br from-[#edf3ee] to-[#e6ece7] shadow-inner"
               : "bg-primary/10"
           }`}
         >
-          <CreditCard className={`w-8 h-8 ${clinicSite ? "text-emerald-600" : "text-primary"}`} />
+          <CreditCard className={`w-8 h-8 ${clinicSite ? "text-[#416d5c]" : "text-primary"}`} />
         </div>
         <h2 className={`text-2xl font-extrabold mb-2 tracking-tight ${clinicSite ? "text-[#1a2e28]" : "text-foreground"}`}>
           תשלום על התור
@@ -100,7 +100,7 @@ export default function PaymentStep({ formData, treatment, onConfirm, onBack, is
       <div
         className={`rounded-2xl p-5 mb-6 space-y-2 text-sm ${
           clinicSite
-            ? "border border-emerald-100/80 bg-gradient-to-br from-white to-emerald-50/40"
+            ? "border border-white/70 bg-white/75 shadow-[0_4px_12px_rgba(0,0,0,0.02)] backdrop-blur-xl"
             : "bg-muted/50"
         }`}
       >
@@ -123,9 +123,9 @@ export default function PaymentStep({ formData, treatment, onConfirm, onBack, is
           <span className="text-muted-foreground">כמות תורים:</span>
           <span className="font-medium">{appointments.length}</span>
         </div>
-        <div className="flex justify-between border-t border-emerald-100 pt-2 mt-2">
+        <div className={`flex justify-between border-t pt-2 mt-2 ${clinicSite ? "border-[#bcd0c4]/50" : "border-border"}`}>
           <span className="text-muted-foreground">לתשלום:</span>
-          <span className="font-bold text-lg text-emerald-700">₪{totalPrice}</span>
+          <span className={`font-bold text-lg ${clinicSite ? "text-[#416d5c]" : "text-foreground"}`}>₪{totalPrice}</span>
         </div>
       </div>
 
@@ -222,7 +222,7 @@ export default function PaymentStep({ formData, treatment, onConfirm, onBack, is
         size="lg"
         className={`w-full text-lg py-6 gap-2 mb-3 ${
           clinicSite
-            ? "rounded-full bg-gradient-to-l from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/25 transition-all duration-200 hover:scale-[1.01] hover:shadow-xl hover:shadow-emerald-500/35 hover:from-emerald-500 hover:to-teal-600"
+            ? "rounded-2xl bg-gradient-to-r from-[#416d5c] to-[#2f5245] text-white shadow-[0_10px_25px_rgba(65,109,92,0.2)] transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_12px_30px_rgba(65,109,92,0.3)] active:scale-[0.98]"
             : "rounded-xl"
         }`}
       >
