@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import Navbar from "../components/layout/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { demoModeEnabled } from "@/api/demoClient";
 import { BarChart3, CalendarCheck, CheckCircle2, ExternalLink, Megaphone, MonitorSmartphone, Users } from "lucide-react";
 
 const DEFAULT_DEMO_URL = "https://karinshinanit-demo.vercel.app";
+const MAYA_HOST = "maya-clinic.vercel.app";
 
 function getDemoUrls() {
   if (demoModeEnabled && typeof window !== "undefined") {
@@ -58,18 +59,63 @@ const adminHighlights = [
 ];
 
 export default function Home() {
-  const navigate = useNavigate();
+  const [mayaImageMissing, setMayaImageMissing] = useState(false);
+  const isMayaHost = typeof window !== "undefined" && window.location.hostname.toLowerCase() === MAYA_HOST;
   const { booking: demoBookingUrl, admin: demoAdminUrl } = useMemo(() => getDemoUrls(), []);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const host = window.location.hostname.toLowerCase();
-    const shouldOpenBookingDirectly = host === "maya-clinic.vercel.app";
+  if (isMayaHost) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="pt-20" dir="rtl">
+          <section className="relative overflow-hidden px-6 py-20">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-muted/40" />
+            <div className="relative mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-[0.9fr_1.1fr]">
+              <Card className="overflow-hidden rounded-3xl border-border/60 bg-card/90 p-3 shadow-2xl">
+                <div className="aspect-[4/5] w-full rounded-2xl bg-gradient-to-b from-primary/10 to-muted/40 p-6">
+                  {!mayaImageMissing ? (
+                    <img
+                      src="/maya-hero.jpg"
+                      alt="מאיה קליניק"
+                      className="h-full w-full rounded-xl object-cover"
+                      onError={() => setMayaImageMissing(true)}
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-border/60 bg-background/70 text-center">
+                      <div>
+                        <p className="text-lg font-semibold">תמונת הקליניקה של מאיה</p>
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          להוספת תמונה: העלי קובץ ל־`public/maya-hero.jpg`
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </Card>
 
-    if (shouldOpenBookingDirectly) {
-      navigate("/book", { replace: true });
-    }
-  }, [navigate]);
+              <div className="space-y-6">
+                <Badge className="w-fit rounded-full px-4 py-1.5 text-sm">ברוכים הבאים לקליניקה של מאיה</Badge>
+                <h1 className="max-w-3xl text-4xl font-black leading-tight text-foreground md:text-6xl">
+                  טיפול מקצועי, יחס אישי ותהליך הזמנה פשוט
+                </h1>
+                <p className="max-w-2xl text-lg leading-8 text-muted-foreground md:text-xl">
+                  אפשר לקבוע תור אונליין במהירות, לבחור טיפול ושעה פנויה, ולקבל תזכורת מסודרת.
+                </p>
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <Button asChild size="lg" className="h-12 rounded-xl px-6 text-base">
+                    <Link to="/book">לקביעת תור</Link>
+                  </Button>
+                  <Button asChild size="lg" variant="outline" className="h-12 rounded-xl px-6 text-base">
+                    <Link to="/admin">כניסה לניהול</Link>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </section>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
