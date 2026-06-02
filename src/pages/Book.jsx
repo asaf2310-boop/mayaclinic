@@ -10,6 +10,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { filterTreatmentsForClinic, getClinicSite } from "@/lib/clinicSite";
+import {
+  clinicGlassCard,
+  clinicGlassPanel,
+  clinicOrbBottom,
+  clinicOrbMid,
+  clinicOrbTop,
+  clinicPageGradient,
+} from "@/lib/clinicUi";
 import { sendBookingConfirmationEmail } from "@/api/bookingEmail";
 
 export default function Book() {
@@ -114,19 +122,15 @@ export default function Book() {
 
   return (
     <div
-      className={`min-h-screen ${
-        clinicSite
-          ? "bg-gradient-to-tr from-[#f3f7f4] via-[#edf3ee] to-[#e6ece7]"
-          : "bg-background"
-      }`}
+      className={`min-h-screen ${clinicSite ? clinicPageGradient : "bg-background"}`}
     >
       <Navbar />
       <main className="relative pt-24 pb-16 px-6" dir="rtl">
         {clinicSite && (
           <>
-            <div className="pointer-events-none absolute left-0 top-24 h-[320px] w-[320px] rounded-full bg-[#e1eae2] blur-[130px]" />
-            <div className="pointer-events-none absolute right-0 bottom-0 h-[360px] w-[360px] rounded-full bg-[#d7e4dc] blur-[140px]" />
-            <div className="pointer-events-none absolute left-1/2 top-1/2 h-[240px] w-[240px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white blur-[90px]" />
+            <div className={clinicOrbTop} />
+            <div className={clinicOrbBottom} />
+            <div className={clinicOrbMid} />
           </>
         )}
         <div className="relative max-w-2xl mx-auto">
@@ -145,12 +149,12 @@ export default function Book() {
               <div className="text-center mb-10">
                 <h1
                   className={`text-3xl md:text-4xl font-extrabold mb-3 tracking-tight ${
-                    clinicSite ? "text-[#1a2e28]" : "text-foreground"
+                    clinicSite ? "text-[#1e2f27]" : "text-foreground"
                   }`}
                 >
                   קביעת תור
                 </h1>
-                <p className={`text-lg ${clinicSite ? "text-[#4a6b5f]" : "text-muted-foreground"}`}>
+                <p className={`text-lg ${clinicSite ? "text-[#415349]" : "text-muted-foreground"}`}>
                   {clinicSite ? "בחרו תאריך ושעה נוחים לטיפול" : "בחרו טיפול, תאריך ושעה נוחים"}
                 </p>
               </div>
@@ -158,7 +162,7 @@ export default function Book() {
               <div
                 className={`space-y-8 ${
                   clinicSite
-                    ? "rounded-3xl border border-white/70 bg-white/75 p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)] backdrop-blur-xl md:p-8"
+                    ? `${clinicGlassPanel} p-6 md:p-8`
                     : ""
                 }`}
               >
@@ -178,13 +182,13 @@ export default function Book() {
                       <Card
                         className={`p-5 ${
                           clinicSite
-                            ? "rounded-2xl border-white/70 bg-white/75 shadow-[0_8px_30px_rgba(0,0,0,0.04)] backdrop-blur-xl"
+                            ? clinicGlassCard
                             : ""
                         }`}
                       >
                         <p className="text-sm text-muted-foreground">הטיפול שלך</p>
-                        <p className="mt-1 text-xl font-bold text-[#1a2e28]">{visibleTreatments[0].name}</p>
-                        <p className="mt-2 text-sm text-[#4a6b5f]">
+                        <p className="mt-1 text-xl font-bold text-[#1e2f27]">{visibleTreatments[0].name}</p>
+                        <p className="mt-2 text-sm text-[#415349]">
                           {visibleTreatments[0].duration_minutes} דקות · ₪{visibleTreatments[0].price}
                         </p>
                       </Card>
@@ -196,7 +200,7 @@ export default function Book() {
                       />
                     )}
 
-                    <div className={`h-px ${clinicSite ? "bg-[#bcd0c4]/50" : "bg-border"}`} />
+                    <div className={`h-px ${clinicSite ? "bg-white/60" : "bg-border"}`} />
 
                     <BookingForm
                       selectedTreatment={selectedTreatment}

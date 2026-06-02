@@ -52,6 +52,9 @@ export const CLINIC_SITES = {
 
     defaultSlots: ["09:00", "10:30", "12:00", "14:00", "16:00", "17:30"],
 
+    bookingHoursHint:
+      "שעות פעילות: א'-ה' 08:30-12:00, 16:00-19:00. ימי ו' 10:00-12:00 לחיילים בלבד.",
+
     bitQrImage: "/maya-bit-qr.png",
 
     payboxLink: "https://links.payboxapp.com/m8x1lhYoD3b",
@@ -64,6 +67,8 @@ export const CLINIC_SITES = {
 const MAYA_CLINIC_HOSTS = new Set([
   "maya-clinic.vercel.app",
   "www.maya-clinic.vercel.app",
+  "localhost",
+  "127.0.0.1",
 ]);
 
 export function getClinicSite(hostname = typeof window !== "undefined" ? window.location.hostname : "") {

@@ -5,6 +5,7 @@ import { CheckCircle2, Home, CalendarPlus } from "lucide-react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { getClinicSite } from "@/lib/clinicSite";
+import { clinicGlassPanel, clinicOutlineBtn, clinicPrimaryBtn } from "@/lib/clinicUi";
 
 const DEFAULT_PRICE = 250;
 
@@ -25,27 +26,27 @@ export default function BookingSuccess({ appointment, onReset }) {
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      className={`text-center py-16 px-6 ${clinicSite ? "rounded-3xl border border-white/70 bg-white/75 shadow-[0_8px_30px_rgba(0,0,0,0.04)] backdrop-blur-xl" : ""}`}
+      className={`px-6 py-16 text-center ${clinicSite ? clinicGlassPanel : ""}`}
     >
       <div
         className={`w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 ${
-          clinicSite ? "bg-gradient-to-br from-[#edf3ee] to-[#e6ece7]" : "bg-primary/10"
+          clinicSite ? "bg-[#edf3ee]" : "bg-primary/10"
         }`}
       >
         <CheckCircle2 className={`w-10 h-10 ${clinicSite ? "text-[#416d5c]" : "text-primary"}`} />
       </div>
 
-      <h2 className={`text-3xl font-bold mb-3 ${clinicSite ? "text-[#1a2e28]" : "text-foreground"}`}>
+      <h2 className={`text-3xl font-bold mb-3 ${clinicSite ? "text-[#1e2f27]" : "text-foreground"}`}>
         התורים נקבעו בהצלחה!
       </h2>
-      <p className={`text-lg mb-8 ${clinicSite ? "text-[#4a6b5f]" : "text-muted-foreground"}`}>
+      <p className={`text-lg mb-8 ${clinicSite ? "text-[#415349]" : "text-muted-foreground"}`}>
         נשלח אליכם אישור בקרוב
       </p>
 
       <div
         className={`rounded-2xl p-6 max-w-sm mx-auto mb-6 text-right ${
           clinicSite
-            ? "border border-white/70 bg-white/75 shadow-[0_4px_12px_rgba(0,0,0,0.02)] backdrop-blur-xl"
+            ? "border border-white/60 bg-white/70 shadow-[0_4px_12px_rgba(0,0,0,0.02)] backdrop-blur-xl"
             : "bg-muted/50"
         }`}
         dir="rtl"
@@ -85,11 +86,7 @@ export default function BookingSuccess({ appointment, onReset }) {
         <Link to="/">
           <Button
             variant="outline"
-            className={`gap-2 ${
-              clinicSite
-                ? "rounded-2xl border-[#bcd0c4] bg-white/40 backdrop-blur-md hover:bg-white/60"
-                : "rounded-xl"
-            }`}
+            className={`gap-2 ${clinicSite ? clinicOutlineBtn : "rounded-xl"}`}
           >
             <Home className="w-4 h-4" />
             חזרה לעמוד הבית
@@ -97,11 +94,7 @@ export default function BookingSuccess({ appointment, onReset }) {
         </Link>
         <Button
           onClick={onReset}
-          className={`gap-2 ${
-            clinicSite
-              ? "rounded-2xl bg-gradient-to-r from-[#416d5c] to-[#2f5245] text-white shadow-[0_10px_25px_rgba(65,109,92,0.2)] transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_12px_30px_rgba(65,109,92,0.3)] active:scale-[0.98]"
-              : "rounded-xl"
-          }`}
+          className={`gap-2 ${clinicSite ? clinicPrimaryBtn : "rounded-xl"}`}
         >
           <CalendarPlus className="w-4 h-4" />
           קביעת תור נוסף

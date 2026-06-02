@@ -23,11 +23,7 @@ import {
 } from "lucide-react";
 import { buildCustomers, buildWhatsAppUrl, formatDate, statusMeta } from "@/lib/customers";
 import { getClinicSite } from "@/lib/clinicSite";
-
-const clinicCardClass =
-  "border-white/70 bg-white/75 shadow-[0_4px_12px_rgba(0,0,0,0.02)] backdrop-blur-xl";
-const clinicOutlineBtnClass =
-  "rounded-2xl border-[#bcd0c4] bg-white/40 backdrop-blur-md hover:bg-white/60";
+import { clinicGlassCard, clinicOutlineBtn } from "@/lib/clinicUi";
 function PatientDetailsDialog({ customer, open, onOpenChange }) {
   if (!customer) return null;
 
@@ -188,17 +184,17 @@ export default function CustomerManagement({ appointments }) {
   return (
     <div className="space-y-6" dir="rtl">
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className={`p-5 ${clinicSite ? clinicCardClass : ""}`}>
+        <Card className={`p-5 ${clinicSite ? clinicGlassCard : ""}`}>
           <p className="text-sm text-muted-foreground">סה"כ לקוחות</p>
           <p className="mt-2 text-3xl font-bold">{customers.length}</p>
         </Card>
-        <Card className={`p-5 ${clinicSite ? clinicCardClass : ""}`}>
+        <Card className={`p-5 ${clinicSite ? clinicGlassCard : ""}`}>
           <p className="text-sm text-muted-foreground">אישרו דיוור</p>
           <p className="mt-2 text-3xl font-bold">
             {customers.filter((customer) => customer.marketingConsent).length}
           </p>
         </Card>
-        <Card className={`p-5 ${clinicSite ? clinicCardClass : ""}`}>
+        <Card className={`p-5 ${clinicSite ? clinicGlassCard : ""}`}>
           <p className="text-sm text-muted-foreground">לקוחות עם יותר מתור אחד</p>
           <p className="mt-2 text-3xl font-bold">
             {customers.filter((customer) => customer.activeAppointmentsCount > 1).length}
@@ -231,11 +227,11 @@ export default function CustomerManagement({ appointments }) {
             return (
               <Card
                 key={customer.key}
-                className={`overflow-hidden ${clinicSite ? clinicCardClass : "border-border/70"}`}
+                className={`overflow-hidden ${clinicSite ? clinicGlassCard : "border-border/70"}`}
               >
                 <div
                   className={`border-b px-5 py-4 ${
-                    clinicSite ? "border-white/60 bg-white/40" : "border-border/60 bg-muted/30"
+                    clinicSite ? "border-white/60 bg-white/70" : "border-border/60 bg-muted/30"
                   }`}
                 >
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -261,7 +257,7 @@ export default function CustomerManagement({ appointments }) {
                       <Button
                         variant="outline"
                         size="sm"
-                        className={clinicSite ? clinicOutlineBtnClass : ""}
+                        className={clinicSite ? clinicOutlineBtn : ""}
                         onClick={() => setSelectedCustomer(customer)}
                       >
                         כרטיס מלא
@@ -270,7 +266,7 @@ export default function CustomerManagement({ appointments }) {
                         asChild
                         variant="outline"
                         size="sm"
-                        className={clinicSite ? clinicOutlineBtnClass : ""}
+                        className={clinicSite ? clinicOutlineBtn : ""}
                       >
                         <Link to={`/admin/patient/${encodeURIComponent(customer.key)}`}>לעמוד מטופל</Link>
                       </Button>
@@ -368,7 +364,7 @@ export default function CustomerManagement({ appointments }) {
                         <Button
                           asChild
                           variant="outline"
-                          className={`w-full justify-start gap-2 ${clinicSite ? clinicOutlineBtnClass : ""}`}
+                          className={`w-full justify-start gap-2 ${clinicSite ? clinicOutlineBtn : ""}`}
                         >
                           <a href={mailtoUrl}>
                             <Mail className="h-4 w-4" />
@@ -379,7 +375,7 @@ export default function CustomerManagement({ appointments }) {
                         <Button
                           disabled
                           variant="outline"
-                          className={`w-full justify-start gap-2 ${clinicSite ? clinicOutlineBtnClass : ""}`}
+                          className={`w-full justify-start gap-2 ${clinicSite ? clinicOutlineBtn : ""}`}
                         >
                           <Mail className="h-4 w-4" />
                           אין אימייל
@@ -389,7 +385,7 @@ export default function CustomerManagement({ appointments }) {
                         <Button
                           asChild
                           variant="outline"
-                          className={`w-full justify-start gap-2 ${clinicSite ? clinicOutlineBtnClass : ""}`}
+                          className={`w-full justify-start gap-2 ${clinicSite ? clinicOutlineBtn : ""}`}
                         >
                           <a href={whatsappUrl} target="_blank" rel="noreferrer">
                             <MessageCircle className="h-4 w-4" />
@@ -400,7 +396,7 @@ export default function CustomerManagement({ appointments }) {
                         <Button
                           disabled
                           variant="outline"
-                          className={`w-full justify-start gap-2 ${clinicSite ? clinicOutlineBtnClass : ""}`}
+                          className={`w-full justify-start gap-2 ${clinicSite ? clinicOutlineBtn : ""}`}
                         >
                           <MessageCircle className="h-4 w-4" />
                           אין טלפון

@@ -6,6 +6,18 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { demoModeEnabled } from "@/api/demoClient";
 import { getClinicSite } from "@/lib/clinicSite";
+import {
+  clinicHeroImageFrame,
+  clinicHeroSection,
+  clinicHeroTitle,
+  clinicHeroTitleBlock,
+  clinicHeroTitleRule,
+  clinicOrbBottom,
+  clinicOrbMid,
+  clinicOrbTop,
+  clinicPageGradient,
+  clinicPrimaryBtn,
+} from "@/lib/clinicUi";
 import { BarChart3, CalendarCheck, CheckCircle2, ExternalLink, Megaphone, MonitorSmartphone, Users } from "lucide-react";
 
 const DEFAULT_DEMO_URL = "https://karinshinanit-demo.vercel.app";
@@ -65,92 +77,45 @@ export default function Home() {
 
   if (clinicSite) {
     return (
-      <div className="min-h-screen font-sans">
+      <div className={`min-h-screen font-sans ${clinicPageGradient}`}>
         <Navbar />
         <main>
-          <section className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-tr from-[#f3f7f4] via-[#edf3ee] to-[#e6ece7] pt-16">
-            <div className="pointer-events-none absolute -left-24 top-0 h-[520px] w-[520px] rounded-full bg-[#e1eae2] blur-[130px]" />
-            <div className="pointer-events-none absolute -right-32 bottom-0 h-[480px] w-[480px] rounded-full bg-[#d7e4dc] blur-[140px]" />
-            <div className="pointer-events-none absolute left-1/2 top-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white blur-[90px]" />
+          <section className={`${clinicHeroSection} ${clinicPageGradient}`}>
+            <div className={clinicOrbTop} />
+            <div className={clinicOrbBottom} />
+            <div className={clinicOrbMid} />
 
-            <div className="container relative z-10 mx-auto grid min-h-[calc(100vh-4rem)] grid-cols-1 items-center gap-10 px-4 py-16 lg:grid-cols-2 lg:gap-16 lg:px-8">
-              <div className="order-2 flex flex-col justify-center space-y-10 text-right lg:order-1" dir="rtl">
-                <div className="inline-flex items-center gap-2.5 self-start rounded-full border border-white/60 bg-white/70 px-5 py-2 shadow-[0_4px_12px_rgba(0,0,0,0.02)] backdrop-blur-xl">
-                  <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-[#416d5c]" />
-                  <span className="text-xs font-semibold tracking-wide text-[#2f5245]">{clinicSite.heroBadge}</span>
-                </div>
-
-                <div className="space-y-6">
-                  <h1 className="text-4xl font-extrabold leading-[1.15] tracking-tight text-[#1a2e28] md:text-5xl lg:text-[3.5rem]">
-                    {clinicSite.heroHeading}{" "}
-                    <br className="hidden md:inline" />
-                    {clinicSite.heroHeadingMid}{" "}
-                    <span className="bg-gradient-to-l from-[#416d5c] via-[#3a6354] to-[#2f5245] bg-clip-text text-transparent">
-                      {clinicSite.heroHeadingHighlight}
-                    </span>
-                  </h1>
-
-                  <p className="max-w-xl text-base font-normal leading-relaxed text-[#4a6b5f] md:text-lg md:leading-8">
-                    {clinicSite.heroSubtext}
-                  </p>
-                </div>
-
-                <div className="pt-2">
-                  <Link
-                    to="/book"
-                    className="group inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-[#416d5c] to-[#2f5245] px-10 py-4 text-base font-semibold text-white shadow-[0_10px_25px_rgba(65,109,92,0.2)] transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_12px_30px_rgba(65,109,92,0.3)] active:scale-[0.98]"
-                  >
-                    {clinicSite.heroCtaPrimary}
-                  </Link>
-                </div>
+            <div
+              className="container relative z-10 mx-auto flex flex-col items-center justify-center px-6 py-12 text-center"
+              dir="rtl"
+            >
+              <div className={clinicHeroTitleBlock}>
+                <h1 className={clinicHeroTitle}>{clinicSite.clinicTitle}</h1>
+                <span className={clinicHeroTitleRule} aria-hidden="true" />
               </div>
 
-              <div className="relative order-1 flex h-[400px] w-full items-center justify-center md:h-[500px] lg:order-2 lg:h-[600px]">
-                <div className="relative h-full w-full overflow-hidden rounded-[2.5rem] border border-white/50 shadow-[0_20px_50px_rgba(0,0,0,0.05)]">
+              <div className="mb-8 w-full max-w-sm md:max-w-md">
+                <div className={`${clinicHeroImageFrame} h-auto`}>
                   {!heroImageMissing ? (
                     <img
                       src={clinicSite.heroImage}
                       alt={clinicSite.clinicTitle}
-                      className="h-full w-full object-cover transition-transform duration-700 hover:scale-[1.03]"
+                      className="mx-auto h-auto max-h-[360px] w-full object-contain md:max-h-[440px]"
                       loading="eager"
                       decoding="async"
                       onError={() => setHeroImageMissing(true)}
                     />
                   ) : (
-                    <div className="flex h-full items-center justify-center bg-white/60 px-6 text-center text-[#4a6b5f]">
+                    <div className="flex min-h-[240px] items-center justify-center bg-white/60 px-6 py-12 text-[#415349]">
                       לא נטענה תמונת הקליניקה
                     </div>
                   )}
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#2f5245]/10 via-transparent to-white/10" />
-                </div>
-
-                <div
-                  className="absolute top-1/2 -left-4 hidden max-w-[170px] -translate-y-1/2 rounded-2xl border border-white/70 bg-white/75 p-5 text-center shadow-[0_8px_30px_rgba(0,0,0,0.04)] backdrop-blur-xl transition-transform duration-300 hover:-translate-y-[calc(50%+4px)] sm:block"
-                  dir="rtl"
-                >
-                  <div className="mx-auto mb-2.5 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#edf3ee] to-[#e6ece7] text-xl shadow-inner">
-                    🌱
-                  </div>
-                  <h4 className="text-xs font-bold text-[#1a2e28]">{clinicSite.heroFloatingTitle}</h4>
-                  <p className="mt-1 text-[11px] leading-relaxed text-[#4a6b5f]">{clinicSite.heroFloatingSubtitle}</p>
-                </div>
-
-                <div
-                  className="absolute bottom-6 right-6 flex items-center gap-3 rounded-2xl border border-white/70 bg-white/75 px-5 py-3.5 shadow-[0_8px_30px_rgba(0,0,0,0.04)] backdrop-blur-xl"
-                  dir="ltr"
-                >
-                  <div className="relative flex h-2.5 w-2.5 items-center justify-center">
-                    <span className="absolute h-2.5 w-2.5 animate-ping rounded-full bg-[#416d5c]/40" />
-                    <span className="h-2.5 w-2.5 rounded-full bg-[#416d5c]" />
-                  </div>
-                  <div className="text-right" dir="rtl">
-                    <span className="block text-[10px] font-semibold uppercase tracking-wider text-[#416d5c]/70">
-                      {clinicSite.heroLiveStatusLabel}
-                    </span>
-                    <span className="text-xs font-bold text-[#1a2e28]">{clinicSite.heroLiveStatusText}</span>
-                  </div>
                 </div>
               </div>
+
+              <Link to="/book" className={clinicPrimaryBtn}>
+                {clinicSite.heroCtaPrimary}
+              </Link>
             </div>
           </section>
         </main>

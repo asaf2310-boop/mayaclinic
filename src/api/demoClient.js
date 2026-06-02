@@ -1,7 +1,7 @@
 import { supabaseConfigured } from "./supabase";
 import { isProductionClinicHost } from "@/lib/clinicSite";
 
-const DEMO_STORE_KEY = "mayaclinic-demo-store-v3";
+const DEMO_STORE_KEY = "mayaclinic-demo-store-v4";
 
 const demoEnvEnabled = import.meta.env.VITE_DEMO_MODE === "true";
 const forceDemoEnabled = import.meta.env.VITE_FORCE_DEMO === "true";
@@ -49,6 +49,7 @@ function createSeedStore() {
   const futureDates = [1, 2, 3, 5, 7, 9, 12, 15, 18, 21].map((days) => formatDate(addDays(today, days)));
 
   const treatments = [
+    { id: "treatment_maya", name: "מגע שיקומי", description: "טיפול מגע שיקומי לפי שיטת מאיה", price: 320, duration: 60, duration_minutes: 60, is_active: true },
     { id: "treatment_laser", name: "טיפול לייזר", description: "טיפול אסתטי ממוקד", price: 350, duration: 45, duration_minutes: 45, is_active: true },
     { id: "treatment_facial", name: "טיפול פנים קלאסי", description: "ניקוי, הזנה ולחות לעור", price: 280, duration: 60, duration_minutes: 60, is_active: true },
     { id: "treatment_consult", name: "פגישת ייעוץ", description: "אבחון והתאמת תכנית טיפול", price: 150, duration: 30, duration_minutes: 30, is_active: true },

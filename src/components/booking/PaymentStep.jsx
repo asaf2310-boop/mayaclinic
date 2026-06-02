@@ -4,6 +4,7 @@ import { ArrowRight, CreditCard, CheckCircle2, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
 import { getClinicSite } from "@/lib/clinicSite";
+import { clinicGlassCard, clinicGlassPanel, clinicPrimaryBtn } from "@/lib/clinicUi";
 import {
   buildDynamicPayboxUrl,
   getPayboxPaymentDetails,
@@ -76,33 +77,29 @@ export default function PaymentStep({ formData, treatment, onConfirm, onBack, is
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`py-8 px-2 ${clinicSite ? "rounded-3xl border border-white/70 bg-white/75 p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)] backdrop-blur-xl md:p-8" : ""}`}
+      className={`px-2 py-8 ${clinicSite ? `${clinicGlassPanel} p-6 md:p-8` : ""}`}
       dir="rtl"
     >
       <div className="text-center mb-8">
         <div
           className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 ${
             clinicSite
-              ? "bg-gradient-to-br from-[#edf3ee] to-[#e6ece7] shadow-inner"
+              ? "bg-[#edf3ee]"
               : "bg-primary/10"
           }`}
         >
           <CreditCard className={`w-8 h-8 ${clinicSite ? "text-[#416d5c]" : "text-primary"}`} />
         </div>
-        <h2 className={`text-2xl font-extrabold mb-2 tracking-tight ${clinicSite ? "text-[#1a2e28]" : "text-foreground"}`}>
+        <h2 className={`text-2xl font-extrabold mb-2 tracking-tight ${clinicSite ? "text-[#1e2f27]" : "text-foreground"}`}>
           תשלום על התור
         </h2>
-        <p className={clinicSite ? "text-[#4a6b5f]" : "text-muted-foreground"}>
+        <p className={clinicSite ? "text-[#415349]" : "text-muted-foreground"}>
           לפני אישור התור, יש לשלם את עלות הטיפול
         </p>
       </div>
 
       <div
-        className={`rounded-2xl p-5 mb-6 space-y-2 text-sm ${
-          clinicSite
-            ? "border border-white/70 bg-white/75 shadow-[0_4px_12px_rgba(0,0,0,0.02)] backdrop-blur-xl"
-            : "bg-muted/50"
-        }`}
+        className={`mb-6 space-y-2 rounded-2xl p-5 text-sm ${clinicSite ? clinicGlassCard : "bg-muted/50"}`}
       >
         <div className="flex justify-between">
           <span className="text-muted-foreground">טיפול:</span>
@@ -123,45 +120,47 @@ export default function PaymentStep({ formData, treatment, onConfirm, onBack, is
           <span className="text-muted-foreground">כמות תורים:</span>
           <span className="font-medium">{appointments.length}</span>
         </div>
-        <div className={`flex justify-between border-t pt-2 mt-2 ${clinicSite ? "border-[#bcd0c4]/50" : "border-border"}`}>
+        <div className={`mt-2 flex justify-between border-t pt-2 ${clinicSite ? "border-white/60" : "border-border"}`}>
           <span className="text-muted-foreground">לתשלום:</span>
           <span className={`font-bold text-lg ${clinicSite ? "text-[#416d5c]" : "text-foreground"}`}>₪{totalPrice}</span>
         </div>
       </div>
 
       <p className="mb-3 text-center text-sm font-semibold text-foreground">אמצעי תשלום</p>
-      <div className="mb-4 grid grid-cols-2 gap-3">
+      <div className="mb-4 flex items-center justify-center gap-10">
         {bitQrImage ? (
-          <div className="flex justify-center">
-            <button
-              type="button"
-              onClick={handleBitClick}
-              className={`inline-flex w-full flex-col items-center gap-0.5 rounded-xl border-2 bg-white p-2 leading-none transition-all active:scale-[0.98] ${
-                bitGuideOpen ? "border-[#0079C1] shadow-sm" : "border-border hover:border-[#0079C1]"
-              }`}
-              aria-label={`תשלום ₪${totalPrice} בביט`}
-              aria-expanded={bitGuideOpen}
-            >
-              <img
-                src={BIT_LOGO}
-                alt=""
-                className="block h-10 w-10 object-contain"
-                width={40}
-                height={40}
-              />
-              <span className="px-0.5 text-[11px] font-semibold text-[#0079C1]">שלם בביט</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={handleBitClick}
+            className={`inline-flex shrink-0 transition-transform hover:opacity-85 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0079C1] ${
+              bitGuideOpen ? "scale-105 opacity-100" : "opacity-90"
+            }`}
+            aria-label={`תשלום ₪${totalPrice} בביט`}
+            aria-expanded={bitGuideOpen}
+          >
+            <img
+              src={BIT_LOGO}
+              alt="ביט"
+              className="block h-12 w-auto max-w-[120px] object-contain"
+              width={48}
+              height={48}
+            />
+          </button>
         ) : (
-          <a href={bitUrl} target="_blank" rel="noopener noreferrer">
-            <button
-              type="button"
-              className="w-full py-3 px-4 rounded-xl font-bold text-white text-sm flex items-center justify-center gap-2 transition-opacity hover:opacity-90"
-              style={{ backgroundColor: "#0079C1" }}
-            >
-              <img src={BIT_LOGO} alt="Bit" className="h-5 object-contain" />
-              שלם בביט
-            </button>
+          <a
+            href={bitUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex shrink-0 transition-transform hover:opacity-85 active:scale-95"
+            aria-label={`תשלום ₪${totalPrice} בביט`}
+          >
+            <img
+              src={BIT_LOGO}
+              alt="ביט"
+              className="block h-12 w-auto max-w-[120px] object-contain"
+              width={48}
+              height={48}
+            />
           </a>
         )}
 
@@ -169,23 +168,32 @@ export default function PaymentStep({ formData, treatment, onConfirm, onBack, is
           <button
             type="button"
             onClick={handleOpenPaybox}
-            className="w-full py-3 px-4 rounded-xl font-bold text-white text-sm flex items-center justify-center gap-2 transition-opacity hover:opacity-90"
-            style={{ backgroundColor: "#7B3FBE" }}
+            className="inline-flex shrink-0 opacity-90 transition-transform hover:opacity-85 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7B3FBE]"
             aria-label="תשלום ב-PayBox"
           >
-            <img src={PAYBOX_LOGO} alt="" className="h-5 w-5 object-contain rounded" />
-            שלם ב-Paybox
+            <img
+              src={PAYBOX_LOGO}
+              alt="Paybox"
+              className="block h-12 w-auto max-w-[120px] object-contain"
+              width={48}
+              height={48}
+            />
           </button>
         ) : (
-          <a href={payboxUrl} target="_blank" rel="noopener noreferrer">
-            <button
-              type="button"
-              className="w-full py-3 px-4 rounded-xl font-bold text-white text-sm flex items-center justify-center gap-2 transition-opacity hover:opacity-90"
-              style={{ backgroundColor: "#7B3FBE" }}
-            >
-              <img src={PAYBOX_LOGO} alt="Paybox" className="h-5 w-5 object-contain rounded" />
-              שלם ב-Paybox
-            </button>
+          <a
+            href={payboxUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex shrink-0 transition-transform hover:opacity-85 active:scale-95"
+            aria-label="תשלום ב-PayBox"
+          >
+            <img
+              src={PAYBOX_LOGO}
+              alt="Paybox"
+              className="block h-12 w-auto max-w-[120px] object-contain"
+              width={48}
+              height={48}
+            />
           </a>
         )}
       </div>
@@ -220,11 +228,7 @@ export default function PaymentStep({ formData, treatment, onConfirm, onBack, is
         onClick={onConfirm}
         disabled={isSubmitting}
         size="lg"
-        className={`w-full text-lg py-6 gap-2 mb-3 ${
-          clinicSite
-            ? "rounded-2xl bg-gradient-to-r from-[#416d5c] to-[#2f5245] text-white shadow-[0_10px_25px_rgba(65,109,92,0.2)] transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_12px_30px_rgba(65,109,92,0.3)] active:scale-[0.98]"
-            : "rounded-xl"
-        }`}
+        className={`mb-3 w-full gap-2 text-lg ${clinicSite ? clinicPrimaryBtn : "rounded-xl py-6"}`}
       >
         {isSubmitting ? (
           <Loader2 className="w-5 h-5 animate-spin" />

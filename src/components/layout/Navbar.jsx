@@ -5,6 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { demoModeEnabled } from "@/api/demoClient";
 import { getDemoBrand } from "@/lib/demoBrand";
 import { getClinicSite } from "@/lib/clinicSite";
+import { clinicNavGlass, clinicPrimaryBtn } from "@/lib/clinicUi";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -34,10 +35,10 @@ export default function Navbar() {
 
   return (
     <nav
-      className={`fixed top-0 left-0 right-0 z-50 backdrop-blur-xl ${
+      className={`fixed top-0 left-0 right-0 z-50 ${
         isClinic
-          ? "border-b border-white/60 bg-white/70 shadow-[0_4px_12px_rgba(0,0,0,0.02)]"
-          : "border-b border-border/50 bg-background/80"
+          ? clinicNavGlass
+          : "border-b border-border/50 bg-background/80 backdrop-blur-xl"
       }`}
       dir="rtl"
     >
@@ -45,7 +46,7 @@ export default function Navbar() {
         <div className="flex items-center gap-8">
           <Link
             to="/"
-            className={`text-xl font-bold ${isClinic ? "text-[#1a2e28]" : "text-foreground"}`}
+            className={`text-xl font-bold ${isClinic ? "text-[#1e2f27]" : "text-foreground"}`}
           >
             {clinicSite?.clinicTitle || (demoModeEnabled ? demoBrand.clinicTitle : "הקליניקה")}
           </Link>
@@ -70,7 +71,7 @@ export default function Navbar() {
                 location.pathname === "/book"
                   ? linkClass("/book")
                   : isClinic
-                    ? "rounded-2xl bg-gradient-to-r from-[#416d5c] to-[#2f5245] px-5 py-2 text-sm font-semibold text-white shadow-[0_10px_25px_rgba(65,109,92,0.2)] transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_12px_30px_rgba(65,109,92,0.3)] active:scale-[0.98]"
+                    ? `${clinicPrimaryBtn} !px-5 !py-2 text-sm`
                     : linkClass("/book")
               }
             >
@@ -109,7 +110,7 @@ export default function Navbar() {
             to="/"
             onClick={() => setIsOpen(false)}
             className={`block rounded-xl px-4 py-3 text-sm font-semibold ${
-              isClinic ? "text-[#1a2e28] hover:bg-white/60" : "text-foreground hover:bg-muted"
+              isClinic ? "text-[#1e2f27] hover:bg-white/60" : "text-foreground hover:bg-muted"
             }`}
           >
             עמוד הבית
@@ -119,7 +120,7 @@ export default function Navbar() {
             onClick={() => setIsOpen(false)}
             className={`block rounded-xl px-4 py-3 text-sm font-semibold ${
               isClinic
-                ? "rounded-2xl bg-gradient-to-r from-[#416d5c] to-[#2f5245] text-white text-center shadow-[0_10px_25px_rgba(65,109,92,0.2)]"
+                ? `${clinicPrimaryBtn} text-center`
                 : "text-foreground hover:bg-muted"
             }`}
           >

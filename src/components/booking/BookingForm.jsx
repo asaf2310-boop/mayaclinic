@@ -6,10 +6,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CalendarPlus, Loader2, ChevronRight, ChevronLeft, Plus, Trash2 } from "lucide-react";
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isBefore, startOfDay, isSameDay } from "date-fns";
-import { he } from "date-fns/locale";
+import { CalendarPlus, Loader2, Plus, Trash2 } from "lucide-react";
+import { format, isBefore, startOfDay } from "date-fns";
 import { getClinicSite } from "@/lib/clinicSite";
+import { clinicOutlineBtn, clinicPrimaryBtn } from "@/lib/clinicUi";
+import BookingCalendar from "@/components/booking/BookingCalendar";
+import TimeSlotSelector from "@/components/booking/TimeSlotSelector";
 
 const MIN_APPOINTMENT_GAP_MINUTES = 60;
 
@@ -67,6 +69,16 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
     return new Set(
       availabilityRecords.filter((r) => r.is_active && r.slots?.length > 0).map((r) => r.date)
     );
+  }, [availabilityRecords]);
+
+  const slotCountByDate = useMemo(() => {
+    const counts = {};
+    availabilityRecords.forEach((record) => {
+      if (record.is_active && record.slots?.length > 0) {
+        counts[record.date] = record.slots.length;
+      }
+    });
+    return counts;
   }, [availabilityRecords]);
 
   // Available slots for the chosen date, excluding any slot less than one hour from existing or selected appointments.
@@ -135,15 +147,6 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
   const today = startOfDay(new Date());
   const [viewMonth, setViewMonth] = useState(new Date());
 
-  const daysInMonth = useMemo(() => {
-    return eachDayOfInterval({ start: startOfMonth(viewMonth), end: endOfMonth(viewMonth) });
-  }, [viewMonth]);
-
-  const firstDayOffset = useMemo(() => {
-    // LTR grid starting Sunday (0). Column 0=Sun, 1=Mon, ... 6=Sat
-    return startOfMonth(viewMonth).getDay();
-  }, [viewMonth]);
-
   const isDateAvailable = (date) => {
     if (isBefore(date, today)) return false;
     const dateStr = format(date, "yyyy-MM-dd");
@@ -156,9 +159,6 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
   };
 
   const selectedDate = form.date ? new Date(form.date + "T00:00:00") : null;
-
-  // LTR grid: leftmost = Sunday, rightmost = Saturday
-  const DAY_NAMES = ["א", "ב", "ג", "ד", "ה", "ו", "ש"];
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -201,92 +201,32 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
         />
       </div>
 
-      {/* Date picker */}
-      <div className="space-y-2">
-        <Label>תאריך *</Label>
-        <div className="border border-border rounded-xl p-4 bg-background">
-          {/* Month navigation */}
-          <div className="flex items-center justify-between mb-4" dir="rtl">
-            <button type="button" onClick={() => setViewMonth(subMonths(viewMonth, 1))} className="p-1 rounded-lg hover:bg-muted">
-              <ChevronRight className="w-4 h-4" />
-            </button>
-            <span className="font-medium text-sm">{format(viewMonth, "MMMM yyyy", { locale: he })}</span>
-            <button type="button" onClick={() => setViewMonth(addMonths(viewMonth, 1))} className="p-1 rounded-lg hover:bg-muted">
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-          </div>
-          {/* Day names */}
-          <div className="grid grid-cols-7 mb-1">
-            {DAY_NAMES.map((d) => (
-              <div key={d} className="text-center text-xs text-muted-foreground py-1">{d}</div>
-            ))}
-          </div>
-          {/* Days grid */}
-          <div className="grid grid-cols-7">
-            {Array.from({ length: firstDayOffset }).map((_, i) => <div key={`empty-${i}`} />)}
-            {daysInMonth.map((date) => {
-              const available = isDateAvailable(date);
-              const selected = selectedDate && isSameDay(date, selectedDate);
-              const isPast = isBefore(date, today);
-              return (
-                <button
-                  key={date.toISOString()}
-                  type="button"
-                  onClick={() => handleDateSelect(date)}
-                  disabled={!available}
-                  className={`aspect-square flex items-center justify-center rounded-lg text-sm m-0.5 transition-all font-medium
-                    ${selected ? "bg-primary text-primary-foreground" : ""}
-                    ${!selected && available ? "hover:bg-accent text-foreground" : ""}
-                    ${isPast || !available ? "text-muted-foreground/40 cursor-not-allowed" : ""}
-                  `}
-                >
-                  {date.getDate()}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+      <BookingCalendar
+        viewMonth={viewMonth}
+        onViewMonthChange={setViewMonth}
+        selectedDate={selectedDate}
+        onDateSelect={handleDateSelect}
+        slotCountByDate={slotCountByDate}
+        isDateAvailable={isDateAvailable}
+        selectedDaySlotCount={form.date ? availableSlots.length : 0}
+      />
 
-      {/* Time slots */}
       {form.date && (
-        <div className="space-y-2">
-          <Label>שעה *</Label>
-          {isFetchingAppointments ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              בודק שעות זמינות...
-            </div>
-          ) : availableSlots.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {availableSlots.map((slot) => (
-                <button
-                  key={slot}
-                  type="button"
-                  onClick={() => handleChange("time", slot)}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all ${
-                    form.time === slot
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-background text-foreground border-border hover:border-primary/40"
-                  }`}
-                >
-                  {slot}
-                </button>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-destructive">אין שעות פנויות בתאריך זה, בחרו תאריך אחר.</p>
-          )}
+        <div className="space-y-4">
+          <TimeSlotSelector
+            slots={availableSlots}
+            selectedSlot={form.time}
+            onSelect={(slot) => handleChange("time", slot)}
+            isLoading={isFetchingAppointments}
+            durationMinutes={selectedTreatment?.duration_minutes}
+            hoursHint={clinicSite?.bookingHoursHint}
+          />
           {form.time && (
             <Button
               type="button"
               variant="outline"
               onClick={handleAddAppointment}
-              className={`w-full gap-2 ${
-                clinicSite
-                  ? "rounded-2xl border-[#bcd0c4] bg-white/40 backdrop-blur-md hover:bg-white/60"
-                  : "rounded-xl"
-              }`}
+              className={`w-full gap-2 ${clinicSite ? clinicOutlineBtn : "rounded-xl"}`}
             >
               <Plus className="w-4 h-4" />
               הוסף תור לרשימה
@@ -351,11 +291,7 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
       <Button
         type="submit"
         size="lg"
-        className={`w-full text-lg py-6 gap-2 ${
-          clinicSite
-            ? "rounded-2xl bg-gradient-to-r from-[#416d5c] to-[#2f5245] text-white shadow-[0_10px_25px_rgba(65,109,92,0.2)] transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_12px_30px_rgba(65,109,92,0.3)] active:scale-[0.98]"
-            : "rounded-xl"
-        }`}
+        className={`w-full gap-2 text-lg ${clinicSite ? clinicPrimaryBtn : "rounded-xl py-6"}`}
         disabled={!selectedTreatment || !form.patient_name || !form.patient_phone || selectedAppointments.length === 0 || isSubmitting}
       >
         {isSubmitting ? (

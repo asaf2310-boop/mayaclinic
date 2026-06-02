@@ -10,6 +10,15 @@ import { ArrowRight, Mail, MessageCircle, Phone } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { buildCustomers, buildWhatsAppUrl, formatDate, statusMeta } from "@/lib/customers";
 import { getClinicSite } from "@/lib/clinicSite";
+import {
+  clinicGlassCard,
+  clinicOrbBottom,
+  clinicOrbMid,
+  clinicOrbTop,
+  clinicOutlineBtn,
+  clinicPageGradient,
+  clinicPrimaryBtn,
+} from "@/lib/clinicUi";
 
 export default function AdminPatient() {
   const clinicSite = getClinicSite();
@@ -30,7 +39,7 @@ export default function AdminPatient() {
     return (
       <div
         className={`min-h-screen ${
-          clinicSite ? "bg-gradient-to-tr from-[#f3f7f4] via-[#edf3ee] to-[#e6ece7]" : "bg-background"
+          clinicSite ? clinicPageGradient : "bg-background"
         }`}
       >
         <Navbar />
@@ -48,7 +57,7 @@ export default function AdminPatient() {
     return (
       <div
         className={`min-h-screen ${
-          clinicSite ? "bg-gradient-to-tr from-[#f3f7f4] via-[#edf3ee] to-[#e6ece7]" : "bg-background"
+          clinicSite ? clinicPageGradient : "bg-background"
         }`}
       >
         <Navbar />
@@ -61,7 +70,7 @@ export default function AdminPatient() {
                 asChild
                 className={`mt-6 ${
                   clinicSite
-                    ? "rounded-2xl bg-gradient-to-r from-[#416d5c] to-[#2f5245] text-white shadow-[0_10px_25px_rgba(65,109,92,0.2)]"
+                    ? clinicPrimaryBtn
                     : ""
                 }`}
               >
@@ -82,29 +91,28 @@ export default function AdminPatient() {
   return (
     <div
       className={`min-h-screen ${
-        clinicSite ? "bg-gradient-to-tr from-[#f3f7f4] via-[#edf3ee] to-[#e6ece7]" : "bg-background"
+        clinicSite ? clinicPageGradient : "bg-background"
       }`}
     >
       <Navbar />
       <main className="relative px-6 pb-16 pt-24" dir="rtl">
         {clinicSite && (
           <>
-            <div className="pointer-events-none absolute left-0 top-24 h-[280px] w-[280px] rounded-full bg-[#e1eae2] blur-[130px]" />
-            <div className="pointer-events-none absolute right-0 top-40 h-[320px] w-[320px] rounded-full bg-[#d7e4dc] blur-[140px]" />
+            <div className={clinicOrbTop} />
+            <div className={clinicOrbBottom} />
+            <div className={clinicOrbMid} />
           </>
         )}
         <div className="relative mx-auto max-w-6xl space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h1 className={`text-3xl font-bold ${clinicSite ? "text-[#1a2e28]" : ""}`}>{customer.name}</h1>
+              <h1 className={`text-3xl font-bold ${clinicSite ? "text-[#1e2f27]" : ""}`}>{customer.name}</h1>
               <p className="mt-1 text-sm text-muted-foreground">כרטיס מטופל מלא</p>
             </div>
             <Button
               asChild
               variant="outline"
-              className={
-                clinicSite ? "rounded-2xl border-[#bcd0c4] bg-white/40 backdrop-blur-md hover:bg-white/60" : ""
-              }
+              className={clinicSite ? `${clinicOutlineBtn} !px-4 !py-2` : ""}
             >
               <Link to="/admin" className="inline-flex items-center gap-2">
                 <ArrowRight className="h-4 w-4" />
@@ -114,26 +122,26 @@ export default function AdminPatient() {
           </div>
 
           <div className="grid gap-4 md:grid-cols-4">
-            <Card className={`p-4 ${clinicSite ? "border-white/70 bg-white/75 shadow-[0_4px_12px_rgba(0,0,0,0.02)] backdrop-blur-xl" : ""}`}>
+            <Card className={`p-4 ${clinicSite ? clinicGlassCard : ""}`}>
               <p className="text-xs text-muted-foreground">סה"כ טיפולים שהושלמו</p>
               <p className="text-2xl font-bold">{customer.completedAppointmentsCount}</p>
             </Card>
-            <Card className={`p-4 ${clinicSite ? "border-white/70 bg-white/75 shadow-[0_4px_12px_rgba(0,0,0,0.02)] backdrop-blur-xl" : ""}`}>
+            <Card className={`p-4 ${clinicSite ? clinicGlassCard : ""}`}>
               <p className="text-xs text-muted-foreground">תורים פעילים</p>
               <p className="text-2xl font-bold">{customer.activeAppointmentsCount}</p>
             </Card>
-            <Card className={`p-4 ${clinicSite ? "border-white/70 bg-white/75 shadow-[0_4px_12px_rgba(0,0,0,0.02)] backdrop-blur-xl" : ""}`}>
+            <Card className={`p-4 ${clinicSite ? clinicGlassCard : ""}`}>
               <p className="text-xs text-muted-foreground">סה"כ תורים</p>
               <p className="text-2xl font-bold">{customer.appointments.length}</p>
             </Card>
-            <Card className={`p-4 ${clinicSite ? "border-white/70 bg-white/75 shadow-[0_4px_12px_rgba(0,0,0,0.02)] backdrop-blur-xl" : ""}`}>
+            <Card className={`p-4 ${clinicSite ? clinicGlassCard : ""}`}>
               <p className="text-xs text-muted-foreground">הכנסות ששולמו</p>
               <p className="text-2xl font-bold">₪{customer.totalRevenue.toLocaleString("he-IL")}</p>
             </Card>
           </div>
 
           <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
-            <Card className={`p-4 ${clinicSite ? "border-white/70 bg-white/75 shadow-[0_4px_12px_rgba(0,0,0,0.02)] backdrop-blur-xl" : ""}`}>
+            <Card className={`p-4 ${clinicSite ? clinicGlassCard : ""}`}>
               <p className="mb-3 text-sm font-semibold">היסטוריית טיפולים</p>
               <div className="space-y-2">
                 {customer.appointments.map((appointment) => {
@@ -164,7 +172,7 @@ export default function AdminPatient() {
             </Card>
 
             <div className="space-y-4">
-              <Card className={`p-4 ${clinicSite ? "border-white/70 bg-white/75 shadow-[0_4px_12px_rgba(0,0,0,0.02)] backdrop-blur-xl" : ""}`}>
+              <Card className={`p-4 ${clinicSite ? clinicGlassCard : ""}`}>
                 <p className="mb-3 text-sm font-semibold">פרטי קשר</p>
                 <div className="space-y-2 text-sm">
                   <p className="inline-flex items-center gap-2">
@@ -183,7 +191,7 @@ export default function AdminPatient() {
                 </div>
               </Card>
 
-              <Card className={`p-4 ${clinicSite ? "border-white/70 bg-white/75 shadow-[0_4px_12px_rgba(0,0,0,0.02)] backdrop-blur-xl" : ""}`}>
+              <Card className={`p-4 ${clinicSite ? clinicGlassCard : ""}`}>
                 <p className="mb-3 text-sm font-semibold">פעולות</p>
                 <div className="space-y-2">
                   {mailtoUrl ? (
@@ -191,7 +199,7 @@ export default function AdminPatient() {
                       asChild
                       variant="outline"
                       className={`w-full justify-start gap-2 ${
-                        clinicSite ? "rounded-2xl border-[#bcd0c4] bg-white/40 backdrop-blur-md hover:bg-white/60" : ""
+                        clinicSite ? `${clinicOutlineBtn} !px-4 !py-3` : ""
                       }`}
                     >
                       <a href={mailtoUrl}>
@@ -204,7 +212,7 @@ export default function AdminPatient() {
                       disabled
                       variant="outline"
                       className={`w-full justify-start gap-2 ${
-                        clinicSite ? "rounded-2xl border-[#bcd0c4] bg-white/40 backdrop-blur-md" : ""
+                        clinicSite ? `${clinicOutlineBtn} !px-4 !py-3` : ""
                       }`}
                     >
                       <Mail className="h-4 w-4" />
@@ -216,7 +224,7 @@ export default function AdminPatient() {
                       asChild
                       variant="outline"
                       className={`w-full justify-start gap-2 ${
-                        clinicSite ? "rounded-2xl border-[#bcd0c4] bg-white/40 backdrop-blur-md hover:bg-white/60" : ""
+                        clinicSite ? `${clinicOutlineBtn} !px-4 !py-3` : ""
                       }`}
                     >
                       <a href={whatsappUrl} target="_blank" rel="noreferrer">
@@ -229,7 +237,7 @@ export default function AdminPatient() {
                       disabled
                       variant="outline"
                       className={`w-full justify-start gap-2 ${
-                        clinicSite ? "rounded-2xl border-[#bcd0c4] bg-white/40 backdrop-blur-md" : ""
+                        clinicSite ? `${clinicOutlineBtn} !px-4 !py-3` : ""
                       }`}
                     >
                       <MessageCircle className="h-4 w-4" />
@@ -239,7 +247,7 @@ export default function AdminPatient() {
                 </div>
               </Card>
 
-              <Card className={`p-4 ${clinicSite ? "border-white/70 bg-white/75 shadow-[0_4px_12px_rgba(0,0,0,0.02)] backdrop-blur-xl" : ""}`}>
+              <Card className={`p-4 ${clinicSite ? clinicGlassCard : ""}`}>
                 <p className="mb-2 text-sm font-semibold">הערות מטופל</p>
                 <p className="text-sm text-muted-foreground">
                   {customer.notes || "לא הוזנו הערות עבור מטופל זה."}
