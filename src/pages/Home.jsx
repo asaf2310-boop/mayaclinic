@@ -5,10 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { demoModeEnabled } from "@/api/demoClient";
+import { getClinicSite } from "@/lib/clinicSite";
 import { BarChart3, CalendarCheck, CheckCircle2, ExternalLink, Megaphone, MonitorSmartphone, Users } from "lucide-react";
 
 const DEFAULT_DEMO_URL = "https://karinshinanit-demo.vercel.app";
-const MAYA_HOST = "maya-clinic.vercel.app";
 
 function getDemoUrls() {
   if (demoModeEnabled && typeof window !== "undefined") {
@@ -59,11 +59,11 @@ const adminHighlights = [
 ];
 
 export default function Home() {
-  const [mayaImageMissing, setMayaImageMissing] = useState(false);
-  const isMayaHost = typeof window !== "undefined" && window.location.hostname.toLowerCase() === MAYA_HOST;
+  const [heroImageMissing, setHeroImageMissing] = useState(false);
+  const clinicSite = getClinicSite();
   const { booking: demoBookingUrl, admin: demoAdminUrl } = useMemo(() => getDemoUrls(), []);
 
-  if (isMayaHost) {
+  if (clinicSite) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
@@ -73,20 +73,18 @@ export default function Home() {
             <div className="relative mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-[0.9fr_1.1fr]">
               <Card className="overflow-hidden rounded-3xl border-border/60 bg-card/90 p-3 shadow-2xl">
                 <div className="aspect-[4/5] w-full rounded-2xl bg-gradient-to-b from-primary/10 to-muted/40 p-6">
-                  {!mayaImageMissing ? (
+                  {!heroImageMissing ? (
                     <img
-                      src="/maya-hero.jpg"
-                      alt="מאיה קליניק"
+                      src={clinicSite.heroImage}
+                      alt={clinicSite.clinicTitle}
                       className="h-full w-full rounded-xl object-cover"
-                      onError={() => setMayaImageMissing(true)}
+                      onError={() => setHeroImageMissing(true)}
                     />
                   ) : (
                     <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-border/60 bg-background/70 text-center">
                       <div>
-                        <p className="text-lg font-semibold">תמונת הקליניקה של מאיה</p>
-                        <p className="mt-2 text-sm text-muted-foreground">
-                          להוספת תמונה: העלי קובץ ל־`public/maya-hero.jpg`
-                        </p>
+                        <p className="text-lg font-semibold">{clinicSite.clinicTitle}</p>
+                        <p className="mt-2 text-sm text-muted-foreground">לא נטענה תמונת הקליניקה</p>
                       </div>
                     </div>
                   )}
@@ -94,9 +92,9 @@ export default function Home() {
               </Card>
 
               <div className="space-y-6">
-                <Badge className="w-fit rounded-full px-4 py-1.5 text-sm">ברוכים הבאים לקליניקה של מאיה</Badge>
+                <Badge className="w-fit rounded-full px-4 py-1.5 text-sm">{clinicSite.heroBadge}</Badge>
                 <h1 className="max-w-3xl text-4xl font-black leading-tight text-foreground md:text-6xl">
-                  טיפול מקצועי, יחס אישי ותהליך הזמנה פשוט
+                  {clinicSite.heroHeading}
                 </h1>
                 <p className="max-w-2xl text-lg leading-8 text-muted-foreground md:text-xl">
                   אפשר לקבוע תור אונליין במהירות, לבחור טיפול ושעה פנויה, ולקבל תזכורת מסודרת.

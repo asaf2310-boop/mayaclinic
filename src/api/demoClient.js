@@ -1,4 +1,5 @@
 import { supabaseConfigured } from "./supabase";
+import { isProductionClinicHost } from "@/lib/clinicSite";
 
 const DEMO_STORE_KEY = "mayaclinic-demo-store-v3";
 
@@ -8,11 +9,12 @@ const hostname = typeof window !== "undefined" ? String(window.location.hostname
 const isLocalHost = hostname === "localhost" || hostname === "127.0.0.1";
 const demoHostEnabled = /-demo\.vercel\.app$/i.test(hostname);
 
-// Guardrail: don't activate demo on real clinic domains when Supabase is configured.
+// Never run demo mode on production clinic domains (e.g. maya-clinic.vercel.app).
 export const demoModeEnabled =
-  forceDemoEnabled ||
-  demoHostEnabled ||
-  (demoEnvEnabled && (isLocalHost || !supabaseConfigured));
+  !isProductionClinicHost(hostname) &&
+  (forceDemoEnabled ||
+    demoHostEnabled ||
+    (demoEnvEnabled && (isLocalHost || !supabaseConfigured)));
 
 const ENTITY_KEYS = {
   Treatment: "treatments",

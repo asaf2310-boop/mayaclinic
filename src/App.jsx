@@ -10,6 +10,7 @@ import Book from './pages/Book';
 import Admin from './pages/Admin';
 import AdminPatient from './pages/AdminPatient';
 import DemoDocumentTitle from './components/DemoDocumentTitle';
+import ClinicBootstrap from './components/ClinicBootstrap';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -49,6 +50,7 @@ function App() {
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
         <DemoDocumentTitle />
+        <ClinicBootstrap />
         <Router>
           <AuthenticatedApp />
         </Router>

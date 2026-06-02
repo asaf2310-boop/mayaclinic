@@ -8,15 +8,15 @@ import BookingSuccess from "../components/booking/BookingSuccess";
 import PaymentStep from "../components/booking/PaymentStep";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
+import { getClinicSite } from "@/lib/clinicSite";
 
 export default function Book() {
   const [selectedTreatment, setSelectedTreatment] = useState(null);
   const [pendingFormData, setPendingFormData] = useState(null);
   const [bookedAppointment, setBookedAppointment] = useState(null);
-  const [isEnsuringMayaTreatment, setIsEnsuringMayaTreatment] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const isMayaHost = typeof window !== "undefined" && window.location.hostname.toLowerCase() === "maya-clinic.vercel.app";
+  const clinicSite = getClinicSite();
 
   const { data: treatments = [], isLoading } = useQuery({
     queryKey: ["treatments"],
@@ -24,56 +24,20 @@ export default function Book() {
   });
 
   useEffect(() => {
-    if (treatments.length > 0 && !selectedTreatment) {
-      setSelectedTreatment(treatments[0]);
-    }
-  }, [treatments]);
+    if (!treatments.length || selectedTreatment) return;
 
-  useEffect(() => {
-    if (!isMayaHost || isEnsuringMayaTreatment) return;
-    if (!Array.isArray(treatments)) return;
-
-    const hasMayaTreatment = treatments.some((treatment) => String(treatment?.name || "").trim() === "מגע שיקומי");
-    if (hasMayaTreatment) return;
-
-    let cancelled = false;
-    const ensureTreatment = async () => {
-      setIsEnsuringMayaTreatment(true);
-      try {
-        await base44.entities.Treatment.create({
-          name: "מגע שיקומי",
-          description: "טיפול מגע שיקומי לפי שיטת מאיה",
-          price: 320,
-          duration: 60,
-          duration_minutes: 60,
-          is_active: true,
-        });
-
-        if (!cancelled) {
-          queryClient.invalidateQueries({ queryKey: ["treatments"] });
-          toast({
-            title: "שוחזר טיפול ברירת מחדל",
-            description: "הטיפול 'מגע שיקומי' נוסף מחדש למערכת.",
-          });
-        }
-      } catch {
-        if (!cancelled) {
-          toast({
-            title: "לא הצלחנו לשחזר טיפול אוטומטית",
-            description: "אפשר להוסיף את 'מגע שיקומי' ידנית במסך הניהול.",
-            variant: "destructive",
-          });
-        }
-      } finally {
-        if (!cancelled) setIsEnsuringMayaTreatment(false);
+    if (clinicSite?.defaultTreatmentName) {
+      const preferred = treatments.find(
+        (treatment) => String(treatment?.name || "").trim() === clinicSite.defaultTreatmentName
+      );
+      if (preferred) {
+        setSelectedTreatment(preferred);
+        return;
       }
-    };
+    }
 
-    ensureTreatment();
-    return () => {
-      cancelled = true;
-    };
-  }, [isMayaHost, isEnsuringMayaTreatment, queryClient, toast, treatments]);
+    setSelectedTreatment(treatments[0]);
+  }, [clinicSite, selectedTreatment, treatments]);
 
   const createMutation = useMutation({
     mutationFn: async (data) => {
