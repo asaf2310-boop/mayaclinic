@@ -93,6 +93,10 @@ function demoBrandingPlugin() {
 
 // https://vite.dev/config/
 export default defineConfig({
+  server: {
+    host: true,
+    port: 5173,
+  },
   logLevel: 'error', // Suppress warnings, only show errors
   plugins: [
     base44({
