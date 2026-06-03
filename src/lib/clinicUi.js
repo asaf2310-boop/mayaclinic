@@ -5,25 +5,17 @@ export const clinicTextMuted = "text-[#6B746F]";
 export const clinicTextPrimary = "text-[#5D7F6D]";
 export const clinicBorder = "border-[#E8ECE8]";
 
+/** Shared clinic page shell — transparent; page bg is on `body.clinic-site` in index.css */
 export const clinicPageGradient =
-  "relative min-h-screen font-sans text-[#2F3B34] [background:radial-gradient(circle_at_top_right,#FFFFFF_0%,#F7F8F6_60%,#F2F4F2_100%)]";
+  "relative min-h-screen bg-transparent font-sans text-[#2F3B34]";
 
 export const clinicFadeIn = "animate-in fade-in duration-700 fill-mode-both";
 
 export const clinicHeroSection =
   "relative flex min-h-[calc(100vh-5rem)] items-center justify-center overflow-hidden font-sans pt-20";
 
-export const clinicOrbTop =
-  "pointer-events-none absolute -top-[10%] -left-[8%] h-[520px] w-[520px] rounded-full bg-[#7F9B8A]/12 opacity-90 blur-[120px]";
-
-export const clinicOrbBottom =
-  "pointer-events-none absolute -bottom-[8%] -right-[6%] h-[480px] w-[480px] rounded-full bg-[#5D7F6D]/10 opacity-80 blur-[130px]";
-
-export const clinicOrbMid =
-  "pointer-events-none absolute bottom-[15%] left-[8%] h-[280px] w-[280px] rounded-full bg-white/70 opacity-50 blur-[100px]";
-
 export const clinicHeroPanel =
-  "w-full max-w-xl rounded-[32px] border border-white/60 bg-white/75 p-8 shadow-[0_20px_60px_rgba(0,0,0,0.06)] backdrop-blur-[12px] md:p-10";
+  "w-full max-w-xl rounded-[32px] border border-white/60 bg-white/88 p-8 shadow-[0_20px_60px_rgba(0,0,0,0.06)] backdrop-blur-[16px] md:p-10";
 
 export const clinicPrimaryBtn =
   "inline-flex h-14 items-center justify-center rounded-2xl bg-[#5D7F6D] px-8 text-center font-medium text-white shadow-[0_8px_24px_rgba(93,127,109,0.22)] transition-all duration-300 hover:scale-[1.03] hover:bg-[#4F6F5F] active:scale-[0.98]";

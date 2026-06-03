@@ -16,9 +16,6 @@ import {
   clinicFadeIn,
   clinicGlassCard,
   clinicGlassPanel,
-  clinicOrbBottom,
-  clinicOrbMid,
-  clinicOrbTop,
   clinicPageGradient,
   clinicTextHeading,
   clinicTextMuted,
@@ -128,17 +125,10 @@ export default function Book() {
 
   return (
     <div
-      className={`min-h-screen ${clinicSite ? `${clinicPageGradient} clinic-page-enter font-sans` : "bg-background"}`}
+      className={`min-h-screen ${clinicSite ? `page-background ${clinicPageGradient} clinic-page-enter font-sans` : "bg-background"}`}
     >
       <Navbar />
       <main className="relative pt-24 pb-16 px-6" dir="rtl">
-        {clinicSite && (
-          <>
-            <div className={clinicOrbTop} />
-            <div className={clinicOrbBottom} />
-            <div className={clinicOrbMid} />
-          </>
-        )}
         <div className={`relative mx-auto max-w-2xl ${clinicSite ? clinicFadeIn : ""}`}>
           {bookedAppointment ? (
             <BookingSuccess appointment={bookedAppointment} onReset={handleReset} />

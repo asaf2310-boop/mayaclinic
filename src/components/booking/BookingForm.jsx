@@ -125,7 +125,8 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
   const isDateAvailable = (date) => {
     if (isBefore(date, today)) return false;
     const dateStr = format(date, "yyyy-MM-dd");
-    return activeDates.has(dateStr);
+    if (!activeDates.has(dateStr)) return false;
+    return (slotCountByDate[dateStr] ?? 0) > 0;
   };
 
   const handleDateSelect = (date) => {

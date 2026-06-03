@@ -114,6 +114,7 @@ const ENTITY_TABLES = {
   Treatment: "treatments",
   Appointment: "appointments",
   Availability: "availability",
+  PatientProfile: "patient_profiles",
 };
 
 export function createSupabaseDataClient() {

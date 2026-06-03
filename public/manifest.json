@@ -1,7 +1,7 @@
 {
-  "name": "Maya's Clinic",
-  "short_name": "Maya's Clinic",
-  "description": "קביעת תורים בקליניקה של מאיה",
+  "name": "אופיר - מרכז טיפול הוליסטי",
+  "short_name": "אופיר",
+  "description": "קביעת תורים באופיר - מרכז טיפול הוליסטי",
   "start_url": "/book",
   "display": "standalone",
   "background_color": "#f7f3ee",

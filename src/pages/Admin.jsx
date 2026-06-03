@@ -14,9 +14,6 @@ import { getClinicSite } from "@/lib/clinicSite";
 import {
   clinicGlassCard,
   clinicGlassPanel,
-  clinicOrbBottom,
-  clinicOrbMid,
-  clinicOrbTop,
   clinicPageGradient,
   clinicPrimaryBtn,
   clinicTextHeading,
@@ -97,18 +94,11 @@ export default function Admin() {
   return (
     <div
       className={`min-h-screen ${
-        clinicSite ? `${clinicPageGradient} clinic-page-enter` : "bg-background"
+        clinicSite ? `page-background ${clinicPageGradient} clinic-page-enter` : "bg-background"
       }`}
     >
       <Navbar />
       <main className="relative pt-24 pb-16 px-6" dir="rtl">
-        {clinicSite && (
-          <>
-            <div className={clinicOrbTop} />
-            <div className={clinicOrbBottom} />
-            <div className={clinicOrbMid} />
-          </>
-        )}
         <div className="relative max-w-6xl mx-auto">
           <h1 className={`mb-8 text-3xl font-bold ${clinicSite ? clinicTextHeading : "text-foreground"}`}>
             ניהול

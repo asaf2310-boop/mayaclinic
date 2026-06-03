@@ -84,7 +84,44 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans;
+    @apply text-foreground font-sans;
+  }
+
+  body:not(.clinic-site) {
+    @apply bg-background;
+  }
+
+  body.clinic-site {
+    min-height: 100vh;
+    background:
+      linear-gradient(
+        90deg,
+        rgba(245, 248, 245, 0.95) 0%,
+        rgba(255, 255, 255, 0.88) 35%,
+        rgba(255, 255, 255, 0.88) 65%,
+        rgba(245, 248, 245, 0.95) 100%
+      ),
+      radial-gradient(circle at 10% 45%, rgba(93, 127, 109, 0.22), transparent 28%),
+      radial-gradient(circle at 90% 55%, rgba(93, 127, 109, 0.18), transparent 30%),
+      #f7f8f6;
+    overflow-x: hidden;
+  }
+
+  .page-background {
+    position: relative;
+  }
+
+  .page-background::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image: url("/clinic-bg-soft.jpg");
+    background-size: cover;
+    background-position: center;
+    opacity: 0.28;
+    filter: blur(1.5px);
   }
 }
 

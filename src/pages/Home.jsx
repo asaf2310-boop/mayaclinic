@@ -19,9 +19,6 @@ import {
   clinicHeroTitleRuleDot,
   clinicHeroTitleRuleLeft,
   clinicHeroTitleRuleRight,
-  clinicOrbBottom,
-  clinicOrbMid,
-  clinicOrbTop,
   clinicPageGradient,
   clinicPrimaryBtn,
   clinicTextMuted,
@@ -85,16 +82,12 @@ export default function Home() {
 
   if (clinicSite) {
     return (
-      <div className={`min-h-screen font-sans ${clinicPageGradient} clinic-page-enter`}>
+      <div className={`page-background min-h-screen font-sans ${clinicPageGradient} clinic-page-enter`}>
         <Navbar />
         <main>
           <section className={clinicHeroSection}>
-            <div className={clinicOrbTop} />
-            <div className={clinicOrbBottom} />
-            <div className={clinicOrbMid} />
-
             <div
-              className="container relative z-10 mx-auto flex min-h-[calc(100vh-6rem)] flex-col items-center justify-center px-6 py-12"
+              className="relative z-10 mx-auto flex min-h-[calc(100vh-6rem)] max-w-4xl flex-col items-center justify-center px-6 py-12"
               dir="rtl"
             >
               <div className={`${clinicHeroPanel} ${clinicFadeIn} flex flex-col items-center text-center`}>

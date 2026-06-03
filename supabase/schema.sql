@@ -90,6 +90,14 @@ begin
           and (split_part(existing.time, ':', 1)::integer * 60 + split_part(existing.time, ':', 2)::integer) -
           (split_part(new.time, ':', 1)::integer * 60 + split_part(new.time, ':', 2)::integer) < 90
         )
+        or
+        -- Overlap: default 60-minute booking would run into an existing start
+        (
+          (split_part(new.time, ':', 1)::integer * 60 + split_part(new.time, ':', 2)::integer) <
+          (split_part(existing.time, ':', 1)::integer * 60 + split_part(existing.time, ':', 2)::integer)
+          and (split_part(new.time, ':', 1)::integer * 60 + split_part(new.time, ':', 2)::integer) + 60 >
+          (split_part(existing.time, ':', 1)::integer * 60 + split_part(existing.time, ':', 2)::integer)
+        )
       )
   ) then
     raise exception 'appointment_time_conflict';

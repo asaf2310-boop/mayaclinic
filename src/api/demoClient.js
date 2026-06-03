@@ -2,7 +2,7 @@ import { supabaseConfigured } from "./supabase";
 import { isProductionClinicHost } from "@/lib/clinicSite";
 import { hasAppointmentTimeConflict } from "@/lib/bookingSlots";
 
-const DEMO_STORE_KEY = "mayaclinic-demo-store-v4";
+const DEMO_STORE_KEY = "mayaclinic-demo-store-v5";
 
 const demoEnvEnabled = import.meta.env.VITE_DEMO_MODE === "true";
 const forceDemoEnabled = import.meta.env.VITE_FORCE_DEMO === "true";
@@ -21,6 +21,7 @@ const ENTITY_KEYS = {
   Treatment: "treatments",
   Availability: "availability",
   Appointment: "appointments",
+  PatientProfile: "patient_profiles",
 };
 
 function pad(value) {
@@ -109,7 +110,60 @@ function createSeedStore() {
     };
   });
 
-  return { treatments, availability, appointments };
+  const patient_profiles = [
+    {
+      id: "profile_noa",
+      customer_key: "0501234567|noa@example.com",
+      patient_name: "נועה כהן",
+      patient_phone: "050-1234567",
+      patient_email: "noa@example.com",
+      profile: {
+        gender: "female",
+        maritalStatus: "single",
+        occupation: "מעצבת גרפית",
+        patientType: "individual",
+        city: "תל אביב",
+        address: "רothschild 12",
+        zip: "6688101",
+        hmo: "maccabi",
+        preferredContact: "whatsapp",
+        intakeNotes: "פניות לעור רגיש. הגיעה בהמלצת חברה.",
+        treatmentGoals: "הרגעה, שיקום רגשי, שיפור שינה",
+        continuousNotes: "מגיבה היטב למגע שיקומי. לשים לב ללחץ בכתפיים.",
+        sessionLocation: "clinic",
+        preferredTimes: "בוקר, ימי שלישי",
+        medicalBackground: "ללא רגישויות ידועות. טיפול פסיכולוגי בעבר.",
+        fundingSource: "private",
+        sessionPrice: "320",
+      },
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    {
+      id: "profile_dana",
+      customer_key: "0527654321|dana@example.com",
+      patient_name: "דנה לוי",
+      patient_phone: "052-7654321",
+      patient_email: "dana@example.com",
+      profile: {
+        gender: "female",
+        maritalStatus: "married",
+        occupation: "רואת חשבון",
+        patientType: "individual",
+        city: "רמת גן",
+        hmo: "clalit",
+        preferredContact: "phone",
+        treatmentGoals: "הפחתת מתח, שחרור שרירים",
+        continuousNotes: "סדרת טיפולי לייזר + מגע שיקומי.",
+        sessionLocation: "clinic",
+        fundingSource: "private",
+      },
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+  ];
+
+  return { treatments, availability, appointments, patient_profiles };
 }
 
 function readStore() {
@@ -118,6 +172,10 @@ function readStore() {
     try {
       const store = JSON.parse(raw);
       if (store?.treatments?.length && store?.availability?.length && store?.appointments?.length) {
+        if (!store.patient_profiles) {
+          store.patient_profiles = createSeedStore().patient_profiles;
+          writeStore(store);
+        }
         return store;
       }
     } catch {
@@ -209,6 +267,12 @@ function createEntity(entityName) {
         updated = { ...existing, ...row };
         return updated;
       });
+      if (entityName === "Appointment" && updated) {
+        const others = (store[storeKey] || []).filter((existing) => existing.id !== id);
+        if (hasAppointmentTimeConflict(updated, others)) {
+          throw new Error("appointment_time_conflict");
+        }
+      }
       writeStore(store);
       return updated;
     },

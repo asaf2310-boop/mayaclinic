@@ -4,7 +4,7 @@ export const CLINIC_SITES = {
 
     id: "maya",
 
-    clinicTitle: "הקליניקה של מאיה",
+    clinicTitle: "אופיר - מרכז טיפול הוליסטי",
 
     heroBadge: "רפואה אסתטית, בריאות ורעננות טבעית",
 

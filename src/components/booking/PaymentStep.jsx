@@ -139,12 +139,12 @@ export default function PaymentStep({ formData, treatment, onConfirm, onBack, is
       <p className={`mb-3 text-center text-sm font-semibold ${clinicSite ? clinicTextHeading : "text-foreground"}`}>
         אמצעי תשלום
       </p>
-      <div className="mb-4 flex items-center justify-center gap-10">
+      <div className="mb-8 flex items-start justify-center gap-10">
         {bitQrImage ? (
           <button
             type="button"
             onClick={handleBitClick}
-            className={`inline-flex shrink-0 transition-transform hover:opacity-85 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0079C1] ${
+            className={`inline-flex shrink-0 flex-col items-center gap-1 transition-transform hover:opacity-85 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0079C1] ${
               bitGuideOpen ? "scale-105 opacity-100" : "opacity-90"
             }`}
             aria-label={`תשלום ₪${totalPrice} בביט`}
@@ -157,13 +157,20 @@ export default function PaymentStep({ formData, treatment, onConfirm, onBack, is
               width={48}
               height={48}
             />
+            <span
+              className={`text-xs font-semibold uppercase tracking-wide ${
+                clinicSite ? "text-[#5D7F6D]" : "text-[#6B746F]"
+              }`}
+            >
+              BIT
+            </span>
           </button>
         ) : (
           <a
             href={bitUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex shrink-0 transition-transform hover:opacity-85 active:scale-95"
+            className="inline-flex shrink-0 flex-col items-center gap-1 transition-transform hover:opacity-85 active:scale-95"
             aria-label={`תשלום ₪${totalPrice} בביט`}
           >
             <img
@@ -173,6 +180,13 @@ export default function PaymentStep({ formData, treatment, onConfirm, onBack, is
               width={48}
               height={48}
             />
+            <span
+              className={`text-xs font-semibold uppercase tracking-wide ${
+                clinicSite ? "text-[#5D7F6D]" : "text-[#6B746F]"
+              }`}
+            >
+              BIT
+            </span>
           </a>
         )}
 
@@ -180,7 +194,7 @@ export default function PaymentStep({ formData, treatment, onConfirm, onBack, is
           <button
             type="button"
             onClick={handleOpenPaybox}
-            className="inline-flex shrink-0 opacity-90 transition-transform hover:opacity-85 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7B3FBE]"
+            className="inline-flex shrink-0 flex-col items-center gap-1 opacity-90 transition-transform hover:opacity-85 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7B3FBE]"
             aria-label="תשלום ב-PayBox"
           >
             <img
@@ -190,13 +204,20 @@ export default function PaymentStep({ formData, treatment, onConfirm, onBack, is
               width={48}
               height={48}
             />
+            <span
+              className={`text-xs font-semibold uppercase tracking-wide ${
+                clinicSite ? "text-[#5D7F6D]" : "text-[#6B746F]"
+              }`}
+            >
+              PAYBOX
+            </span>
           </button>
         ) : (
           <a
             href={payboxUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex shrink-0 transition-transform hover:opacity-85 active:scale-95"
+            className="inline-flex shrink-0 flex-col items-center gap-1 transition-transform hover:opacity-85 active:scale-95"
             aria-label="תשלום ב-PayBox"
           >
             <img
@@ -206,6 +227,13 @@ export default function PaymentStep({ formData, treatment, onConfirm, onBack, is
               width={48}
               height={48}
             />
+            <span
+              className={`text-xs font-semibold uppercase tracking-wide ${
+                clinicSite ? "text-[#5D7F6D]" : "text-[#6B746F]"
+              }`}
+            >
+              PAYBOX
+            </span>
           </a>
         )}
       </div>
@@ -229,12 +257,6 @@ export default function PaymentStep({ formData, treatment, onConfirm, onBack, is
           </p>
         </div>
       )}
-
-      <p className={`mb-8 text-center text-xs ${clinicSite ? clinicTextMuted : "text-muted-foreground"}`}>
-        {bitQrImage
-          ? "לחצו על ביט לקבלת הוראות תשלום וסריקת הברקוד"
-          : "הכפתורים יפתחו את האפליקציה במכשירכם"}
-      </p>
 
       <Button
         onClick={onConfirm}

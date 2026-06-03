@@ -1,4 +1,14 @@
-/** Minutes blocked after an existing appointment start (treatment + buffer). */
+/**
+ * Minutes blocked after an existing appointment start (treatment + buffer).
+ *
+ * For each active appointment at time T on date D, slot S (same day) is unavailable when:
+ *   forward:  minutes(S) >= minutes(T) AND minutes(S) <= minutes(T) + BLOCK_AFTER_MINUTES
+ *   backward: minutes(S) < minutes(T) AND minutes(T) - minutes(S) < BLOCK_AFTER_MINUTES
+ *   overlap:  minutes(S) < minutes(T) AND minutes(S) + bookingDurationMinutes > minutes(T)
+ *
+ * Next bookable slot after T is the first configured slot with minutes(S) > minutes(T) + BLOCK_AFTER_MINUTES
+ * (e.g. T=10:00 → blocked through 11:30 inclusive, next is 12:00 on a 30-min grid).
+ */
 export const BLOCK_AFTER_MINUTES = 90;
 
 export const timeToMinutes = (time) => {

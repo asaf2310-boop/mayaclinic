@@ -38,6 +38,16 @@ export default function ClinicBootstrap() {
 
   useEffect(() => {
     const site = getClinicSite();
+    if (site) {
+      document.body.classList.add("clinic-site");
+    } else {
+      document.body.classList.remove("clinic-site");
+    }
+    return () => document.body.classList.remove("clinic-site");
+  }, []);
+
+  useEffect(() => {
+    const site = getClinicSite();
     if (!site || ranRef.current) return;
     if (backendMode === "demo") return;
 

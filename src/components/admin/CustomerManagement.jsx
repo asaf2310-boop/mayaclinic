@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,11 +23,14 @@ import {
   UserRound,
 } from "lucide-react";
 import { buildCustomers, buildWhatsAppUrl, formatDate, statusMeta } from "@/lib/customers";
+import { buildProfileMap, listPatientProfiles, profileSummaryChips } from "@/lib/patientProfiles";
 import { getClinicSite } from "@/lib/clinicSite";
 import { clinicGlassCard, clinicOutlineBtn, clinicTextPrimary } from "@/lib/clinicUi";
-function PatientDetailsDialog({ customer, open, onOpenChange }) {
+
+function PatientDetailsDialog({ customer, profile, open, onOpenChange }) {
   if (!customer) return null;
 
+  const summaryChips = profileSummaryChips(profile);
   const whatsappUrl = buildWhatsAppUrl(customer.phone);
   const mailtoUrl = customer.email
     ? `mailto:${customer.email}?subject=${encodeURIComponent("עדכון ממאיה קליניק")}`
@@ -40,7 +44,22 @@ function PatientDetailsDialog({ customer, open, onOpenChange }) {
           <DialogDescription className="text-right">
             כרטיס מטופל מלא כולל היסטוריית טיפולים, פרטי קשר ופעולות מהירות.
           </DialogDescription>
+          {summaryChips.length > 0 && (
+            <div className="flex flex-wrap gap-2 pt-1">
+              {summaryChips.map((chip) => (
+                <Badge key={chip} variant="outline">
+                  {chip}
+                </Badge>
+              ))}
+            </div>
+          )}
         </DialogHeader>
+
+        <div className="flex justify-end">
+          <Button asChild variant="outline" size="sm">
+            <Link to={`/admin/patient/${encodeURIComponent(customer.key)}`}>עריכת תיק מלא</Link>
+          </Button>
+        </div>
 
         <div className="grid gap-4 md:grid-cols-4">
           <Card className="p-4">
@@ -163,6 +182,13 @@ export default function CustomerManagement({ appointments }) {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const customers = useMemo(() => buildCustomers(appointments), [appointments]);
 
+  const { data: patientProfiles = [] } = useQuery({
+    queryKey: ["patient-profiles"],
+    queryFn: listPatientProfiles,
+  });
+
+  const profileByKey = useMemo(() => buildProfileMap(patientProfiles), [patientProfiles]);
+
   const filteredCustomers = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
     if (!query) return customers;
@@ -219,6 +245,8 @@ export default function CustomerManagement({ appointments }) {
       ) : (
         <div className="grid gap-5">
           {filteredCustomers.map((customer) => {
+            const profile = profileByKey[customer.key];
+            const summaryChips = profileSummaryChips(profile);
             const whatsappUrl = buildWhatsAppUrl(customer.phone);
             const mailtoUrl = customer.email
               ? `mailto:${customer.email}?subject=${encodeURIComponent("עדכון ממאיה קליניק")}`
@@ -251,6 +279,15 @@ export default function CustomerManagement({ appointments }) {
                             {customer.email || "אין אימייל"}
                           </span>
                         </div>
+                        {summaryChips.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {summaryChips.map((chip) => (
+                              <Badge key={chip} variant="outline" className="text-xs font-normal">
+                                {chip}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -268,7 +305,9 @@ export default function CustomerManagement({ appointments }) {
                         size="sm"
                         className={clinicSite ? clinicOutlineBtn : ""}
                       >
-                        <Link to={`/admin/patient/${encodeURIComponent(customer.key)}`}>לעמוד מטופל</Link>
+                        <Link to={`/admin/patient/${encodeURIComponent(customer.key)}`}>
+                          {profile ? "עריכת תיק" : "פתיחת תיק"}
+                        </Link>
                       </Button>
                       <Badge variant={customer.marketingConsent ? "default" : "secondary"}>
                         {customer.marketingConsent ? "אישר/ה דיוור" : "לא אישר/ה דיוור"}
@@ -420,6 +459,7 @@ export default function CustomerManagement({ appointments }) {
 
       <PatientDetailsDialog
         customer={selectedCustomer}
+        profile={selectedCustomer ? profileByKey[selectedCustomer.key] : null}
         open={Boolean(selectedCustomer)}
         onOpenChange={(nextOpen) => {
           if (!nextOpen) setSelectedCustomer(null);
