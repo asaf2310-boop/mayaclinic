@@ -46,6 +46,8 @@ export const CLINIC_SITES = {
 
         icon: "🌿",
 
+        paybox_link: "https://links.payboxapp.com/m8x1lhYoD3b",
+
       },
 
     ],
@@ -89,25 +91,9 @@ export function isProductionClinicHost(hostname = typeof window !== "undefined" 
 
 
 
-export function getAllowedTreatmentNames(site = getClinicSite()) {
-
-  if (!site) return null;
-
-  return site.seedTreatments.map((treatment) => treatment.name);
-
-}
-
-
-
+/** Booking shows all treatments in the database; seedTreatments is bootstrap-only. */
 export function filterTreatmentsForClinic(treatments = [], site = getClinicSite()) {
-
   if (!site) return treatments;
-
-
-
-  const allowedNames = new Set(getAllowedTreatmentNames(site));
-
-  return treatments.filter((treatment) => allowedNames.has(String(treatment?.name || "").trim()));
-
+  return treatments;
 }
 

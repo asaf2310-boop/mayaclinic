@@ -7,8 +7,9 @@ import { Tabs, TabsContent } from "@/components/ui/tabs";
 import AvailabilityManager from "../components/admin/AvailabilityManager";
 import RevenueReport from "../components/admin/RevenueReport";
 import CustomerManagement from "../components/admin/CustomerManagement";
+import TreatmentManagement from "../components/admin/TreatmentManagement";
 import { Card } from "@/components/ui/card";
-import { BarChart3, CalendarCheck, CalendarDays, CheckCircle2, Clock, Settings2, Users } from "lucide-react";
+import { BarChart3, CalendarCheck, CalendarDays, CheckCircle2, Clock, Settings2, Sparkles, Users } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getClinicSite } from "@/lib/clinicSite";
 import {
@@ -79,6 +80,7 @@ export default function Admin() {
   const adminTabs = [
     { value: "appointments", label: "תורים", icon: CalendarCheck },
     { value: "availability", label: "זמינות", icon: Settings2 },
+    { value: "treatments", label: "טיפולים", icon: Sparkles },
     { value: "customers", label: "לקוחות", icon: Users },
     { value: "revenue", label: "דוח הכנסות", icon: BarChart3 },
   ];
@@ -106,7 +108,7 @@ export default function Admin() {
 
           <Tabs value={activeAdminTab} onValueChange={setActiveAdminTab} dir="rtl">
             <div
-              className={`mb-8 grid w-full grid-cols-1 gap-3 rounded-2xl border p-3 shadow-sm sm:grid-cols-2 lg:grid-cols-4 ${
+              className={`mb-8 grid w-full grid-cols-1 gap-3 rounded-2xl border p-3 shadow-sm sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 ${
                 clinicSite
                   ? clinicGlassPanel
                   : "border-border/60 bg-card"
@@ -194,6 +196,12 @@ export default function Admin() {
               <div className="max-w-2xl">
                 <p className="text-muted-foreground mb-6">בחרי את הימים והשעות שבהם את זמינה לטיפולים. המטופלים יראו רק שעות פנויות.</p>
                 <AvailabilityManager />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="treatments">
+              <div className="max-w-3xl">
+                <TreatmentManagement treatments={treatments} />
               </div>
             </TabsContent>
 

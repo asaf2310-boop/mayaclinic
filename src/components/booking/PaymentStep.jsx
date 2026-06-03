@@ -17,6 +17,7 @@ import {
   buildDynamicPayboxUrl,
   getPayboxPaymentDetails,
   openPayboxLink,
+  resolvePayboxLink,
 } from "@/lib/paymentLinks";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -47,7 +48,7 @@ export default function PaymentStep({ formData, treatment, onConfirm, onBack, is
   const [bitGuideOpen, setBitGuideOpen] = useState(false);
   const clinicSite = getClinicSite();
   const bitQrImage = clinicSite?.bitQrImage;
-  const payboxLink = clinicSite?.payboxLink;
+  const payboxLink = resolvePayboxLink(treatment, clinicSite);
   const { toast } = useToast();
 
   const payboxDetails = useMemo(

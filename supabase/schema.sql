@@ -10,6 +10,7 @@ create table if not exists treatments (
   duration_minutes integer not null,
   price numeric(10, 2) not null,
   icon text,
+  paybox_link text,
   created_at timestamptz not null default now()
 );
 

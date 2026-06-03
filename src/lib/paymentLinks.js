@@ -1,3 +1,9 @@
+export function resolvePayboxLink(treatment, clinicSite) {
+  const treatmentLink = String(treatment?.paybox_link || "").trim();
+  if (treatmentLink) return treatmentLink;
+  return String(clinicSite?.payboxLink || "").trim();
+}
+
 function normalizePayboxUrl(url) {
   const value = String(url || "").trim();
   if (!value) return "";
