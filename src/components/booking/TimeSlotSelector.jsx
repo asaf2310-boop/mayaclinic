@@ -1,7 +1,12 @@
 import React from "react";
 import { Loader2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
-import { clinicTimeSlotBtn, clinicTimeSlotBtnSelected } from "@/lib/clinicUi";
+import {
+  clinicTextHeading,
+  clinicTextMuted,
+  clinicTimeSlotBtn,
+  clinicTimeSlotBtnSelected,
+} from "@/lib/clinicUi";
 
 export default function TimeSlotSelector({
   slots = [],
@@ -11,10 +16,10 @@ export default function TimeSlotSelector({
 }) {
   return (
     <div className="space-y-3">
-      <Label className="text-base font-bold text-[#1e2f27]">בחרו שעה *</Label>
+      <Label className={`text-base font-bold ${clinicTextHeading}`}>בחרו שעה *</Label>
 
       {isLoading ? (
-        <div className="flex items-center gap-2 text-sm text-[#8a958f]">
+        <div className={`flex items-center gap-2 text-sm ${clinicTextMuted}`}>
           <Loader2 className="h-4 w-4 animate-spin" />
           בודק שעות זמינות...
         </div>
@@ -26,16 +31,16 @@ export default function TimeSlotSelector({
               type="button"
               onClick={() => onSelect(slot)}
               aria-pressed={selectedSlot === slot}
-              className={`${clinicTimeSlotBtn} ${
-                selectedSlot === slot ? clinicTimeSlotBtnSelected : ""
-              }`}
+              className={
+                selectedSlot === slot ? clinicTimeSlotBtnSelected : clinicTimeSlotBtn
+              }
             >
               {slot}
             </button>
           ))}
         </div>
       ) : (
-        <p className="text-sm text-destructive">אין שעות פנויות בתאריך זה, בחרו תאריך אחר.</p>
+        <p className="text-sm text-[#B85C5C]">אין שעות פנויות בתאריך זה, בחרו תאריך אחר.</p>
       )}
     </div>
   );

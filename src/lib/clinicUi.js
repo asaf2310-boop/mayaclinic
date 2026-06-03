@@ -1,97 +1,150 @@
-/** Maya clinic UI tokens — must match user hero template class-for-class */
+/** Maya clinic UI tokens — premium calm palette */
+
+export const clinicTextHeading = "text-[#2F3B34]";
+export const clinicTextMuted = "text-[#6B746F]";
+export const clinicTextPrimary = "text-[#5D7F6D]";
+export const clinicBorder = "border-[#E8ECE8]";
 
 export const clinicPageGradient =
-  "bg-gradient-to-tr from-[#f3f7f4] via-[#edf3ee] to-[#e6ece7]";
+  "relative min-h-screen font-sans text-[#2F3B34] [background:radial-gradient(circle_at_top_right,#FFFFFF_0%,#F7F8F6_60%,#F2F4F2_100%)]";
+
+export const clinicFadeIn = "animate-in fade-in duration-700 fill-mode-both";
 
 export const clinicHeroSection =
-  "relative flex min-h-screen items-center justify-center overflow-hidden font-sans";
+  "relative flex min-h-[calc(100vh-5rem)] items-center justify-center overflow-hidden font-sans pt-20";
 
 export const clinicOrbTop =
-  "pointer-events-none absolute top-[-15%] left-[-10%] h-[600px] w-[600px] rounded-full bg-[#e1eae2] opacity-80 blur-[130px]";
+  "pointer-events-none absolute -top-[10%] -left-[8%] h-[520px] w-[520px] rounded-full bg-[#7F9B8A]/12 opacity-90 blur-[120px]";
 
 export const clinicOrbBottom =
-  "pointer-events-none absolute bottom-[-10%] right-[-5%] h-[550px] w-[550px] rounded-full bg-[#d7e4dc] opacity-70 blur-[140px]";
+  "pointer-events-none absolute -bottom-[8%] -right-[6%] h-[480px] w-[480px] rounded-full bg-[#5D7F6D]/10 opacity-80 blur-[130px]";
 
 export const clinicOrbMid =
-  "pointer-events-none absolute top-1/3 left-1/4 h-[300px] w-[300px] rounded-full bg-white opacity-60 blur-[90px]";
+  "pointer-events-none absolute bottom-[15%] left-[8%] h-[280px] w-[280px] rounded-full bg-white/70 opacity-50 blur-[100px]";
+
+export const clinicHeroPanel =
+  "w-full max-w-xl rounded-[32px] border border-white/60 bg-white/75 p-8 shadow-[0_20px_60px_rgba(0,0,0,0.06)] backdrop-blur-[12px] md:p-10";
 
 export const clinicPrimaryBtn =
-  "rounded-2xl bg-gradient-to-r from-[#416d5c] to-[#2f5245] px-8 py-4 text-center font-medium text-white shadow-[0_10px_25px_rgba(65,109,92,0.2)] transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_12px_30px_rgba(65,109,92,0.3)] active:scale-[0.98]";
+  "inline-flex h-14 items-center justify-center rounded-2xl bg-[#5D7F6D] px-8 text-center font-medium text-white shadow-[0_8px_24px_rgba(93,127,109,0.22)] transition-all duration-300 hover:scale-[1.03] hover:bg-[#4F6F5F] active:scale-[0.98]";
 
 export const clinicOutlineBtn =
-  "rounded-2xl border border-white/60 bg-white/70 px-8 py-4 text-center font-medium text-[#2f5245] shadow-[0_4px_12px_rgba(0,0,0,0.02)] backdrop-blur-xl transition-all duration-300 hover:bg-white/90";
+  "inline-flex items-center justify-center rounded-2xl border border-[#DDE4DD] bg-white px-8 py-4 text-center font-medium text-[#5D7F6D] shadow-[0_4px_14px_rgba(0,0,0,0.04)] transition-all duration-300 hover:bg-[#F7F8F6]";
 
 export const clinicBadgeGlass =
-  "inline-flex items-center gap-2 self-start rounded-full border border-white/60 bg-white/70 px-4 py-1.5 shadow-[0_4px_12px_rgba(0,0,0,0.02)] backdrop-blur-xl";
+  "inline-flex items-center gap-2 self-start rounded-full border border-[#E8ECE8] bg-white px-4 py-1.5 shadow-[0_4px_12px_rgba(0,0,0,0.03)]";
 
-export const clinicBadgeText = "text-xs font-medium text-[#2d473d]";
+export const clinicBadgeText = "text-xs font-medium text-[#5D7F6D]";
 
-export const clinicHeadingHighlight =
-  "bg-gradient-to-r from-[#4a7c6a] to-[#2d5244] bg-clip-text text-transparent";
-
-export const clinicHeroTitleBlock = "text-center space-y-3 mb-8";
+export const clinicHeroTitleBlock = "mb-8 space-y-3 text-center";
 
 export const clinicHeroEyebrow =
-  "text-xs uppercase tracking-[0.2em] text-[#4a6d5c]/70 font-semibold block";
+  "block text-xs font-semibold uppercase tracking-[0.2em] text-[#7F9B8A]";
 
 export const clinicHeroTitle =
-  "text-3xl md:text-4xl lg:text-5xl font-black tracking-tight text-[#1e2f27] relative inline-block";
+  "relative inline-block font-bold leading-tight tracking-[-0.02em] text-[#2F3B34] [font-size:clamp(42px,5vw,64px)]";
 
-export const clinicHeroTitleGradient =
-  "bg-gradient-to-r from-[#2d473d] via-[#416d5c] to-[#2d473d] bg-clip-text text-transparent";
+export const clinicHeroTitleGradient = "text-[#2F3B34]";
 
 export const clinicHeroTitleDecor = "flex items-center justify-center gap-2 pt-1";
 
 export const clinicHeroTitleRuleLeft =
-  "w-8 h-[1px] bg-gradient-to-r from-transparent to-[#416d5c]/40";
+  "h-px w-8 bg-gradient-to-r from-transparent to-[#7F9B8A]/50";
 
-export const clinicHeroTitleRuleDot = "w-1.5 h-1.5 rounded-full bg-[#416d5c]/60";
+export const clinicHeroTitleRuleDot = "h-1.5 w-1.5 rounded-full bg-[#7F9B8A]/70";
 
 export const clinicHeroTitleRuleRight =
-  "w-8 h-[1px] bg-gradient-to-l from-transparent to-[#416d5c]/40";
+  "h-px w-8 bg-gradient-to-l from-transparent to-[#7F9B8A]/50";
+
+export const clinicNavShell = "pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center px-4 pt-4";
 
 export const clinicNavGlass =
-  "border-b border-white/50 bg-white/40 backdrop-blur-xl";
+  "pointer-events-auto flex w-fit max-w-[calc(100vw-2rem)] items-center gap-4 rounded-full border border-[#E8ECE8]/90 bg-white/90 px-4 py-2 shadow-[0_8px_32px_rgba(0,0,0,0.06)] backdrop-blur-xl";
+
+export const clinicNavLinkActive =
+  "rounded-full bg-[#5D7F6D]/12 px-4 py-2 text-sm font-semibold text-[#5D7F6D] shadow-sm transition-all duration-200";
+
+export const clinicNavLink =
+  "rounded-full px-4 py-2 text-sm font-semibold text-[#6B746F] transition-all duration-200 hover:bg-[#F7F8F6] hover:text-[#5D7F6D]";
 
 export const clinicGlassCard =
-  "border border-white/60 bg-white/70 shadow-[0_4px_12px_rgba(0,0,0,0.02)] backdrop-blur-xl";
+  "rounded-2xl border border-[#E8ECE8] bg-white shadow-[0_4px_20px_rgba(0,0,0,0.04)]";
 
 export const clinicGlassPanel =
-  "rounded-3xl border border-white/60 bg-white/70 shadow-[0_8px_30px_rgba(0,0,0,0.04)] backdrop-blur-xl";
+  "rounded-3xl border border-[#E8ECE8] bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.05)] md:p-8";
 
 export const clinicFloatingCard =
-  "rounded-2xl border border-white/70 bg-white/75 p-4 shadow-[0_8px_30px_rgba(0,0,0,0.04)] backdrop-blur-xl";
+  "rounded-2xl border border-[#E8ECE8] bg-white p-4 shadow-[0_8px_30px_rgba(0,0,0,0.04)]";
 
 export const clinicHeroImageFrame =
-  "relative h-full w-full overflow-hidden rounded-[2.5rem] border border-white/50 shadow-[0_20px_50px_rgba(0,0,0,0.05)]";
+  "relative w-full overflow-hidden rounded-[28px] border border-white shadow-[0_20px_60px_rgba(0,0,0,0.08)]";
+
+export const clinicSelectionBanner =
+  "border border-[#5D7F6D]/35 bg-[#F0F4F1] text-[#2F3B34]";
+
+export const clinicIconSurface = "bg-[#F0F4F1]";
 
 /** Booking calendar & time-slot tokens */
 export const clinicCalendarCard =
-  "rounded-2xl bg-white p-5 shadow-[0_4px_20px_rgba(0,0,0,0.06)]";
+  "rounded-2xl border border-[#E8ECE8] bg-white p-5 shadow-[0_4px_20px_rgba(0,0,0,0.05)]";
 
 export const clinicCalendarNavBtn =
-  "flex h-9 w-9 items-center justify-center rounded-full border border-[#d4cfc4]/70 bg-white text-[#415349] transition-colors hover:bg-[#f3f7f4]";
+  "flex h-9 w-9 items-center justify-center rounded-full border border-[#E8ECE8] bg-white text-[#6B746F] transition-colors hover:bg-[#F7F8F6] hover:text-[#5D7F6D]";
 
 export const clinicCalendarDayBase =
-  "mx-0.5 flex aspect-square flex-col items-center justify-center rounded-xl text-sm font-medium transition-all";
+  "mx-0.5 flex aspect-square flex-col items-center justify-center rounded-xl text-sm font-medium transition-all duration-200";
 
 export const clinicCalendarDayAvailable =
-  "border border-[#4a7c6a]/45 bg-[#e8f2ed] text-[#2f5245] hover:border-[#4a7c6a]/70";
+  "border border-[#7F9B8A]/40 bg-[#F0F4F1] text-[#2F3B34] hover:border-[#5D7F6D]/50 hover:bg-[#E8ECE8]/60";
 
 export const clinicCalendarDaySelected =
-  "border border-[#416d5c] bg-[#416d5c] text-white shadow-sm";
+  "border border-[#5D7F6D] bg-[#5D7F6D] text-white shadow-sm";
 
 export const clinicCalendarDayDisabled =
-  "cursor-not-allowed text-[#c8c8c8]";
+  "cursor-not-allowed text-[#C5CCC8]";
 
 export const clinicCalendarDayToday =
-  "ring-1 ring-[#d4cfc4] ring-inset";
+  "ring-1 ring-[#7F9B8A]/40 ring-inset";
 
 export const clinicCalendarFooter =
-  "mt-4 text-center text-sm font-medium text-[#4a7c6a]";
+  "mt-4 text-center text-sm font-medium text-[#5D7F6D]";
+
+export const clinicTimeSlotBtnBase =
+  "rounded-xl py-3 text-center text-sm font-medium transition-all duration-200";
 
 export const clinicTimeSlotBtn =
-  "rounded-xl border border-[#d4cfc4]/70 bg-white py-3 text-center text-sm font-medium text-[#1e2f27] transition-all hover:border-[#4a7c6a]/40";
+  `${clinicTimeSlotBtnBase} border border-[#E8ECE8] bg-white text-[#2F3B34] hover:border-[#7F9B8A]/50 hover:shadow-sm`;
 
 export const clinicTimeSlotBtnSelected =
-  "border-2 border-[#416d5c] bg-[#416d5c] text-white shadow-sm ring-2 ring-[#416d5c]/25";
+  `${clinicTimeSlotBtnBase} border-2 border-[#5D7F6D] bg-[#5D7F6D] text-white shadow-sm ring-2 ring-[#5D7F6D]/20`;
+
+/** Booking form fields */
+export const clinicFormLabel = "text-sm font-semibold text-[#2F3B34]";
+
+export const clinicFormInput =
+  "h-11 rounded-xl border-[#E8ECE8] bg-white text-[#2F3B34] shadow-[0_2px_8px_rgba(0,0,0,0.03)] placeholder:text-[#8A958F] focus-visible:border-[#5D7F6D]/50 focus-visible:ring-[#5D7F6D]/25";
+
+export const clinicCheckboxPanel =
+  "flex items-start gap-3 rounded-xl border border-[#E8ECE8] bg-[#FAFBFA] p-4 text-sm leading-6 text-[#6B746F]";
+
+export const clinicFormHint = "text-sm text-[#9A8470] text-center";
+
+export const clinicTreatmentCard =
+  "cursor-pointer rounded-2xl border border-[#E8ECE8] bg-white p-4 shadow-[0_4px_16px_rgba(0,0,0,0.04)] transition-all duration-300 hover:border-[#7F9B8A]/50 hover:shadow-[0_6px_20px_rgba(0,0,0,0.06)]";
+
+export const clinicTreatmentCardSelected =
+  "cursor-pointer rounded-2xl border-2 border-[#5D7F6D] bg-[#F0F4F1] p-4 shadow-[0_6px_24px_rgba(93,127,109,0.12)] ring-2 ring-[#5D7F6D]/15";
+
+export const clinicTreatmentCheck =
+  "flex h-6 w-6 items-center justify-center rounded-full bg-[#5D7F6D] text-white";
+
+export const clinicCalendarDayHeader =
+  "py-1 text-center text-xs font-medium text-[#6B746F]";
+
+export const clinicCalendarSlotCount =
+  "mt-1 flex items-center gap-0.5 text-[10px] leading-none";
+
+export const clinicBookPageTitle =
+  "mb-3 text-3xl font-bold tracking-tight text-[#2F3B34] md:text-4xl";
+
+export const clinicBookPageSubtitle = "text-lg text-[#6B746F]";

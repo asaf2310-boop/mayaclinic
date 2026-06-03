@@ -5,7 +5,16 @@ import { CheckCircle2, Home, CalendarPlus } from "lucide-react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { getClinicSite } from "@/lib/clinicSite";
-import { clinicGlassPanel, clinicOutlineBtn, clinicPrimaryBtn } from "@/lib/clinicUi";
+import {
+  clinicGlassCard,
+  clinicGlassPanel,
+  clinicIconSurface,
+  clinicOutlineBtn,
+  clinicPrimaryBtn,
+  clinicTextHeading,
+  clinicTextMuted,
+  clinicTextPrimary,
+} from "@/lib/clinicUi";
 
 const DEFAULT_PRICE = 250;
 
@@ -29,55 +38,61 @@ export default function BookingSuccess({ appointment, onReset }) {
       className={`px-6 py-16 text-center ${clinicSite ? clinicGlassPanel : ""}`}
     >
       <div
-        className={`w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 ${
-          clinicSite ? "bg-[#edf3ee]" : "bg-primary/10"
+        className={`mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl ${
+          clinicSite ? clinicIconSurface : "bg-primary/10"
         }`}
       >
-        <CheckCircle2 className={`w-10 h-10 ${clinicSite ? "text-[#416d5c]" : "text-primary"}`} />
+        <CheckCircle2 className={`h-10 w-10 ${clinicSite ? clinicTextPrimary : "text-primary"}`} />
       </div>
 
-      <h2 className={`text-3xl font-bold mb-3 ${clinicSite ? "text-[#1e2f27]" : "text-foreground"}`}>
+      <h2 className={`mb-3 text-3xl font-bold ${clinicSite ? clinicTextHeading : "text-foreground"}`}>
         התורים נקבעו בהצלחה!
       </h2>
-      <p className={`text-lg mb-8 ${clinicSite ? "text-[#415349]" : "text-muted-foreground"}`}>
+      <p className={`mb-8 text-lg ${clinicSite ? clinicTextMuted : "text-muted-foreground"}`}>
         נשלח אליכם אישור בקרוב
       </p>
 
       <div
-        className={`rounded-2xl p-6 max-w-sm mx-auto mb-6 text-right ${
-          clinicSite
-            ? "border border-white/60 bg-white/70 shadow-[0_4px_12px_rgba(0,0,0,0.02)] backdrop-blur-xl"
-            : "bg-muted/50"
+        className={`mx-auto mb-6 max-w-sm rounded-2xl p-6 text-right ${
+          clinicSite ? clinicGlassCard : "bg-muted/50"
         }`}
         dir="rtl"
       >
         <div className="space-y-3 text-sm">
           <div className="flex justify-between">
-            <span className="text-muted-foreground">טיפול:</span>
-            <span className="font-medium text-foreground">{appointment.treatment_name || appointments[0]?.treatment_name}</span>
+            <span className={clinicSite ? clinicTextMuted : "text-muted-foreground"}>טיפול:</span>
+            <span className={`font-medium ${clinicSite ? clinicTextHeading : "text-foreground"}`}>
+              {appointment.treatment_name || appointments[0]?.treatment_name}
+            </span>
           </div>
           <div className="space-y-2">
-            <span className="text-muted-foreground">תורים:</span>
+            <span className={clinicSite ? clinicTextMuted : "text-muted-foreground"}>תורים:</span>
             <div className="space-y-1">
               {appointments.map((item) => (
                 <div key={item.id || `${item.date}-${item.time}`} className="flex justify-between">
-                  <span className="font-medium text-foreground">{format(new Date(item.date + "T00:00:00"), "dd/MM/yyyy")}</span>
-                  <span className="font-medium text-foreground">{item.time}</span>
+                  <span className={`font-medium ${clinicSite ? clinicTextHeading : "text-foreground"}`}>
+                    {format(new Date(item.date + "T00:00:00"), "dd/MM/yyyy")}
+                  </span>
+                  <span className={`font-medium ${clinicSite ? clinicTextHeading : "text-foreground"}`}>{item.time}</span>
                 </div>
               ))}
             </div>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">כמות תורים:</span>
-            <span className="font-medium text-foreground">{appointments.length}</span>
+            <span className={clinicSite ? clinicTextMuted : "text-muted-foreground"}>כמות תורים:</span>
+            <span className={`font-medium ${clinicSite ? clinicTextHeading : "text-foreground"}`}>{appointments.length}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">סטטוס:</span>
-            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${status.color}`}>{status.label}</span>
+            <span className={clinicSite ? clinicTextMuted : "text-muted-foreground"}>סטטוס:</span>
+            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${status.color}`}>{status.label}</span>
           </div>
-          <div className="flex justify-between border-t border-border pt-3 mt-3">
-            <span className="text-muted-foreground">לתשלום:</span>
-            <span className="font-bold text-foreground text-base">₪{price}</span>
+          <div
+            className={`mt-3 flex justify-between border-t pt-3 ${
+              clinicSite ? "border-[#E8ECE8]" : "border-border"
+            }`}
+          >
+            <span className={clinicSite ? clinicTextMuted : "text-muted-foreground"}>לתשלום:</span>
+            <span className={`text-base font-bold ${clinicSite ? clinicTextPrimary : "text-foreground"}`}>₪{price}</span>
           </div>
         </div>
       </div>

@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { buildCustomers, buildWhatsAppUrl, formatDate, statusMeta } from "@/lib/customers";
 import { getClinicSite } from "@/lib/clinicSite";
-import { clinicGlassCard, clinicOutlineBtn } from "@/lib/clinicUi";
+import { clinicGlassCard, clinicOutlineBtn, clinicTextPrimary } from "@/lib/clinicUi";
 function PatientDetailsDialog({ customer, open, onOpenChange }) {
   if (!customer) return null;
 
@@ -231,7 +231,7 @@ export default function CustomerManagement({ appointments }) {
               >
                 <div
                   className={`border-b px-5 py-4 ${
-                    clinicSite ? "border-white/60 bg-white/70" : "border-border/60 bg-muted/30"
+                    clinicSite ? "border-[#E8ECE8] bg-white" : "border-border/60 bg-muted/30"
                   }`}
                 >
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -404,7 +404,7 @@ export default function CustomerManagement({ appointments }) {
                       )}
                       <div className="rounded-xl bg-muted/40 p-3 text-xs text-muted-foreground">
                         <p className="mb-1 inline-flex items-center gap-1 font-medium text-foreground">
-                          <CheckCircle2 className={`h-3.5 w-3.5 ${clinicSite ? "text-[#416d5c]" : "text-emerald-600"}`} />
+                          <CheckCircle2 className={`h-3.5 w-3.5 ${clinicSite ? clinicTextPrimary : "text-emerald-600"}`} />
                           הערות מטופל
                         </p>
                         <p className="leading-5">{customer.notes || "לא הוזנו הערות עבור מטופל זה."}</p>

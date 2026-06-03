@@ -9,7 +9,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { CalendarPlus, CalendarCheck, Loader2 } from "lucide-react";
 import { format, isBefore, startOfDay } from "date-fns";
 import { getClinicSite } from "@/lib/clinicSite";
-import { clinicPrimaryBtn } from "@/lib/clinicUi";
+import {
+  clinicCheckboxPanel,
+  clinicFormHint,
+  clinicFormInput,
+  clinicFormLabel,
+  clinicPrimaryBtn,
+  clinicSelectionBanner,
+  clinicTextPrimary,
+} from "@/lib/clinicUi";
 import BookingCalendar from "@/components/booking/BookingCalendar";
 import TimeSlotSelector from "@/components/booking/TimeSlotSelector";
 import {
@@ -130,21 +138,25 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
     ? format(new Date(form.date + "T00:00:00"), "dd/MM/yyyy")
     : null;
 
+  const labelClass = clinicSite ? clinicFormLabel : undefined;
+  const inputClass = clinicSite ? clinicFormInput : undefined;
+
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      <div className="grid sm:grid-cols-2 gap-4">
+      <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="name">שם מלא *</Label>
+          <Label htmlFor="name" className={labelClass}>שם מלא *</Label>
           <Input
             id="name"
             placeholder="הכניסו את שמכם"
             value={form.patient_name}
             onChange={(e) => handleChange("patient_name", e.target.value)}
             required
+            className={inputClass}
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="phone">טלפון *</Label>
+          <Label htmlFor="phone" className={labelClass}>טלפון *</Label>
           <Input
             id="phone"
             type="tel"
@@ -153,13 +165,13 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
             onChange={(e) => handleChange("patient_phone", e.target.value)}
             required
             dir="ltr"
-            className="text-left"
+            className={inputClass ? `${inputClass} text-left` : "text-left"}
           />
         </div>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="email">אימייל</Label>
+        <Label htmlFor="email" className={labelClass}>אימייל</Label>
         <Input
           id="email"
           type="email"
@@ -167,12 +179,12 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
           value={form.patient_email}
           onChange={(e) => handleChange("patient_email", e.target.value)}
           dir="ltr"
-          className="text-left"
+          className={inputClass ? `${inputClass} text-left` : "text-left"}
         />
       </div>
 
       <div className="space-y-2">
-        <Label>בחרו תאריך *</Label>
+        <Label className={labelClass}>בחרו תאריך *</Label>
         <BookingCalendar
           viewMonth={viewMonth}
           onViewMonthChange={setViewMonth}
@@ -199,14 +211,16 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
         <div
           className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-sm ${
             hasCompleteSelection
-              ? "border-[#416d5c]/50 bg-[#e8f2ed] text-[#2f5245]"
-              : "border-border bg-muted/30 text-muted-foreground"
+              ? clinicSelectionBanner
+              : clinicSite
+                ? "border-[#E8ECE8] bg-[#FAFBFA] text-[#6B746F]"
+                : "border-border bg-muted/30 text-muted-foreground"
           }`}
           role="status"
           aria-live="polite"
         >
           <CalendarCheck
-            className={`h-5 w-5 shrink-0 ${hasCompleteSelection ? "text-[#416d5c]" : "text-muted-foreground"}`}
+            className={`h-5 w-5 shrink-0 ${hasCompleteSelection ? clinicTextPrimary : "text-muted-foreground"}`}
             aria-hidden
           />
           <p className="font-medium">
@@ -220,29 +234,38 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="notes">הערות נוספות</Label>
+        <Label htmlFor="notes" className={labelClass}>הערות נוספות</Label>
         <Textarea
           id="notes"
           placeholder="האם יש משהו שחשוב שנדע?"
           value={form.notes}
           onChange={(e) => handleChange("notes", e.target.value)}
           rows={3}
+          className={inputClass}
         />
       </div>
 
-      <label className="flex items-start gap-3 rounded-xl border border-border bg-muted/20 p-4 text-sm leading-6">
+      <label
+        className={
+          clinicSite
+            ? clinicCheckboxPanel
+            : "flex items-start gap-3 rounded-xl border border-border bg-muted/20 p-4 text-sm leading-6"
+        }
+      >
         <Checkbox
           checked={form.marketing_consent}
           onCheckedChange={(checked) => handleChange("marketing_consent", Boolean(checked))}
-          className="mt-1"
+          className="mt-1 border-[#DDE4DD] data-[state=checked]:border-[#5D7F6D] data-[state=checked]:bg-[#5D7F6D]"
         />
-        <span className="text-muted-foreground">
+        <span className={clinicSite ? undefined : "text-muted-foreground"}>
           אני מאשר/ת קבלת עדכונים, מבצעים ותזכורות שיווקיות ממאיה קליניק.
         </span>
       </label>
 
       {selectedTreatment && !hasCompleteSelection && (
-        <p className="text-sm text-amber-600 text-center">יש לבחור תאריך ושעה לתור</p>
+        <p className={clinicSite ? clinicFormHint : "text-center text-sm text-amber-600"}>
+          יש לבחור תאריך ושעה לתור
+        </p>
       )}
       <Button
         type="submit"

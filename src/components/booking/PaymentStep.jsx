@@ -4,7 +4,15 @@ import { ArrowRight, CreditCard, CheckCircle2, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
 import { getClinicSite } from "@/lib/clinicSite";
-import { clinicGlassCard, clinicGlassPanel, clinicPrimaryBtn } from "@/lib/clinicUi";
+import {
+  clinicGlassCard,
+  clinicGlassPanel,
+  clinicIconSurface,
+  clinicPrimaryBtn,
+  clinicTextHeading,
+  clinicTextMuted,
+  clinicTextPrimary,
+} from "@/lib/clinicUi";
 import {
   buildDynamicPayboxUrl,
   getPayboxPaymentDetails,
@@ -84,16 +92,16 @@ export default function PaymentStep({ formData, treatment, onConfirm, onBack, is
         <div
           className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 ${
             clinicSite
-              ? "bg-[#edf3ee]"
+              ? clinicIconSurface
               : "bg-primary/10"
           }`}
         >
-          <CreditCard className={`w-8 h-8 ${clinicSite ? "text-[#416d5c]" : "text-primary"}`} />
+          <CreditCard className={`w-8 h-8 ${clinicSite ? clinicTextPrimary : "text-primary"}`} />
         </div>
-        <h2 className={`text-2xl font-extrabold mb-2 tracking-tight ${clinicSite ? "text-[#1e2f27]" : "text-foreground"}`}>
+        <h2 className={`mb-2 text-2xl font-bold tracking-tight ${clinicSite ? clinicTextHeading : "text-foreground"}`}>
           תשלום על התור
         </h2>
-        <p className={clinicSite ? "text-[#415349]" : "text-muted-foreground"}>
+        <p className={clinicSite ? clinicTextMuted : "text-muted-foreground"}>
           לפני אישור התור, יש לשלם את עלות הטיפול
         </p>
       </div>
@@ -102,31 +110,35 @@ export default function PaymentStep({ formData, treatment, onConfirm, onBack, is
         className={`mb-6 space-y-2 rounded-2xl p-5 text-sm ${clinicSite ? clinicGlassCard : "bg-muted/50"}`}
       >
         <div className="flex justify-between">
-          <span className="text-muted-foreground">טיפול:</span>
-          <span className="font-medium">{treatment?.name}</span>
+          <span className={clinicSite ? clinicTextMuted : "text-muted-foreground"}>טיפול:</span>
+          <span className={`font-medium ${clinicSite ? clinicTextHeading : ""}`}>{treatment?.name}</span>
         </div>
         <div className="space-y-2">
-          <span className="text-muted-foreground">תורים:</span>
+          <span className={clinicSite ? clinicTextMuted : "text-muted-foreground"}>תורים:</span>
           <div className="space-y-1">
             {appointments.map((appointment) => (
               <div key={`${appointment.date}-${appointment.time}`} className="flex justify-between">
-                <span className="font-medium">{format(new Date(appointment.date + "T00:00:00"), "dd/MM/yyyy")}</span>
-                <span className="font-medium">{appointment.time}</span>
+                <span className={`font-medium ${clinicSite ? clinicTextHeading : ""}`}>
+                  {format(new Date(appointment.date + "T00:00:00"), "dd/MM/yyyy")}
+                </span>
+                <span className={`font-medium ${clinicSite ? clinicTextHeading : ""}`}>{appointment.time}</span>
               </div>
             ))}
           </div>
         </div>
         <div className="flex justify-between">
-          <span className="text-muted-foreground">כמות תורים:</span>
-          <span className="font-medium">{appointments.length}</span>
+          <span className={clinicSite ? clinicTextMuted : "text-muted-foreground"}>כמות תורים:</span>
+          <span className={`font-medium ${clinicSite ? clinicTextHeading : ""}`}>{appointments.length}</span>
         </div>
-        <div className={`mt-2 flex justify-between border-t pt-2 ${clinicSite ? "border-white/60" : "border-border"}`}>
-          <span className="text-muted-foreground">לתשלום:</span>
-          <span className={`font-bold text-lg ${clinicSite ? "text-[#416d5c]" : "text-foreground"}`}>₪{totalPrice}</span>
+        <div className={`mt-2 flex justify-between border-t pt-2 ${clinicSite ? "border-[#E8ECE8]" : "border-border"}`}>
+          <span className={clinicSite ? clinicTextMuted : "text-muted-foreground"}>לתשלום:</span>
+          <span className={`text-lg font-bold ${clinicSite ? clinicTextPrimary : "text-foreground"}`}>₪{totalPrice}</span>
         </div>
       </div>
 
-      <p className="mb-3 text-center text-sm font-semibold text-foreground">אמצעי תשלום</p>
+      <p className={`mb-3 text-center text-sm font-semibold ${clinicSite ? clinicTextHeading : "text-foreground"}`}>
+        אמצעי תשלום
+      </p>
       <div className="mb-4 flex items-center justify-center gap-10">
         {bitQrImage ? (
           <button
@@ -218,7 +230,7 @@ export default function PaymentStep({ formData, treatment, onConfirm, onBack, is
         </div>
       )}
 
-      <p className="text-xs text-muted-foreground text-center mb-8">
+      <p className={`mb-8 text-center text-xs ${clinicSite ? clinicTextMuted : "text-muted-foreground"}`}>
         {bitQrImage
           ? "לחצו על ביט לקבלת הוראות תשלום וסריקת הברקוד"
           : "הכפתורים יפתחו את האפליקציה במכשירכם"}
@@ -241,7 +253,11 @@ export default function PaymentStep({ formData, treatment, onConfirm, onBack, is
       <button
         type="button"
         onClick={onBack}
-        className="w-full text-sm text-muted-foreground hover:text-foreground flex items-center justify-center gap-1 py-2"
+        className={`flex w-full items-center justify-center gap-1 py-2 text-sm transition-colors ${
+          clinicSite
+            ? `${clinicTextMuted} hover:text-[#5D7F6D]`
+            : "text-muted-foreground hover:text-foreground"
+        }`}
       >
         <ArrowRight className="w-4 h-4" />
         חזרה לטופס

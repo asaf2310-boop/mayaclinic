@@ -18,6 +18,7 @@ import {
   clinicOutlineBtn,
   clinicPageGradient,
   clinicPrimaryBtn,
+  clinicTextHeading,
 } from "@/lib/clinicUi";
 
 export default function AdminPatient() {
@@ -39,7 +40,7 @@ export default function AdminPatient() {
     return (
       <div
         className={`min-h-screen ${
-          clinicSite ? clinicPageGradient : "bg-background"
+          clinicSite ? `${clinicPageGradient} clinic-page-enter` : "bg-background"
         }`}
       >
         <Navbar />
@@ -57,7 +58,7 @@ export default function AdminPatient() {
     return (
       <div
         className={`min-h-screen ${
-          clinicSite ? clinicPageGradient : "bg-background"
+          clinicSite ? `${clinicPageGradient} clinic-page-enter` : "bg-background"
         }`}
       >
         <Navbar />
@@ -91,7 +92,7 @@ export default function AdminPatient() {
   return (
     <div
       className={`min-h-screen ${
-        clinicSite ? clinicPageGradient : "bg-background"
+        clinicSite ? `${clinicPageGradient} clinic-page-enter` : "bg-background"
       }`}
     >
       <Navbar />
@@ -106,7 +107,7 @@ export default function AdminPatient() {
         <div className="relative mx-auto max-w-6xl space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h1 className={`text-3xl font-bold ${clinicSite ? "text-[#1e2f27]" : ""}`}>{customer.name}</h1>
+              <h1 className={`text-3xl font-bold ${clinicSite ? clinicTextHeading : ""}`}>{customer.name}</h1>
               <p className="mt-1 text-sm text-muted-foreground">כרטיס מטופל מלא</p>
             </div>
             <Button

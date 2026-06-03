@@ -19,6 +19,7 @@ import {
   clinicOrbTop,
   clinicPageGradient,
   clinicPrimaryBtn,
+  clinicTextHeading,
 } from "@/lib/clinicUi";
 
 export default function Admin() {
@@ -96,7 +97,7 @@ export default function Admin() {
   return (
     <div
       className={`min-h-screen ${
-        clinicSite ? clinicPageGradient : "bg-background"
+        clinicSite ? `${clinicPageGradient} clinic-page-enter` : "bg-background"
       }`}
     >
       <Navbar />
@@ -109,7 +110,7 @@ export default function Admin() {
           </>
         )}
         <div className="relative max-w-6xl mx-auto">
-          <h1 className={`text-3xl font-bold mb-8 ${clinicSite ? "text-[#1e2f27]" : "text-foreground"}`}>
+          <h1 className={`mb-8 text-3xl font-bold ${clinicSite ? clinicTextHeading : "text-foreground"}`}>
             ניהול
           </h1>
 
@@ -136,7 +137,7 @@ export default function Admin() {
                         ? `border-transparent ${clinicPrimaryBtn} !px-4 !py-3 text-sm`
                         : "border-primary/30 bg-primary text-primary-foreground shadow-md"
                       : clinicSite
-                        ? "border-transparent bg-white/70 text-[#1e2f27] hover:bg-white/90"
+                        ? "border-transparent bg-white text-[#2F3B34] hover:bg-[#F7F8F6]"
                         : "border-transparent bg-muted/40 text-foreground hover:border-primary/20 hover:bg-muted"
                   }`}
                 >

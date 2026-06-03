@@ -20,7 +20,12 @@ import {
   clinicCalendarDaySelected,
   clinicCalendarDayDisabled,
   clinicCalendarDayToday,
+  clinicCalendarDayHeader,
   clinicCalendarFooter,
+  clinicCalendarSlotCount,
+  clinicTextHeading,
+  clinicTextMuted,
+  clinicTextPrimary,
 } from "@/lib/clinicUi";
 
 const DAY_NAMES = ["א", "ב", "ג", "ד", "ה", "ו", "ש"];
@@ -58,7 +63,7 @@ export default function BookingCalendar({
           >
             <ChevronRight className="h-4 w-4" />
           </button>
-          <span className="text-base font-bold text-[#1e2f27]">
+          <span className={`text-base font-bold ${clinicTextHeading}`}>
             {format(viewMonth, "MMMM yyyy", { locale: he })}
           </span>
           <button
@@ -73,7 +78,7 @@ export default function BookingCalendar({
 
         <div className="grid grid-cols-7 mb-2">
           {DAY_NAMES.map((d) => (
-            <div key={d} className="py-1 text-center text-xs font-medium text-[#8a958f]">
+            <div key={d} className={clinicCalendarDayHeader}>
               {d}
             </div>
           ))}
@@ -108,11 +113,11 @@ export default function BookingCalendar({
                 <span className="leading-none">{date.getDate()}</span>
                 {available && slotCount > 0 && (
                   <span
-                    className={`mt-1 flex items-center gap-0.5 text-[10px] leading-none ${
-                      selected ? "text-white/90" : "text-[#6b7f74]"
+                    className={`${clinicCalendarSlotCount} ${
+                      selected ? "text-white/90" : clinicTextMuted
                     }`}
                   >
-                    <span className={selected ? "text-white/80" : "text-[#c4a574]"}>•</span>
+                    <span className={selected ? "text-white/80" : clinicTextPrimary}>•</span>
                     {slotCount}
                   </span>
                 )}

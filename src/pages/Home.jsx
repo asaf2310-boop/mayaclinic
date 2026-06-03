@@ -7,9 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { demoModeEnabled } from "@/api/demoClient";
 import { getClinicSite } from "@/lib/clinicSite";
 import {
-  clinicHeroImageFrame,
-  clinicHeroSection,
+  clinicFadeIn,
   clinicHeroEyebrow,
+  clinicHeroImageFrame,
+  clinicHeroPanel,
+  clinicHeroSection,
   clinicHeroTitle,
   clinicHeroTitleBlock,
   clinicHeroTitleDecor,
@@ -22,6 +24,7 @@ import {
   clinicOrbTop,
   clinicPageGradient,
   clinicPrimaryBtn,
+  clinicTextMuted,
 } from "@/lib/clinicUi";
 import { BarChart3, CalendarCheck, CheckCircle2, ExternalLink, Megaphone, MonitorSmartphone, Users } from "lucide-react";
 
@@ -82,52 +85,54 @@ export default function Home() {
 
   if (clinicSite) {
     return (
-      <div className={`min-h-screen font-sans ${clinicPageGradient}`}>
+      <div className={`min-h-screen font-sans ${clinicPageGradient} clinic-page-enter`}>
         <Navbar />
         <main>
-          <section className={`${clinicHeroSection} ${clinicPageGradient}`}>
+          <section className={clinicHeroSection}>
             <div className={clinicOrbTop} />
             <div className={clinicOrbBottom} />
             <div className={clinicOrbMid} />
 
             <div
-              className="container relative z-10 mx-auto flex flex-col items-center justify-center px-6 py-12 text-center"
+              className="container relative z-10 mx-auto flex min-h-[calc(100vh-6rem)] flex-col items-center justify-center px-6 py-12"
               dir="rtl"
             >
-              <div className={clinicHeroTitleBlock} dir="rtl">
-                <span className={clinicHeroEyebrow}>ABOUT THE CLINIC</span>
-                <h2 className={clinicHeroTitle}>
-                  <span className={clinicHeroTitleGradient}>{clinicSite.clinicTitle}</span>
-                </h2>
-                <div className={clinicHeroTitleDecor} aria-hidden="true">
-                  <div className={clinicHeroTitleRuleLeft} />
-                  <div className={clinicHeroTitleRuleDot} />
-                  <div className={clinicHeroTitleRuleRight} />
+              <div className={`${clinicHeroPanel} ${clinicFadeIn} flex flex-col items-center text-center`}>
+                <div className={clinicHeroTitleBlock} dir="rtl">
+                  <span className={clinicHeroEyebrow}>ABOUT THE CLINIC</span>
+                  <h2 className={clinicHeroTitle}>
+                    <span className={clinicHeroTitleGradient}>{clinicSite.clinicTitle}</span>
+                  </h2>
+                  <div className={clinicHeroTitleDecor} aria-hidden="true">
+                    <div className={clinicHeroTitleRuleLeft} />
+                    <div className={clinicHeroTitleRuleDot} />
+                    <div className={clinicHeroTitleRuleRight} />
+                  </div>
                 </div>
-              </div>
 
-              <div className="mb-8 w-full max-w-sm md:max-w-md">
-                <div className={`${clinicHeroImageFrame} h-auto`}>
-                  {!heroImageMissing ? (
-                    <img
-                      src={clinicSite.heroImage}
-                      alt={clinicSite.clinicTitle}
-                      className="mx-auto h-auto max-h-[360px] w-full object-contain md:max-h-[440px]"
-                      loading="eager"
-                      decoding="async"
-                      onError={() => setHeroImageMissing(true)}
-                    />
-                  ) : (
-                    <div className="flex min-h-[240px] items-center justify-center bg-white/60 px-6 py-12 text-[#415349]">
-                      לא נטענה תמונת הקליניקה
-                    </div>
-                  )}
+                <div className="mb-8 w-full max-w-sm md:max-w-md">
+                  <div className={`${clinicHeroImageFrame} h-auto transition-transform duration-300 hover:scale-[1.01]`}>
+                    {!heroImageMissing ? (
+                      <img
+                        src={clinicSite.heroImage}
+                        alt={clinicSite.clinicTitle}
+                        className="mx-auto h-auto max-h-[360px] w-full object-contain md:max-h-[440px]"
+                        loading="eager"
+                        decoding="async"
+                        onError={() => setHeroImageMissing(true)}
+                      />
+                    ) : (
+                      <div className={`flex min-h-[240px] items-center justify-center bg-white px-6 py-12 ${clinicTextMuted}`}>
+                        לא נטענה תמונת הקליניקה
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              <Link to="/book" className={clinicPrimaryBtn}>
-                {clinicSite.heroCtaPrimary}
-              </Link>
+                <Link to="/book" className={clinicPrimaryBtn}>
+                  {clinicSite.heroCtaPrimary}
+                </Link>
+              </div>
             </div>
           </section>
         </main>

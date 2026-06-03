@@ -11,12 +11,17 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { filterTreatmentsForClinic, getClinicSite } from "@/lib/clinicSite";
 import {
+  clinicBookPageSubtitle,
+  clinicBookPageTitle,
+  clinicFadeIn,
   clinicGlassCard,
   clinicGlassPanel,
   clinicOrbBottom,
   clinicOrbMid,
   clinicOrbTop,
   clinicPageGradient,
+  clinicTextHeading,
+  clinicTextMuted,
 } from "@/lib/clinicUi";
 import { sendBookingConfirmationEmail } from "@/api/bookingEmail";
 
@@ -123,7 +128,7 @@ export default function Book() {
 
   return (
     <div
-      className={`min-h-screen ${clinicSite ? clinicPageGradient : "bg-background"}`}
+      className={`min-h-screen ${clinicSite ? `${clinicPageGradient} clinic-page-enter font-sans` : "bg-background"}`}
     >
       <Navbar />
       <main className="relative pt-24 pb-16 px-6" dir="rtl">
@@ -134,7 +139,7 @@ export default function Book() {
             <div className={clinicOrbMid} />
           </>
         )}
-        <div className="relative max-w-2xl mx-auto">
+        <div className={`relative mx-auto max-w-2xl ${clinicSite ? clinicFadeIn : ""}`}>
           {bookedAppointment ? (
             <BookingSuccess appointment={bookedAppointment} onReset={handleReset} />
           ) : pendingFormData ? (
@@ -147,24 +152,18 @@ export default function Book() {
             />
           ) : (
             <>
-              <div className="text-center mb-10">
-                <h1
-                  className={`text-3xl md:text-4xl font-extrabold mb-3 tracking-tight ${
-                    clinicSite ? "text-[#1e2f27]" : "text-foreground"
-                  }`}
-                >
+              <div className="mb-10 text-center">
+                <h1 className={clinicSite ? clinicBookPageTitle : "mb-3 text-3xl font-bold tracking-tight text-foreground md:text-4xl"}>
                   קביעת תור
                 </h1>
-                <p className={`text-lg ${clinicSite ? "text-[#415349]" : "text-muted-foreground"}`}>
+                <p className={clinicSite ? clinicBookPageSubtitle : "text-lg text-muted-foreground"}>
                   {clinicSite ? "בחרו תאריך ושעה נוחים לטיפול" : "בחרו טיפול, תאריך ושעה נוחים"}
                 </p>
               </div>
 
               <div
                 className={`space-y-8 ${
-                  clinicSite
-                    ? `${clinicGlassPanel} p-6 md:p-8`
-                    : ""
+                  clinicSite ? clinicGlassPanel : ""
                 }`}
               >
                 {isLoading ? (
@@ -174,7 +173,7 @@ export default function Book() {
                     ))}
                   </div>
                 ) : visibleTreatments.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
+                  <div className={`py-12 text-center ${clinicSite ? clinicTextMuted : "text-muted-foreground"}`}>
                     אין טיפולים זמינים כרגע
                   </div>
                 ) : (
@@ -187,9 +186,9 @@ export default function Book() {
                             : ""
                         }`}
                       >
-                        <p className="text-sm text-muted-foreground">הטיפול שלך</p>
-                        <p className="mt-1 text-xl font-bold text-[#1e2f27]">{visibleTreatments[0].name}</p>
-                        <p className="mt-2 text-sm text-[#415349]">
+                        <p className={`text-sm ${clinicTextMuted}`}>הטיפול שלך</p>
+                        <p className={`mt-1 text-xl font-bold ${clinicTextHeading}`}>{visibleTreatments[0].name}</p>
+                        <p className={`mt-2 text-sm ${clinicTextMuted}`}>
                           {visibleTreatments[0].duration_minutes} דקות · ₪{visibleTreatments[0].price}
                         </p>
                       </Card>
@@ -201,7 +200,7 @@ export default function Book() {
                       />
                     )}
 
-                    <div className={`h-px ${clinicSite ? "bg-white/60" : "bg-border"}`} />
+                    <div className={`h-px ${clinicSite ? "bg-[#E8ECE8]" : "bg-border"}`} />
 
                     <BookingForm
                       selectedTreatment={selectedTreatment}

@@ -5,7 +5,8 @@ module.exports = {
   theme: {
   	extend: {
   		fontFamily: {
-  			heebo: ['var(--font-heebo)']
+  			heebo: ['var(--font-heebo)'],
+  			sans: ['var(--font-heebo)', 'system-ui', 'sans-serif']
   		},
   		borderRadius: {
   			lg: 'var(--radius)',
