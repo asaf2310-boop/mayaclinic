@@ -1,5 +1,17 @@
 import { getClinicSite } from "./clinicSite";
 
+export const AVAILABILITY_CLEARED_KEY = "clinic-availability-cleared";
+
+export function markAvailabilityCleared() {
+  if (typeof sessionStorage !== "undefined") {
+    sessionStorage.setItem(AVAILABILITY_CLEARED_KEY, "1");
+  }
+}
+
+export function isAvailabilityCleared() {
+  return typeof sessionStorage !== "undefined" && sessionStorage.getItem(AVAILABILITY_CLEARED_KEY) === "1";
+}
+
 function formatDate(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -33,20 +45,22 @@ export async function ensureClinicSeedData(base44) {
     restoredTreatments += 1;
   }
 
-  const availability = await base44.entities.Availability.list();
-  const availabilityList = Array.isArray(availability) ? availability : [];
-  const existingDates = new Set(availabilityList.map((row) => row.date));
+  if (!isAvailabilityCleared()) {
+    const availability = await base44.entities.Availability.list();
+    const availabilityList = Array.isArray(availability) ? availability : [];
+    const existingDates = new Set(availabilityList.map((row) => row.date));
 
-  for (let offset = 1; offset <= 30; offset += 1) {
-    const date = formatDate(addDays(new Date(), offset));
-    if (existingDates.has(date)) continue;
+    for (let offset = 1; offset <= 30; offset += 1) {
+      const date = formatDate(addDays(new Date(), offset));
+      if (existingDates.has(date)) continue;
 
-    await base44.entities.Availability.create({
-      date,
-      slots: site.defaultSlots,
-      is_active: true,
-    });
-    restoredAvailability += 1;
+      await base44.entities.Availability.create({
+        date,
+        slots: site.defaultSlots,
+        is_active: true,
+      });
+      restoredAvailability += 1;
+    }
   }
 
   return { restoredTreatments, restoredAvailability };

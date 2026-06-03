@@ -4,9 +4,20 @@ import { base44 } from "@/api/base44Client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Save, Trash2, Plus, ChevronRight, ChevronLeft } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Loader2, Save, Trash2, RotateCcw, ChevronRight, ChevronLeft } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isBefore, startOfDay, isSameDay } from "date-fns";
+import { markAvailabilityCleared } from "@/lib/mayaBootstrap";
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isBefore, startOfDay } from "date-fns";
 import { he } from "date-fns/locale";
 
 const ALL_SLOTS = [
@@ -23,6 +34,7 @@ export default function AvailabilityManager() {
   const [viewMonth, setViewMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null); // date string yyyy-MM-dd
   const [saving, setSaving] = useState(false);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
 
   const { data: availabilityRecords = [], isLoading } = useQuery({
     queryKey: ["availability"],
@@ -84,12 +96,57 @@ export default function AvailabilityManager() {
     toast({ title: "התאריך נמחק" });
   };
 
+  const handleResetAll = async () => {
+    if (!availabilityRecords.length) return;
+    setSaving(true);
+    try {
+      await Promise.all(
+        availabilityRecords.map((record) => base44.entities.Availability.delete(record.id))
+      );
+      markAvailabilityCleared();
+      await queryClient.invalidateQueries({ queryKey: ["availability"] });
+      setSelectedDate(null);
+      setEditSlots([]);
+      toast({
+        title: "כל הזמינות אופסה",
+        description: "לא נותרו שעות פנויות לקביעת תורים.",
+      });
+    } finally {
+      setSaving(false);
+      setResetDialogOpen(false);
+    }
+  };
+
+  const activeDayCount = useMemo(
+    () => availabilityRecords.filter((r) => r.slots?.length > 0).length,
+    [availabilityRecords]
+  );
+
   if (isLoading) {
     return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
   }
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-between gap-3" dir="rtl">
+        <p className="text-sm text-muted-foreground">
+          {activeDayCount > 0
+            ? `${activeDayCount} ימים עם שעות פנויות`
+            : "אין שעות פנויות — לא ניתן לקבוע תורים"}
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={saving || activeDayCount === 0}
+          onClick={() => setResetDialogOpen(true)}
+          className="gap-1.5 text-muted-foreground hover:text-destructive hover:border-destructive/40 shrink-0"
+        >
+          <RotateCcw className="w-4 h-4" />
+          איפוס הכל
+        </Button>
+      </div>
+
       {/* Calendar */}
       <Card className="p-5">
         <div className="flex items-center justify-between mb-4" dir="rtl">
@@ -189,6 +246,31 @@ export default function AvailabilityManager() {
       {!selectedDate && (
         <p className="text-center text-muted-foreground text-sm py-4">בחרי תאריך בלוח השנה כדי להגדיר שעות</p>
       )}
+
+      <AlertDialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>לאפס את כל הזמינות?</AlertDialogTitle>
+            <AlertDialogDescription>
+              פעולה זו תמחק את כל {activeDayCount} הימים עם שעות פנויות. לאחר האיפוס לא יהיו שעות זמינות לקביעת תורים, עד שתגדירי מחדש.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={saving}>ביטול</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={saving}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-1.5"
+              onClick={(event) => {
+                event.preventDefault();
+                handleResetAll();
+              }}
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+              איפוס הכל
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
