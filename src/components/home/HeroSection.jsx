@@ -2,7 +2,8 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { Phone, CalendarPlus } from "lucide-react";
+import { CalendarPlus } from "lucide-react";
+import { ContactChannelIcon } from "@/lib/contactIcons";
 
 export default function HeroSection() {
   return (
@@ -40,12 +41,12 @@ export default function HeroSection() {
               קביעת תור
             </Button>
           </Link>
-          <a href="tel:0549000301" className="flex-1">
+          <a href="tel:0549000301" className="flex-1" aria-label="התקשרי עכשיו לקליניקה">
             <Button
               variant="outline"
-              className="w-full gap-2 rounded-xl text-base h-12 border-[#2eb88a] text-[#2eb88a] hover:bg-[#2eb88a]/10"
+              className="w-full gap-3 rounded-xl text-base h-12 border-[#2eb88a] text-[#2eb88a] hover:bg-[#2eb88a]/10"
             >
-              <Phone className="w-5 h-5" />
+              <ContactChannelIcon channel="phone" size="sm" decorative />
               התקשרי עכשיו
             </Button>
           </a>

@@ -17,11 +17,11 @@ import {
   CalendarDays,
   CheckCircle2,
   Mail,
-  MessageCircle,
   Phone,
   Search,
   UserRound,
 } from "lucide-react";
+import { ContactChannelIcon } from "@/lib/contactIcons";
 import { buildCustomers, buildWhatsAppUrl, formatDate, statusMeta } from "@/lib/customers";
 import { buildProfileMap, listPatientProfiles, profileSummaryChips } from "@/lib/patientProfiles";
 import { getClinicSite } from "@/lib/clinicSite";
@@ -30,10 +30,11 @@ import { clinicGlassCard, clinicOutlineBtn, clinicTextPrimary } from "@/lib/clin
 function PatientDetailsDialog({ customer, profile, open, onOpenChange }) {
   if (!customer) return null;
 
+  const clinicSite = getClinicSite();
   const summaryChips = profileSummaryChips(profile);
   const whatsappUrl = buildWhatsAppUrl(customer.phone);
   const mailtoUrl = customer.email
-    ? `mailto:${customer.email}?subject=${encodeURIComponent("עדכון ממאיה קליניק")}`
+    ? `mailto:${customer.email}?subject=${encodeURIComponent(`עדכון מ${clinicSite?.clinicTitle ?? "הקליניקה"}`)}`
     : null;
 
   return (
@@ -150,13 +151,13 @@ function PatientDetailsDialog({ customer, profile, open, onOpenChange }) {
                 {whatsappUrl ? (
                   <Button asChild variant="outline" className="w-full justify-start gap-2">
                     <a href={whatsappUrl} target="_blank" rel="noreferrer">
-                      <MessageCircle className="h-4 w-4" />
+                      <ContactChannelIcon channel="whatsapp" size="sm" decorative />
                       שליחה בוואטסאפ
                     </a>
                   </Button>
                 ) : (
                   <Button disabled variant="outline" className="w-full justify-start gap-2">
-                    <MessageCircle className="h-4 w-4" />
+                    <ContactChannelIcon channel="whatsapp" size="sm" decorative />
                     אין טלפון
                   </Button>
                 )}
@@ -249,7 +250,7 @@ export default function CustomerManagement({ appointments }) {
             const summaryChips = profileSummaryChips(profile);
             const whatsappUrl = buildWhatsAppUrl(customer.phone);
             const mailtoUrl = customer.email
-              ? `mailto:${customer.email}?subject=${encodeURIComponent("עדכון ממאיה קליניק")}`
+              ? `mailto:${customer.email}?subject=${encodeURIComponent(`עדכון מ${clinicSite?.clinicTitle ?? "הקליניקה"}`)}`
               : null;
 
             return (
@@ -427,7 +428,7 @@ export default function CustomerManagement({ appointments }) {
                           className={`w-full justify-start gap-2 ${clinicSite ? clinicOutlineBtn : ""}`}
                         >
                           <a href={whatsappUrl} target="_blank" rel="noreferrer">
-                            <MessageCircle className="h-4 w-4" />
+                            <ContactChannelIcon channel="whatsapp" size="sm" decorative />
                             שליחה בוואטסאפ
                           </a>
                         </Button>
@@ -437,7 +438,7 @@ export default function CustomerManagement({ appointments }) {
                           variant="outline"
                           className={`w-full justify-start gap-2 ${clinicSite ? clinicOutlineBtn : ""}`}
                         >
-                          <MessageCircle className="h-4 w-4" />
+                          <ContactChannelIcon channel="whatsapp" size="sm" decorative />
                           אין טלפון
                         </Button>
                       )}

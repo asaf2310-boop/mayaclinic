@@ -10,19 +10,32 @@ const hostname = typeof window !== "undefined" ? String(window.location.hostname
 const isLocalHost = hostname === "localhost" || hostname === "127.0.0.1";
 const demoHostEnabled = /-demo\.vercel\.app$/i.test(hostname);
 
-// Never run demo mode on production clinic domains (e.g. maya-clinic.vercel.app).
+// Never run demo mode on production clinic domains (e.g. maya-clinic.vercel.app),
+// except localhost without Supabase — local Maya clinic dev should use seeded demo data.
 export const demoModeEnabled =
-  !isProductionClinicHost(hostname) &&
-  (forceDemoEnabled ||
-    demoHostEnabled ||
-    (demoEnvEnabled && (isLocalHost || !supabaseConfigured)));
+  forceDemoEnabled ||
+  demoHostEnabled ||
+  (isLocalHost && isProductionClinicHost(hostname) && !supabaseConfigured) ||
+  (!isProductionClinicHost(hostname) &&
+    demoEnvEnabled &&
+    (isLocalHost || !supabaseConfigured));
 
 const ENTITY_KEYS = {
   Treatment: "treatments",
   Availability: "availability",
   Appointment: "appointments",
   PatientProfile: "patient_profiles",
+  WeeklySchedule: "weekly_schedule",
 };
+
+function createEmptyWeeklySchedule() {
+  return Array.from({ length: 7 }, (_, dayOfWeek) => ({
+    id: `weekly_${dayOfWeek}`,
+    day_of_week: dayOfWeek,
+    slots: [],
+    is_active: false,
+  }));
+}
 
 function pad(value) {
   return String(value).padStart(2, "0");
@@ -172,7 +185,13 @@ function createSeedStore() {
     },
   ];
 
-  return { treatments, availability, appointments, patient_profiles };
+  return {
+    treatments,
+    availability,
+    appointments,
+    patient_profiles,
+    weekly_schedule: createEmptyWeeklySchedule(),
+  };
 }
 
 function readStore() {
@@ -183,6 +202,10 @@ function readStore() {
       if (store?.treatments?.length && store?.availability?.length && store?.appointments?.length) {
         if (!store.patient_profiles) {
           store.patient_profiles = createSeedStore().patient_profiles;
+          writeStore(store);
+        }
+        if (!store.weekly_schedule?.length) {
+          store.weekly_schedule = createEmptyWeeklySchedule();
           writeStore(store);
         }
         return store;

@@ -8,6 +8,12 @@ export function markAvailabilityCleared() {
   }
 }
 
+export function clearAvailabilityClearedMark() {
+  if (typeof sessionStorage !== "undefined") {
+    sessionStorage.removeItem(AVAILABILITY_CLEARED_KEY);
+  }
+}
+
 export function isAvailabilityCleared() {
   return typeof sessionStorage !== "undefined" && sessionStorage.getItem(AVAILABILITY_CLEARED_KEY) === "1";
 }

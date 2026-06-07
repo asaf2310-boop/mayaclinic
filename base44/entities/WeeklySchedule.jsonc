@@ -1,0 +1,28 @@
+{
+  "name": "WeeklySchedule",
+  "type": "object",
+  "properties": {
+    "day_of_week": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 6,
+      "description": "יום בשבוע (0=ראשון … 6=שבת)"
+    },
+    "slots": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "שעות פנויות חוזרות ליום זה, למשל ['09:00','10:30']"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": false,
+      "description": "האם היום פעיל בלוז השבועי"
+    }
+  },
+  "required": [
+    "day_of_week",
+    "slots"
+  ]
+}

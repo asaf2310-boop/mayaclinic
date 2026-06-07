@@ -115,6 +115,7 @@ const ENTITY_TABLES = {
   Appointment: "appointments",
   Availability: "availability",
   PatientProfile: "patient_profiles",
+  WeeklySchedule: "weekly_schedule",
 };
 
 export function createSupabaseDataClient() {

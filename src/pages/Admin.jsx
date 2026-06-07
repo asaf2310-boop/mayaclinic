@@ -194,7 +194,9 @@ export default function Admin() {
 
             <TabsContent value="availability">
               <div className="max-w-2xl">
-                <p className="text-muted-foreground mb-6">בחרי את הימים והשעות שבהם את זמינה לטיפולים. המטופלים יראו רק שעות פנויות.</p>
+                <p className="text-muted-foreground mb-6">
+                  הגדירי זמינות לפי תאריך בודד או לוח שבועי חוזר. לאחר איפוס, החילי מחדש את הלוז השבועי.
+                </p>
                 <AvailabilityManager />
               </div>
             </TabsContent>

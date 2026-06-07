@@ -6,6 +6,8 @@ export const CLINIC_SITES = {
 
     clinicTitle: "אופיר - מרכז טיפול הוליסטי",
 
+    clinicPhone: "0549000301",
+
     heroBadge: "רפואה אסתטית, בריאות ורעננות טבעית",
 
     heroHeading: "מאיה קליניק –",

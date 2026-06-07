@@ -259,7 +259,7 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
           className="mt-1 border-[#DDE4DD] data-[state=checked]:border-[#5D7F6D] data-[state=checked]:bg-[#5D7F6D]"
         />
         <span className={clinicSite ? undefined : "text-muted-foreground"}>
-          אני מאשר/ת קבלת עדכונים, מבצעים ותזכורות שיווקיות ממאיה קליניק.
+          {`אני מאשר/ת קבלת עדכונים, מבצעים ותזכורות שיווקיות מ${clinicSite?.clinicTitle ?? "הקליניקה"}.`}
         </span>
       </label>
 

@@ -4,6 +4,7 @@ import { base44 } from "@/api/base44Client";
 import Navbar from "../components/layout/Navbar";
 import TreatmentSelector from "../components/booking/TreatmentSelector";
 import BookingForm from "../components/booking/BookingForm";
+import BookingContact from "../components/booking/BookingContact";
 import BookingSuccess from "../components/booking/BookingSuccess";
 import PaymentStep from "../components/booking/PaymentStep";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -199,6 +200,8 @@ export default function Book() {
                     />
                   </>
                 )}
+
+                {!isLoading && <BookingContact />}
               </div>
             </>
           )}

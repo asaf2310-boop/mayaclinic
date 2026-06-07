@@ -17,7 +17,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { ArrowRight, Loader2, Mail, MessageCircle, Phone, Save } from "lucide-react";
+import { ArrowRight, Loader2, Mail, Phone, Save } from "lucide-react";
+import { ContactChannelIcon } from "@/lib/contactIcons";
 import { base44 } from "@/api/base44Client";
 import { buildCustomers, buildWhatsAppUrl, formatDate, statusMeta } from "@/lib/customers";
 import { getClinicSite } from "@/lib/clinicSite";
@@ -157,7 +158,7 @@ export default function AdminPatient() {
 
   const whatsappUrl = buildWhatsAppUrl(customer.phone);
   const mailtoUrl = customer.email
-    ? `mailto:${customer.email}?subject=${encodeURIComponent("עדכון ממאיה קליניק")}`
+    ? `mailto:${customer.email}?subject=${encodeURIComponent(`עדכון מ${clinicSite?.clinicTitle ?? "הקליניקה"}`)}`
     : null;
   const cardClass = clinicSite ? clinicGlassCard : "";
   const inputClass = clinicSite ? clinicFormInput : "";
@@ -459,13 +460,13 @@ export default function AdminPatient() {
                   {whatsappUrl ? (
                     <Button asChild variant="outline" className={`w-full justify-start gap-2 ${clinicSite ? `${clinicOutlineBtn} !px-4 !py-3` : ""}`}>
                       <a href={whatsappUrl} target="_blank" rel="noreferrer">
-                        <MessageCircle className="h-4 w-4" />
+                        <ContactChannelIcon channel="whatsapp" size="sm" decorative />
                         שליחה בוואטסאפ
                       </a>
                     </Button>
                   ) : (
                     <Button disabled variant="outline" className={`w-full justify-start gap-2 ${clinicSite ? `${clinicOutlineBtn} !px-4 !py-3` : ""}`}>
-                      <MessageCircle className="h-4 w-4" />
+                      <ContactChannelIcon channel="whatsapp" size="sm" decorative />
                       אין טלפון
                     </Button>
                   )}
