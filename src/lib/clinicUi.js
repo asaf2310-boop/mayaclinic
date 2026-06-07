@@ -23,6 +23,9 @@ export const clinicPrimaryBtn =
 export const clinicOutlineBtn =
   "inline-flex items-center justify-center rounded-2xl border border-[#DDE4DD] bg-white px-8 py-4 text-center font-medium text-[#5D7F6D] shadow-[0_4px_14px_rgba(0,0,0,0.04)] transition-all duration-300 hover:bg-[#F7F8F6]";
 
+export const clinicContactBtn =
+  "flex h-auto min-h-[96px] flex-1 flex-col items-center justify-center gap-2 rounded-xl border border-[#DDE4DD] bg-white px-4 py-3 text-center text-sm font-medium leading-none text-[#5D7F6D] shadow-[0_4px_14px_rgba(0,0,0,0.04)] transition-all duration-300 hover:bg-[#F7F8F6]";
+
 export const clinicBadgeGlass =
   "inline-flex items-center gap-2 self-start rounded-full border border-[#E8ECE8] bg-white px-4 py-1.5 shadow-[0_4px_12px_rgba(0,0,0,0.03)]";
 

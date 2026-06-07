@@ -16,9 +16,10 @@ export function ContactChannelIcon({ channel, size = "md", className = "", decor
       src={src}
       alt={decorative ? "" : label}
       aria-hidden={decorative || undefined}
-      className={`shrink-0 rounded-xl object-contain ${sizeClasses[size]} ${className}`}
+      className={`block shrink-0 object-contain ${sizeClasses[size]} ${className}`}
       width={size === "lg" ? 48 : size === "md" ? 40 : 32}
       height={size === "lg" ? 48 : size === "md" ? 40 : 32}
+      draggable={false}
     />
   );
 }

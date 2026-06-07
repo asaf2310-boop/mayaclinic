@@ -2,7 +2,10 @@ import { Button } from "@/components/ui/button";
 import { ContactChannelIcon } from "@/lib/contactIcons";
 import { buildWhatsAppUrl } from "@/lib/customers";
 import { getClinicSite } from "@/lib/clinicSite";
-import { clinicOutlineBtn, clinicTextMuted } from "@/lib/clinicUi";
+import { clinicContactBtn, clinicTextMuted } from "@/lib/clinicUi";
+
+const defaultContactBtn =
+  "flex h-auto min-h-[96px] flex-1 flex-col items-center justify-center gap-2 rounded-xl border border-input bg-transparent px-4 py-3 text-center text-sm font-medium leading-none shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground";
 
 export default function BookingContact() {
   const clinicSite = getClinicSite();
@@ -14,18 +17,13 @@ export default function BookingContact() {
       <p className={`text-center text-sm ${clinicSite ? clinicTextMuted : "text-muted-foreground"}`}>
         צריכים עזרה? צרו קשר
       </p>
-      <div className="flex flex-col gap-3 sm:flex-row">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
         <Button
           asChild
           variant="outline"
-          size="lg"
-          className={`flex-1 ${clinicSite ? clinicOutlineBtn : "rounded-xl"}`}
+          className={clinicSite ? clinicContactBtn : defaultContactBtn}
         >
-          <a
-            href={`tel:${clinicPhone}`}
-            className="inline-flex flex-col items-center gap-2 py-1"
-            aria-label="התקשרות לקליניקה"
-          >
+          <a href={`tel:${clinicPhone}`} aria-label="התקשרות לקליניקה">
             <ContactChannelIcon channel="phone" size="md" decorative />
             <span>התקשרות</span>
           </a>
@@ -34,14 +32,12 @@ export default function BookingContact() {
           <Button
             asChild
             variant="outline"
-            size="lg"
-            className={`flex-1 ${clinicSite ? clinicOutlineBtn : "rounded-xl"}`}
+            className={clinicSite ? clinicContactBtn : defaultContactBtn}
           >
             <a
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex flex-col items-center gap-2 py-1"
               aria-label="שליחת הודעה בוואטסאפ"
             >
               <ContactChannelIcon channel="whatsapp" size="md" decorative />
