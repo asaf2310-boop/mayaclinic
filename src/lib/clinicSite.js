@@ -102,9 +102,15 @@ export function isProductionClinicHost(hostname = typeof window !== "undefined" 
 
 
 
-/** Booking shows all treatments in the database; seedTreatments is bootstrap-only. */
+export function getAllowedTreatmentNames(site = getClinicSite()) {
+  if (!site) return null;
+  return site.seedTreatments.map((treatment) => treatment.name);
+}
+
 export function filterTreatmentsForClinic(treatments = [], site = getClinicSite()) {
   if (!site) return treatments;
-  return treatments;
+
+  const allowedNames = new Set(getAllowedTreatmentNames(site));
+  return treatments.filter((treatment) => allowedNames.has(String(treatment?.name || "").trim()));
 }
 
