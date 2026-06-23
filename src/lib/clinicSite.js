@@ -73,6 +73,10 @@ export const CLINIC_SITES = {
 const MAYA_CLINIC_HOSTS = new Set([
   "maya-clinic.vercel.app",
   "www.maya-clinic.vercel.app",
+  "ofirbaby.vercel.app",
+  "www.ofirbaby.vercel.app",
+  "ofirbaby.com",
+  "www.ofirbaby.com",
   "localhost",
   "127.0.0.1",
 ]);
