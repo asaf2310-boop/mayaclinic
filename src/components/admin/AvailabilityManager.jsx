@@ -22,7 +22,7 @@ import { ALL_SLOTS, DAY_NAMES } from "@/lib/weeklySchedule";
 import WeeklyScheduleEditor from "@/components/admin/WeeklyScheduleEditor";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isBefore, startOfDay } from "date-fns";
 import { he } from "date-fns/locale";
-import { getClinicSite } from "@/lib/clinicSite";
+import { filterByClinicTenant, getClinicSite } from "@/lib/clinicSite";
 import { clinicGlassPanel, clinicPrimaryBtn } from "@/lib/clinicUi";
 
 export default function AvailabilityManager() {
@@ -40,13 +40,18 @@ export default function AvailabilityManager() {
     queryFn: () => base44.entities.Availability.list(),
   });
 
+  const clinicAvailabilityRecords = useMemo(
+    () => filterByClinicTenant(availabilityRecords, clinicSite),
+    [availabilityRecords, clinicSite]
+  );
+
   const today = startOfDay(new Date());
 
   const availMap = useMemo(() => {
     const m = {};
-    availabilityRecords.forEach((r) => { if (r.date) m[r.date] = r; });
+    clinicAvailabilityRecords.forEach((r) => { if (r.date) m[r.date] = r; });
     return m;
-  }, [availabilityRecords]);
+  }, [clinicAvailabilityRecords]);
 
   const daysInMonth = useMemo(() => {
     return eachDayOfInterval({ start: startOfMonth(viewMonth), end: endOfMonth(viewMonth) });
@@ -61,7 +66,7 @@ export default function AvailabilityManager() {
     if (selectedDate) {
       setEditSlots(availMap[selectedDate]?.slots || []);
     }
-  }, [selectedDate, availabilityRecords]);
+  }, [selectedDate, clinicAvailabilityRecords]);
 
   const toggleSlot = (slot) => {
     setEditSlots((prev) =>
@@ -101,11 +106,11 @@ export default function AvailabilityManager() {
   };
 
   const handleResetAll = async () => {
-    if (!availabilityRecords.length) return;
+    if (!clinicAvailabilityRecords.length) return;
     setSaving(true);
     try {
       await Promise.all(
-        availabilityRecords.map((record) => base44.entities.Availability.delete(record.id))
+        clinicAvailabilityRecords.map((record) => base44.entities.Availability.delete(record.id))
       );
       markAvailabilityCleared();
       await queryClient.invalidateQueries({ queryKey: ["availability"] });
@@ -122,8 +127,8 @@ export default function AvailabilityManager() {
   };
 
   const activeDayCount = useMemo(
-    () => availabilityRecords.filter((r) => r.slots?.length > 0).length,
-    [availabilityRecords]
+    () => clinicAvailabilityRecords.filter((r) => r.slots?.length > 0).length,
+    [clinicAvailabilityRecords]
   );
 
   const viewTabs = [
@@ -288,7 +293,7 @@ export default function AvailabilityManager() {
         </TabsContent>
 
         <TabsContent value="weekly" className="mt-0">
-          <WeeklyScheduleEditor availabilityRecords={availabilityRecords} />
+          <WeeklyScheduleEditor availabilityRecords={clinicAvailabilityRecords} />
         </TabsContent>
       </Tabs>
 

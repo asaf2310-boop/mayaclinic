@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import Navbar from "../components/layout/Navbar";
@@ -11,7 +11,11 @@ import TreatmentManagement from "../components/admin/TreatmentManagement";
 import { Card } from "@/components/ui/card";
 import { BarChart3, CalendarCheck, CalendarDays, CheckCircle2, Clock, Settings2, Sparkles, Users } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getClinicSite } from "@/lib/clinicSite";
+import {
+  filterAppointmentsForClinic,
+  filterTreatmentsForClinic,
+  getClinicSite,
+} from "@/lib/clinicSite";
 import {
   clinicGlassCard,
   clinicGlassPanel,
@@ -36,6 +40,16 @@ export default function Admin() {
     queryFn: () => base44.entities.Treatment.list(),
   });
 
+  const clinicAppointments = useMemo(
+    () => filterAppointmentsForClinic(appointments, clinicSite),
+    [appointments, clinicSite]
+  );
+
+  const clinicTreatments = useMemo(
+    () => filterTreatmentsForClinic(treatments, clinicSite),
+    [treatments, clinicSite]
+  );
+
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Appointment.update(id, data),
     onSuccess: (updatedAppointment) => {
@@ -55,8 +69,8 @@ export default function Admin() {
   });
 
   const filteredAppointments = (statusFilter === "all"
-    ? appointments
-    : appointments.filter((a) => a.status === statusFilter)
+    ? clinicAppointments
+    : clinicAppointments.filter((a) => a.status === statusFilter)
   ).sort((a, b) => {
     const dateCompare = (a.date || "").localeCompare(b.date || "");
     if (dateCompare !== 0) return dateCompare;
@@ -64,10 +78,10 @@ export default function Admin() {
   });
 
   const stats = {
-    total: appointments.length,
-    pending: appointments.filter((a) => a.status === "pending").length,
-    confirmed: appointments.filter((a) => a.status === "confirmed").length,
-    completed: appointments.filter((a) => a.status === "completed").length,
+    total: clinicAppointments.length,
+    pending: clinicAppointments.filter((a) => a.status === "pending").length,
+    confirmed: clinicAppointments.filter((a) => a.status === "confirmed").length,
+    completed: clinicAppointments.filter((a) => a.status === "completed").length,
   };
 
   const statCards = [
@@ -203,7 +217,7 @@ export default function Admin() {
 
             <TabsContent value="treatments">
               <div className="max-w-3xl">
-                <TreatmentManagement treatments={treatments} />
+                <TreatmentManagement treatments={clinicTreatments} />
               </div>
             </TabsContent>
 
@@ -211,7 +225,7 @@ export default function Admin() {
               {isLoading ? (
                 <Skeleton className="h-64 rounded-xl" />
               ) : (
-                <CustomerManagement appointments={appointments} />
+                <CustomerManagement appointments={clinicAppointments} />
               )}
             </TabsContent>
 
@@ -219,7 +233,7 @@ export default function Admin() {
               {isLoading ? (
                 <Skeleton className="h-64 rounded-xl" />
               ) : (
-                <RevenueReport appointments={appointments} treatments={treatments} />
+                <RevenueReport appointments={clinicAppointments} treatments={clinicTreatments} />
               )}
             </TabsContent>
           </Tabs>

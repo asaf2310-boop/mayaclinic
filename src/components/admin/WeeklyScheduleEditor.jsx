@@ -17,7 +17,7 @@ import {
   normalizeWeeklyRecords,
   planWeeklyAvailabilityApply,
 } from "@/lib/weeklySchedule";
-import { getClinicSite } from "@/lib/clinicSite";
+import { filterByClinicTenant, getClinicSite } from "@/lib/clinicSite";
 import { clinicOutlineBtn, clinicPrimaryBtn } from "@/lib/clinicUi";
 
 function SlotGrid({ slots, onToggle, disabled }) {
@@ -63,9 +63,14 @@ export default function WeeklyScheduleEditor({ availabilityRecords = [] }) {
     enabled: hasWeeklyEntity,
   });
 
+  const clinicWeeklyRecords = useMemo(
+    () => filterByClinicTenant(weeklyRecords, clinicSite),
+    [weeklyRecords, clinicSite]
+  );
+
   useEffect(() => {
-    setWeekDays(normalizeWeeklyRecords(weeklyRecords));
-  }, [weeklyRecords]);
+    setWeekDays(normalizeWeeklyRecords(clinicWeeklyRecords));
+  }, [clinicWeeklyRecords]);
 
   const activeDayCount = useMemo(
     () => weekDays.filter((day) => day.is_active && day.slots.length > 0).length,
@@ -95,7 +100,7 @@ export default function WeeklyScheduleEditor({ availabilityRecords = [] }) {
     setSaving(true);
     try {
       const existingByDay = Object.fromEntries(
-        weeklyRecords.map((row) => [Number(row.day_of_week), row])
+        clinicWeeklyRecords.map((row) => [Number(row.day_of_week), row])
       );
 
       await Promise.all(

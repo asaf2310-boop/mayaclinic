@@ -21,7 +21,7 @@ import { ArrowRight, Loader2, Mail, Phone, Save } from "lucide-react";
 import { ContactChannelIcon } from "@/lib/contactIcons";
 import { base44 } from "@/api/base44Client";
 import { buildCustomers, buildWhatsAppUrl, formatDate, statusMeta } from "@/lib/customers";
-import { getClinicSite } from "@/lib/clinicSite";
+import { filterAppointmentsForClinic, getClinicSite } from "@/lib/clinicSite";
 import {
   FUNDING_SOURCE_OPTIONS,
   GENDER_OPTIONS,
@@ -86,10 +86,15 @@ export default function AdminPatient() {
     queryFn: () => base44.entities.Appointment.list("date"),
   });
 
+  const clinicAppointments = useMemo(
+    () => filterAppointmentsForClinic(appointments, clinicSite),
+    [appointments, clinicSite]
+  );
+
   const customer = useMemo(() => {
-    const customers = buildCustomers(appointments);
+    const customers = buildCustomers(clinicAppointments);
     return customers.find((item) => item.key === decodedKey) || null;
-  }, [appointments, decodedKey]);
+  }, [clinicAppointments, decodedKey]);
 
   const { data: profileRow, isLoading: profileLoading } = useQuery({
     queryKey: ["patient-profile", decodedKey],

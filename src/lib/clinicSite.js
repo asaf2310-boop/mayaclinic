@@ -114,3 +114,28 @@ export function filterTreatmentsForClinic(treatments = [], site = getClinicSite(
   return treatments.filter((treatment) => allowedNames.has(String(treatment?.name || "").trim()));
 }
 
+export function filterByClinicTenant(rows = [], site = getClinicSite()) {
+  if (!site) return rows;
+
+  const tenantId = site.id;
+  return rows.filter((row) => {
+    const rowTenant = String(row?.tenant_id || "").trim();
+    return !rowTenant || rowTenant === tenantId;
+  });
+}
+
+export function filterAppointmentsForClinic(appointments = [], site = getClinicSite()) {
+  if (!site) return appointments;
+
+  const allowedNames = new Set(getAllowedTreatmentNames(site));
+  const tenantId = site.id;
+
+  return appointments.filter((appointment) => {
+    const rowTenant = String(appointment?.tenant_id || "").trim();
+    if (rowTenant) return rowTenant === tenantId;
+
+    const treatmentName = String(appointment?.treatment_name || "").trim();
+    return allowedNames.has(treatmentName);
+  });
+}
+
