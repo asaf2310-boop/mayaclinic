@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { base44, backendMode } from "@/api/base44Client";
 import { getClinicSite } from "@/lib/clinicSite";
-import { ensureClinicSeedData } from "@/lib/mayaBootstrap";
+import { ensureClinicSeedData, restoreDefaultAvailability } from "@/lib/mayaBootstrap";
 import { supabaseConfigured } from "@/api/supabase";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -69,13 +69,39 @@ export default function ClinicBootstrap() {
 
     ranRef.current = true;
 
-    ensureClinicSeedData(base44)
-      .then(({ restoredTreatments, restoredAvailability }) => {
+    const params = new URLSearchParams(window.location.search);
+    const shouldRestoreAvailability = params.get("restoreAvailability") === "1";
+
+    const runBootstrap = shouldRestoreAvailability
+      ? restoreDefaultAvailability(base44, site).then(({ restored, removed }) => ({
+          restoredTreatments: 0,
+          restoredAvailability: restored,
+          removedAvailability: removed,
+        }))
+      : ensureClinicSeedData(base44);
+
+    runBootstrap
+      .then(({ restoredTreatments, restoredAvailability, removedAvailability = 0 }) => {
+        if (shouldRestoreAvailability) {
+          params.delete("restoreAvailability");
+          const nextSearch = params.toString();
+          const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`;
+          window.history.replaceState({}, "", nextUrl);
+        }
+
         if (restoredTreatments > 0) {
           queryClient.invalidateQueries({ queryKey: ["treatments"] });
         }
         if (restoredAvailability > 0) {
           queryClient.invalidateQueries({ queryKey: ["availability"] });
+        }
+
+        if (shouldRestoreAvailability && restoredAvailability > 0) {
+          toast({
+            title: "שעות ברירת המחדל שוחזרו",
+            description: `${restoredAvailability} ימים עודכנו${removedAvailability > 0 ? `, ${removedAvailability} ימים הוסרו` : ""}.`,
+          });
+          return;
         }
 
         if (restoredTreatments > 0 || restoredAvailability > 0) {

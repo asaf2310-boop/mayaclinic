@@ -1,4 +1,5 @@
 import { cleanEnvValue, supabaseAnonKey, supabaseConfigured, supabaseUrl } from "./supabase";
+import { CLINIC_TENANT_HEADER, getClinicTenantId } from "@/lib/tenant";
 
 function assertSupabaseConfigured() {
   if (!supabaseConfigured) {
@@ -28,13 +29,25 @@ function buildUrl(tableName, filters = {}, params = {}) {
 
 function requestHeaders(extra = {}) {
   const key = cleanEnvValue(supabaseAnonKey);
-
-  return {
+  const tenantId = getClinicTenantId();
+  const headers = {
     apikey: key,
     Authorization: `Bearer ${key}`,
     "Content-Type": "application/json",
     ...extra,
   };
+
+  if (tenantId) {
+    headers[CLINIC_TENANT_HEADER] = tenantId;
+  }
+
+  return headers;
+}
+
+function withTenantId(row = {}) {
+  const tenantId = getClinicTenantId();
+  if (!tenantId || row.tenant_id) return row;
+  return { ...row, tenant_id: tenantId };
 }
 
 async function requestJson(url, options = {}) {
@@ -76,7 +89,7 @@ function createEntity(tableName) {
       const data = await requestJson(buildUrl(tableName, {}, { select: "*" }), {
         method: "POST",
         headers: { Prefer: "return=representation" },
-        body: JSON.stringify(row),
+        body: JSON.stringify(withTenantId(row)),
       });
 
       return data?.[0] ?? data;
@@ -88,7 +101,7 @@ function createEntity(tableName) {
       return (await requestJson(buildUrl(tableName, {}, { select: "*" }), {
         method: "POST",
         headers: { Prefer: "return=representation" },
-        body: JSON.stringify(rows),
+        body: JSON.stringify(rows.map((row) => withTenantId(row))),
       })) ?? [];
     },
 
@@ -96,7 +109,7 @@ function createEntity(tableName) {
       const data = await requestJson(buildUrl(tableName, { id }, { select: "*" }), {
         method: "PATCH",
         headers: { Prefer: "return=representation" },
-        body: JSON.stringify(row),
+        body: JSON.stringify(withTenantId(row)),
       });
 
       return data?.[0] ?? data;

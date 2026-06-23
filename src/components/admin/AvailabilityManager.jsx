@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Loader2, Save, Trash2, RotateCcw, ChevronRight, ChevronLeft, CalendarDays, CalendarRange } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { markAvailabilityCleared, clearAvailabilityClearedMark } from "@/lib/mayaBootstrap";
+import { restoreDefaultAvailability, clearAvailabilityClearedMark } from "@/lib/mayaBootstrap";
 import { ALL_SLOTS, DAY_NAMES } from "@/lib/weeklySchedule";
 import WeeklyScheduleEditor from "@/components/admin/WeeklyScheduleEditor";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isBefore, startOfDay } from "date-fns";
@@ -106,19 +106,16 @@ export default function AvailabilityManager() {
   };
 
   const handleResetAll = async () => {
-    if (!clinicAvailabilityRecords.length) return;
+    if (!clinicSite) return;
     setSaving(true);
     try {
-      await Promise.all(
-        clinicAvailabilityRecords.map((record) => base44.entities.Availability.delete(record.id))
-      );
-      markAvailabilityCleared();
+      const { restored, removed } = await restoreDefaultAvailability(base44, clinicSite);
       await queryClient.invalidateQueries({ queryKey: ["availability"] });
       setSelectedDate(null);
-      setEditSlots([]);
+      setEditSlots(clinicSite.defaultSlots || []);
       toast({
-        title: "כל הזמינות אופסה",
-        description: "לוח השבועי נשמר — ניתן להחיל מחדש בלשונית «לוז שבועי».",
+        title: "שעות ברירת המחדל שוחזרו",
+        description: `${restored} ימים עודכנו${removed > 0 ? `, ${removed} ימים עתידיים הוסרו` : ""}. שעות: ${(clinicSite.defaultSlots || []).join(", ")}`,
       });
     } finally {
       setSaving(false);
@@ -184,12 +181,12 @@ export default function AvailabilityManager() {
               type="button"
               variant="outline"
               size="sm"
-              disabled={saving || activeDayCount === 0}
+              disabled={saving || !clinicSite}
               onClick={() => setResetDialogOpen(true)}
               className="gap-1.5 text-muted-foreground hover:text-destructive hover:border-destructive/40 shrink-0"
             >
               <RotateCcw className="w-4 h-4" />
-              איפוס הכל
+              שחזור שעות ברירת מחדל
             </Button>
           </div>
 
@@ -300,9 +297,12 @@ export default function AvailabilityManager() {
       <AlertDialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
         <AlertDialogContent dir="rtl">
           <AlertDialogHeader>
-            <AlertDialogTitle>לאפס את כל הזמינות?</AlertDialogTitle>
+            <AlertDialogTitle>לשחזר שעות ברירת מחדל?</AlertDialogTitle>
             <AlertDialogDescription>
-              פעולה זו תמחק את כל {activeDayCount} הימים עם שעות פנויות. לוח השבועי לא יימחק — תוכלי להחיל אותו מחדש בלשונית «לוז שבועי».
+              פעולה זו תעדכן את 30 הימים הבאים לשעות ברירת המחדל של מאיה:
+              {" "}
+              {(clinicSite?.defaultSlots || []).join(", ")}.
+              ימים עתידיים אחרים של מאיה (מחוץ לטווח) יוסרו.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -316,7 +316,7 @@ export default function AvailabilityManager() {
               }}
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
-              איפוס הכל
+              שחזור שעות
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
