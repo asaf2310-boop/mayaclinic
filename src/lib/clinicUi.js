@@ -20,6 +20,21 @@ export const clinicHeroPanel =
 export const clinicPrimaryBtn =
   "inline-flex h-14 items-center justify-center rounded-2xl bg-[#5D7F6D] px-8 text-center font-medium text-white shadow-[0_8px_24px_rgba(93,127,109,0.22)] transition-all duration-300 hover:scale-[1.03] hover:bg-[#4F6F5F] active:scale-[0.98]";
 
+export const clinicHeroCtaBtn =
+  "relative flex w-full items-center justify-center rounded-[24px] bg-gradient-to-l from-[#5D7F6D] to-[#6F9180] px-8 py-[18px] text-xl font-semibold tracking-wide text-white shadow-[0_12px_30px_rgba(0,0,0,0.12)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:scale-[1.01] hover:shadow-[0_18px_40px_rgba(0,0,0,0.16)] active:translate-y-0 active:scale-100";
+
+export const clinicHeroCtaIcon =
+  "pointer-events-none absolute left-6 h-[22px] w-[22px] text-white/70";
+
+export const clinicHeroPremiumCard =
+  "flex flex-1 flex-col items-center gap-6 rounded-[24px] border border-[#5D7F6D]/20 bg-white px-6 py-9 text-center shadow-[0_8px_24px_rgba(0,0,0,0.06)] transition-all duration-300 ease-in-out hover:-translate-y-1 hover:shadow-[0_15px_35px_rgba(0,0,0,0.12)]";
+
+export const clinicHeroPremiumIconRing =
+  "flex h-20 w-20 items-center justify-center rounded-full border border-[#5D7F6D]/15 bg-[#F7FAF8]";
+
+export const clinicHeroPremiumLabel =
+  "text-[15px] font-semibold leading-snug text-[#2F3B34] sm:text-base";
+
 export const clinicOutlineBtn =
   "inline-flex items-center justify-center rounded-2xl border border-[#DDE4DD] bg-white px-8 py-4 text-center font-medium text-[#5D7F6D] shadow-[0_4px_14px_rgba(0,0,0,0.04)] transition-all duration-300 hover:bg-[#F7F8F6]";
 

@@ -20,10 +20,27 @@ import {
   clinicHeroTitleRuleLeft,
   clinicHeroTitleRuleRight,
   clinicPageGradient,
-  clinicPrimaryBtn,
+  clinicHeroCtaBtn,
+  clinicHeroCtaIcon,
+  clinicHeroPremiumCard,
+  clinicHeroPremiumIconRing,
+  clinicHeroPremiumLabel,
   clinicTextMuted,
 } from "@/lib/clinicUi";
-import { BarChart3, CalendarCheck, CheckCircle2, ExternalLink, Megaphone, MonitorSmartphone, Users } from "lucide-react";
+import { BarChart3, CalendarCheck, CheckCircle2, ExternalLink, Flower2, Home as HomeIcon, Leaf, Megaphone, MonitorSmartphone, Users } from "lucide-react";
+
+function HeroPremiumIcon({ icon }) {
+  if (icon === "lotus") {
+    return <Flower2 className="h-10 w-10 text-[#5D7F6D]" strokeWidth={1.4} aria-hidden="true" />;
+  }
+
+  return (
+    <span className="relative flex h-10 w-10 items-center justify-center" aria-hidden="true">
+      <HomeIcon className="h-9 w-9 text-[#5D7F6D]" strokeWidth={1.4} />
+      <Leaf className="absolute -bottom-0.5 -left-0.5 h-[18px] w-[18px] text-[#7F9B8A]" strokeWidth={1.6} />
+    </span>
+  );
+}
 
 const DEFAULT_DEMO_URL = "https://karinshinanit-demo.vercel.app";
 
@@ -122,9 +139,30 @@ export default function Home() {
                   </div>
                 </div>
 
-                <Link to="/book" className={clinicPrimaryBtn}>
-                  {clinicSite.heroCtaPrimary}
-                </Link>
+                <div className="flex w-full flex-col items-stretch gap-7 pt-2">
+                  <Link to="/book" className={clinicHeroCtaBtn}>
+                    <Leaf className={clinicHeroCtaIcon} strokeWidth={1.5} aria-hidden="true" />
+                    {clinicSite.heroCtaPrimary}
+                  </Link>
+                  {clinicSite.heroExternalLinks?.length > 0 && (
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
+                      {clinicSite.heroExternalLinks.map((link) => (
+                        <a
+                          key={link.url}
+                          href={link.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={clinicHeroPremiumCard}
+                        >
+                          <div className={clinicHeroPremiumIconRing}>
+                            <HeroPremiumIcon icon={link.icon} />
+                          </div>
+                          <span className={clinicHeroPremiumLabel}>{link.label}</span>
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </section>

@@ -22,6 +22,11 @@ export const CLINIC_SITES = {
 
     heroCtaPrimary: "לקביעת תור",
 
+    heroExternalLinks: [
+      { label: "טיפולים", url: "https://www.ofirbaby.com", icon: "lotus" },
+      { label: "שלטים ומוצרים לבית", url: "https://www.klamra-designs.com", icon: "home-leaf" },
+    ],
+
     heroFloatingTitle: "רעננות טבעית,",
 
     heroFloatingSubtitle: "בתוצאות מיידיות",
