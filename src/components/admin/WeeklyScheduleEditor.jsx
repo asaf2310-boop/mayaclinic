@@ -69,8 +69,8 @@ export default function WeeklyScheduleEditor({ availabilityRecords = [] }) {
   );
 
   useEffect(() => {
-    setWeekDays(normalizeWeeklyRecords(clinicWeeklyRecords));
-  }, [clinicWeeklyRecords]);
+    setWeekDays(normalizeWeeklyRecords(clinicWeeklyRecords, clinicSite));
+  }, [clinicWeeklyRecords, clinicSite]);
 
   const activeDayCount = useMemo(
     () => weekDays.filter((day) => day.is_active && day.slots.length > 0).length,

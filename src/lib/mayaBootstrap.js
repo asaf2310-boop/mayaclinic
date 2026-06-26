@@ -1,4 +1,5 @@
 import { filterByClinicTenant, getClinicSite } from "./clinicSite";
+import { createEmptyWeeklyTemplate } from "./weeklySchedule";
 
 export const AVAILABILITY_CLEARED_KEY = "clinic-availability-cleared";
 export const DEFAULT_AVAILABILITY_DAYS = 30;
@@ -47,21 +48,63 @@ function buildDefaultAvailabilityDates(daysAhead = DEFAULT_AVAILABILITY_DAYS, fr
 }
 
 function availabilityPayload(site, date) {
-  return {
+  const payload = {
     date,
     slots: [...site.defaultSlots],
     is_active: true,
   };
+  const tenantId = String(import.meta.env.VITE_CLINIC_TENANT_ID || "").trim();
+  if (tenantId) payload.tenant_id = tenantId;
+  return payload;
+}
+
+async function listAllAvailability(base44) {
+  if (typeof base44.entities.Availability.listAll === "function") {
+    return base44.entities.Availability.listAll("date");
+  }
+  return base44.entities.Availability.list("date", 1000);
+}
+
+/**
+ * Remove duplicate weekly template rows and reset to an inactive empty template.
+ */
+export async function restoreDefaultWeeklySchedule(base44, site = getClinicSite()) {
+  if (!site || !base44.entities.WeeklySchedule) {
+    return { reset: 0, removed: 0 };
+  }
+
+  const weeklyRecords = await base44.entities.WeeklySchedule.list("day_of_week");
+  const clinicRows = filterByClinicTenant(Array.isArray(weeklyRecords) ? weeklyRecords : [], site);
+
+  let removed = 0;
+  for (const row of clinicRows) {
+    if (!row?.id) continue;
+    await base44.entities.WeeklySchedule.delete(row.id);
+    removed += 1;
+  }
+
+  const tenantId = String(import.meta.env.VITE_CLINIC_TENANT_ID || "").trim();
+  for (const day of createEmptyWeeklyTemplate()) {
+    const payload = {
+      day_of_week: day.day_of_week,
+      slots: [],
+      is_active: false,
+    };
+    if (tenantId) payload.tenant_id = tenantId;
+    await base44.entities.WeeklySchedule.create(payload);
+  }
+
+  return { reset: 7, removed };
 }
 
 /**
  * Reset Maya clinic availability to defaultSlots for the next 30 days.
- * Only touches rows for the current clinic tenant (client-side filter).
+ * Clears duplicate weekly templates and future availability outside the window.
  */
 export async function restoreDefaultAvailability(base44, site = getClinicSite(), { daysAhead = DEFAULT_AVAILABILITY_DAYS } = {}) {
-  if (!site) return { restored: 0, removed: 0 };
+  if (!site) return { restored: 0, removed: 0, weeklyRemoved: 0 };
 
-  const availability = await base44.entities.Availability.list();
+  const availability = await listAllAvailability(base44);
   const clinicRows = filterByClinicTenant(Array.isArray(availability) ? availability : [], site);
   const existingByDate = Object.fromEntries(clinicRows.map((row) => [row.date, row]));
   const targetDates = new Set(buildDefaultAvailabilityDates(daysAhead));
@@ -89,8 +132,10 @@ export async function restoreDefaultAvailability(base44, site = getClinicSite(),
     }
   }
 
+  const { removed: weeklyRemoved } = await restoreDefaultWeeklySchedule(base44, site);
+
   clearAvailabilityClearedMark();
-  return { restored, removed };
+  return { restored, removed, weeklyRemoved };
 }
 
 export async function ensureClinicSeedData(base44) {
@@ -114,7 +159,7 @@ export async function ensureClinicSeedData(base44) {
   }
 
   if (!isAvailabilityCleared()) {
-    const availability = await base44.entities.Availability.list();
+    const availability = await listAllAvailability(base44);
     const availabilityList = filterByClinicTenant(Array.isArray(availability) ? availability : [], site);
     const existingDates = new Set(availabilityList.map((row) => row.date));
 

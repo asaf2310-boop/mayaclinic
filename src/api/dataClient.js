@@ -45,7 +45,7 @@ function requestHeaders(extra = {}) {
 }
 
 function withTenantId(row = {}) {
-  const tenantId = getClinicTenantId();
+  const tenantId = String(import.meta.env.VITE_CLINIC_TENANT_ID || "").trim();
   if (!tenantId || row.tenant_id) return row;
   return { ...row, tenant_id: tenantId };
 }
@@ -73,7 +73,7 @@ function createEntity(tableName) {
       return (await requestJson(buildUrl(tableName, filters, { select: "*" }))) ?? [];
     },
 
-    async list(order = "-created_at", limit = 100) {
+    async list(order = "-created_at", limit = 100, offset = 0) {
       const orderColumn = String(order || "-created_at");
       const desc = orderColumn.startsWith("-");
       const column = desc ? orderColumn.slice(1) : orderColumn;
@@ -82,7 +82,23 @@ function createEntity(tableName) {
         select: "*",
         order: `${column}.${desc ? "desc" : "asc"}`,
         limit,
+        offset,
       }))) ?? [];
+    },
+
+    async listAll(order = "date", pageSize = 200) {
+      const rows = [];
+      let offset = 0;
+
+      while (true) {
+        const page = await this.list(order, pageSize, offset);
+        if (!page.length) break;
+        rows.push(...page);
+        if (page.length < pageSize) break;
+        offset += pageSize;
+      }
+
+      return rows;
     },
 
     async create(row) {

@@ -109,13 +109,16 @@ export default function AvailabilityManager() {
     if (!clinicSite) return;
     setSaving(true);
     try {
-      const { restored, removed } = await restoreDefaultAvailability(base44, clinicSite);
-      await queryClient.invalidateQueries({ queryKey: ["availability"] });
+      const { restored, removed, weeklyRemoved = 0 } = await restoreDefaultAvailability(base44, clinicSite);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["availability"] }),
+        queryClient.invalidateQueries({ queryKey: ["weekly-schedule"] }),
+      ]);
       setSelectedDate(null);
       setEditSlots(clinicSite.defaultSlots || []);
       toast({
         title: "שעות ברירת המחדל שוחזרו",
-        description: `${restored} ימים עודכנו${removed > 0 ? `, ${removed} ימים עתידיים הוסרו` : ""}. שעות: ${(clinicSite.defaultSlots || []).join(", ")}`,
+        description: `${restored} ימים עודכנו${removed > 0 ? `, ${removed} ימים עתידיים הוסרו` : ""}${weeklyRemoved > 0 ? `, ${weeklyRemoved} שורות לוז שבועי נוקו` : ""}. שעות: ${(clinicSite.defaultSlots || []).join(", ")}`,
       });
     } finally {
       setSaving(false);

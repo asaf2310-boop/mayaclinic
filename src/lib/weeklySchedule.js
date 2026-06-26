@@ -32,10 +32,51 @@ export function createEmptyWeeklyTemplate() {
   }));
 }
 
-export function normalizeWeeklyRecords(records = []) {
-  const byDay = Object.fromEntries(
-    (records || []).map((row) => [Number(row.day_of_week), row])
-  );
+function slotsMatchSiteDefaults(slots, site) {
+  if (!site?.defaultSlots?.length || !Array.isArray(slots) || !slots.length) return false;
+  return [...slots].sort().join(",") === [...site.defaultSlots].sort().join(",");
+}
+
+export function normalizeWeeklyRecords(records = [], site = null) {
+  const tenantId = site?.id;
+  const byDay = {};
+
+  for (const row of records || []) {
+    const day = Number(row.day_of_week);
+    const existing = byDay[day];
+    if (!existing) {
+      byDay[day] = row;
+      continue;
+    }
+
+    if (tenantId) {
+      const rowTenant = String(row.tenant_id || "").trim();
+      const existingTenant = String(existing.tenant_id || "").trim();
+      if (rowTenant === tenantId && existingTenant !== tenantId) {
+        byDay[day] = row;
+        continue;
+      }
+      if (rowTenant !== tenantId && existingTenant === tenantId) {
+        continue;
+      }
+    }
+
+    if (site) {
+      const rowMatches = slotsMatchSiteDefaults(row.slots, site);
+      const existingMatches = slotsMatchSiteDefaults(existing.slots, site);
+      if (rowMatches && !existingMatches) {
+        byDay[day] = row;
+        continue;
+      }
+      if (!rowMatches && existingMatches) {
+        continue;
+      }
+    }
+
+    if (!row.slots?.length && existing.slots?.length) {
+      byDay[day] = row;
+    }
+  }
 
   return createEmptyWeeklyTemplate().map((template) => {
     const existing = byDay[template.day_of_week];

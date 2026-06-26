@@ -118,10 +118,13 @@ export function filterByClinicTenant(rows = [], site = getClinicSite()) {
   if (!site) return rows;
 
   const tenantId = site.id;
-  return rows.filter((row) => {
-    const rowTenant = String(row?.tenant_id || "").trim();
-    return !rowTenant || rowTenant === tenantId;
-  });
+  const hasTenantColumn = rows.some((row) => Object.prototype.hasOwnProperty.call(row, "tenant_id"));
+  if (!hasTenantColumn) return rows;
+
+  const hasAnyTenant = rows.some((row) => String(row?.tenant_id || "").trim());
+  if (!hasAnyTenant) return rows;
+
+  return rows.filter((row) => String(row?.tenant_id || "").trim() === tenantId);
 }
 
 export function filterAppointmentsForClinic(appointments = [], site = getClinicSite()) {

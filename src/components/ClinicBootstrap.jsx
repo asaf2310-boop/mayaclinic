@@ -95,6 +95,9 @@ export default function ClinicBootstrap() {
         if (restoredAvailability > 0) {
           queryClient.invalidateQueries({ queryKey: ["availability"] });
         }
+        if (shouldRestoreAvailability) {
+          queryClient.invalidateQueries({ queryKey: ["weekly-schedule"] });
+        }
 
         if (shouldRestoreAvailability && restoredAvailability > 0) {
           toast({
