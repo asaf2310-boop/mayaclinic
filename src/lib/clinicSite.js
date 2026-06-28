@@ -27,6 +27,12 @@ export const CLINIC_SITES = {
       { label: "מידע על מוצרים", url: "https://www.klamra-designs.com", icon: "home-leaf" },
     ],
 
+    heroMeridianLink: {
+      title: "תור למילואימניקים ונפגעי פעולות איבה",
+      subtitle: "בהטבה דרך מרידיאן",
+      url: "https://meridian-medicine.com/therapists/%d7%9e%d7%90%d7%99%d7%94-%d7%90%d7%a8%d7%99%d7%90%d7%9c%d7%99-%d7%91%d7%a8%d7%95%d7%9f/",
+    },
+
     heroFloatingTitle: "רעננות טבעית,",
 
     heroFloatingSubtitle: "בתוצאות מיידיות",

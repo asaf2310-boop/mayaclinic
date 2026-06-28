@@ -27,6 +27,7 @@ import {
   clinicHeroPremiumLabel,
   clinicTextMuted,
 } from "@/lib/clinicUi";
+import HeroMeridianButton from "../components/home/HeroMeridianButton";
 import { BarChart3, CalendarCheck, CheckCircle2, ExternalLink, Flower2, Home as HomeIcon, Leaf, Megaphone, MonitorSmartphone, Users } from "lucide-react";
 
 function HeroPremiumIcon({ icon }) {
@@ -160,6 +161,11 @@ export default function Home() {
                           <span className={clinicHeroPremiumLabel}>{link.label}</span>
                         </a>
                       ))}
+                    </div>
+                  )}
+                  {clinicSite.heroMeridianLink && (
+                    <div className="flex w-full justify-center pt-1">
+                      <HeroMeridianButton link={clinicSite.heroMeridianLink} />
                     </div>
                   )}
                 </div>
