@@ -1,5 +1,10 @@
 -- Run once in Supabase SQL Editor.
 -- Project URL for this app: https://furrjspvtmyvjikynkfj.supabase.co
+--
+-- Run order for multi-tenant setup:
+--   1. schema.sql               (this file)
+--   2. multi-tenant.sql
+--   3. tag-holistic-records.sql (optional)
 
 create extension if not exists "pgcrypto";
 

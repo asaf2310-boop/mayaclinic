@@ -1,5 +1,6 @@
 -- Run after schema.sql in Supabase SQL Editor.
 -- Recurring weekly availability template (admin applies to future dates).
+-- Optional if you run multi-tenant.sql (it creates this table when missing).
 
 create table if not exists weekly_schedule (
   id uuid primary key default gen_random_uuid(),

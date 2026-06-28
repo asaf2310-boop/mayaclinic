@@ -1,5 +1,6 @@
 -- Run after schema.sql in Supabase SQL Editor.
 -- Extended patient profile for Maya clinic admin (not a full EMR).
+-- Optional if you run multi-tenant.sql (it creates this table when missing).
 
 create table if not exists patient_profiles (
   id uuid primary key default gen_random_uuid(),
