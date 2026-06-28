@@ -121,13 +121,13 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="mb-4 w-full max-w-sm md:mb-8 md:max-w-md">
-                  <div className={`${clinicHeroImageFrame} h-auto transition-transform duration-300 hover:scale-[1.01]`}>
+                <div className="mb-4 w-full md:mb-8 md:max-w-md">
+                  <div className={`${clinicHeroImageFrame} transition-transform duration-300 hover:scale-[1.01]`}>
                     {!heroImageMissing ? (
                       <img
                         src={clinicSite.heroImage}
                         alt={clinicSite.clinicTitle}
-                        className="h-[220px] w-full object-cover md:h-auto md:max-h-[440px] md:object-contain"
+                        className="clinic-hero-image block h-full w-full object-cover object-center md:h-auto md:max-h-[440px] md:object-contain"
                         loading="eager"
                         decoding="async"
                         onError={() => setHeroImageMissing(true)}

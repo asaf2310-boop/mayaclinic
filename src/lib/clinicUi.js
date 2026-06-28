@@ -93,7 +93,7 @@ export const clinicFloatingCard =
   "rounded-2xl border border-[#E8ECE8] bg-white p-4 shadow-[0_8px_30px_rgba(0,0,0,0.04)]";
 
 export const clinicHeroImageFrame =
-  "relative w-full overflow-hidden rounded-[20px] border border-white shadow-[0_20px_60px_rgba(0,0,0,0.08)] md:rounded-[28px]";
+  "relative aspect-[3/4] w-full overflow-hidden rounded-[20px] border border-white shadow-[0_20px_60px_rgba(0,0,0,0.08)] md:aspect-auto md:rounded-[28px]";
 
 export const clinicSelectionBanner =
   "border border-[#5D7F6D]/35 bg-[#F0F4F1] text-[#2F3B34]";
