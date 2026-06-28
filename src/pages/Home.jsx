@@ -32,13 +32,13 @@ import { BarChart3, CalendarCheck, CheckCircle2, ExternalLink, Flower2, Home as 
 
 function HeroPremiumIcon({ icon }) {
   if (icon === "lotus") {
-    return <Flower2 className="h-10 w-10 text-[#5D7F6D]" strokeWidth={1.4} aria-hidden="true" />;
+    return <Flower2 className="h-7 w-7 text-[#5D7F6D] md:h-10 md:w-10" strokeWidth={1.4} aria-hidden="true" />;
   }
 
   return (
-    <span className="relative flex h-10 w-10 items-center justify-center" aria-hidden="true">
-      <HomeIcon className="h-9 w-9 text-[#5D7F6D]" strokeWidth={1.4} />
-      <Leaf className="absolute -bottom-0.5 -left-0.5 h-[18px] w-[18px] text-[#7F9B8A]" strokeWidth={1.6} />
+    <span className="relative flex h-7 w-7 items-center justify-center md:h-10 md:w-10" aria-hidden="true">
+      <HomeIcon className="h-6 w-6 text-[#5D7F6D] md:h-9 md:w-9" strokeWidth={1.4} />
+      <Leaf className="absolute -bottom-0.5 -left-0.5 h-3 w-3 text-[#7F9B8A] md:h-[18px] md:w-[18px]" strokeWidth={1.6} />
     </span>
   );
 }
@@ -105,7 +105,7 @@ export default function Home() {
         <main>
           <section className={clinicHeroSection}>
             <div
-              className="relative z-10 mx-auto flex min-h-[calc(100vh-6rem)] max-w-4xl flex-col items-center justify-center px-6 py-12"
+              className="clinic-hero-shell relative z-10 mx-auto flex min-h-0 max-w-4xl flex-col items-center justify-center px-4 py-5 md:min-h-[calc(100vh-6rem)] md:px-6 md:py-12"
               dir="rtl"
             >
               <div className={`${clinicHeroPanel} ${clinicFadeIn} flex flex-col items-center text-center`}>
@@ -121,13 +121,13 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="mb-8 w-full max-w-sm md:max-w-md">
+                <div className="mb-4 w-full max-w-sm md:mb-8 md:max-w-md">
                   <div className={`${clinicHeroImageFrame} h-auto transition-transform duration-300 hover:scale-[1.01]`}>
                     {!heroImageMissing ? (
                       <img
                         src={clinicSite.heroImage}
                         alt={clinicSite.clinicTitle}
-                        className="mx-auto h-auto max-h-[360px] w-full object-contain md:max-h-[440px]"
+                        className="mx-auto h-auto max-h-[220px] w-full object-contain md:max-h-[440px]"
                         loading="eager"
                         decoding="async"
                         onError={() => setHeroImageMissing(true)}
@@ -140,13 +140,13 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="flex w-full flex-col items-stretch gap-7 pt-2">
+                <div className="flex w-full flex-col items-stretch gap-3.5 pt-0 md:gap-7 md:pt-2">
                   <Link to="/book" className={clinicHeroCtaBtn}>
                     <Leaf className={clinicHeroCtaIcon} strokeWidth={1.5} aria-hidden="true" />
                     {clinicSite.heroCtaPrimary}
                   </Link>
                   {clinicSite.heroExternalLinks?.length > 0 && (
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
+                    <div className="grid grid-cols-2 gap-2.5 sm:gap-5">
                       {clinicSite.heroExternalLinks.map((link) => (
                         <a
                           key={link.url}
@@ -164,7 +164,7 @@ export default function Home() {
                     </div>
                   )}
                   {clinicSite.heroMeridianLink && (
-                    <div className="flex w-full justify-center pt-1">
+                    <div className="flex w-full justify-center pt-0 md:pt-1">
                       <HeroMeridianButton link={clinicSite.heroMeridianLink} />
                     </div>
                   )}

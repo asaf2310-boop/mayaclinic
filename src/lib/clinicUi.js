@@ -12,34 +12,34 @@ export const clinicPageGradient =
 export const clinicFadeIn = "animate-in fade-in duration-700 fill-mode-both";
 
 export const clinicHeroSection =
-  "relative flex min-h-[calc(100vh-5rem)] items-center justify-center overflow-hidden font-sans pt-20";
+  "relative flex min-h-0 items-center justify-center overflow-hidden font-sans pt-14 md:min-h-[calc(100vh-5rem)] md:pt-20";
 
 export const clinicHeroPanel =
-  "w-full max-w-xl rounded-[32px] border border-white/60 bg-white/88 p-8 shadow-[0_20px_60px_rgba(0,0,0,0.06)] backdrop-blur-[16px] md:p-10";
+  "w-full max-w-xl rounded-[24px] border border-white/60 bg-white/88 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.06)] backdrop-blur-[16px] md:rounded-[32px] md:p-10";
 
 export const clinicPrimaryBtn =
   "inline-flex h-14 items-center justify-center rounded-2xl bg-[#5D7F6D] px-8 text-center font-medium text-white shadow-[0_8px_24px_rgba(93,127,109,0.22)] transition-all duration-300 hover:scale-[1.03] hover:bg-[#4F6F5F] active:scale-[0.98]";
 
 export const clinicHeroCtaBtn =
-  "relative flex w-full items-center justify-center rounded-[24px] bg-gradient-to-l from-[#5D7F6D] to-[#6F9180] px-8 py-[18px] text-xl font-semibold tracking-wide text-white shadow-[0_12px_30px_rgba(0,0,0,0.12)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:scale-[1.01] hover:shadow-[0_18px_40px_rgba(0,0,0,0.16)] active:translate-y-0 active:scale-100";
+  "relative flex w-full items-center justify-center rounded-[20px] bg-gradient-to-l from-[#5D7F6D] to-[#6F9180] px-6 py-3.5 text-lg font-semibold tracking-wide text-white shadow-[0_12px_30px_rgba(0,0,0,0.12)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:scale-[1.01] hover:shadow-[0_18px_40px_rgba(0,0,0,0.16)] active:translate-y-0 active:scale-100 md:rounded-[24px] md:px-8 md:py-[18px] md:text-xl";
 
 export const clinicHeroCtaIcon =
-  "pointer-events-none absolute left-6 h-[22px] w-[22px] text-white/70";
+  "pointer-events-none absolute left-5 h-[18px] w-[18px] text-white/70 md:left-6 md:h-[22px] md:w-[22px]";
 
 export const clinicHeroPremiumCard =
-  "flex flex-1 flex-col items-center gap-6 rounded-[24px] border border-[#5D7F6D]/20 bg-white px-6 py-9 text-center shadow-[0_8px_24px_rgba(0,0,0,0.06)] transition-all duration-300 ease-in-out hover:-translate-y-1 hover:shadow-[0_15px_35px_rgba(0,0,0,0.12)]";
+  "flex min-h-0 flex-1 flex-col items-center gap-2.5 rounded-[18px] border border-[#5D7F6D]/20 bg-white px-3 py-4 text-center shadow-[0_8px_24px_rgba(0,0,0,0.06)] transition-all duration-300 ease-in-out hover:-translate-y-1 hover:shadow-[0_15px_35px_rgba(0,0,0,0.12)] md:gap-6 md:rounded-[24px] md:px-6 md:py-9";
 
 export const clinicHeroPremiumIconRing =
-  "flex h-20 w-20 items-center justify-center rounded-full border border-[#5D7F6D]/15 bg-[#F7FAF8]";
+  "flex h-12 w-12 items-center justify-center rounded-full border border-[#5D7F6D]/15 bg-[#F7FAF8] md:h-20 md:w-20";
 
 export const clinicHeroPremiumLabel =
-  "text-[15px] font-semibold leading-snug text-[#2F3B34] sm:text-base";
+  "text-sm font-semibold leading-snug text-[#2F3B34] sm:text-base";
 
 export const clinicHeroMeridianBtn =
-  "group mx-auto flex w-full max-w-md flex-col items-center gap-4 rounded-full border border-white/25 bg-gradient-to-l from-[#4A6B5C] via-[#5D7F6D] to-[#6F9180] px-6 py-5 text-center shadow-[0_14px_36px_rgba(74,107,92,0.28),inset_0_1px_0_rgba(255,255,255,0.18)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:shadow-[0_18px_44px_rgba(74,107,92,0.34),inset_0_1px_0_rgba(255,255,255,0.22)] active:translate-y-0 sm:flex-row sm:gap-5 sm:px-8 sm:py-5 sm:text-right";
+  "group mx-auto flex w-full max-w-md flex-col items-center gap-2.5 rounded-full border border-white/25 bg-gradient-to-l from-[#4A6B5C] via-[#5D7F6D] to-[#6F9180] px-5 py-3.5 text-center shadow-[0_14px_36px_rgba(74,107,92,0.28),inset_0_1px_0_rgba(255,255,255,0.18)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:shadow-[0_18px_44px_rgba(74,107,92,0.34),inset_0_1px_0_rgba(255,255,255,0.22)] active:translate-y-0 sm:flex-row sm:gap-5 sm:px-8 sm:py-5 sm:text-right";
 
 export const clinicHeroMeridianIconRing =
-  "flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white/15 shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] ring-1 ring-white/20 transition-transform duration-300 group-hover:scale-105";
+  "flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/15 shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] ring-1 ring-white/20 transition-transform duration-300 group-hover:scale-105 md:h-14 md:w-14";
 
 export const clinicOutlineBtn =
   "inline-flex items-center justify-center rounded-2xl border border-[#DDE4DD] bg-white px-8 py-4 text-center font-medium text-[#5D7F6D] shadow-[0_4px_14px_rgba(0,0,0,0.04)] transition-all duration-300 hover:bg-[#F7F8F6]";
@@ -52,13 +52,13 @@ export const clinicBadgeGlass =
 
 export const clinicBadgeText = "text-xs font-medium text-[#5D7F6D]";
 
-export const clinicHeroTitleBlock = "mb-8 space-y-3 text-center";
+export const clinicHeroTitleBlock = "mb-4 space-y-1.5 text-center md:mb-8 md:space-y-3";
 
 export const clinicHeroEyebrow =
-  "block text-xs font-semibold uppercase tracking-[0.2em] text-[#7F9B8A]";
+  "block text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7F9B8A] md:text-xs md:tracking-[0.2em]";
 
 export const clinicHeroTitle =
-  "relative inline-block font-bold leading-tight tracking-[-0.02em] text-[#2F3B34] [font-size:clamp(42px,5vw,64px)]";
+  "relative inline-block text-[34px] font-bold leading-[1.1] tracking-[-0.02em] text-[#2F3B34] md:text-[clamp(42px,5vw,64px)] md:leading-tight";
 
 export const clinicHeroTitleGradient = "text-[#2F3B34]";
 
@@ -93,7 +93,7 @@ export const clinicFloatingCard =
   "rounded-2xl border border-[#E8ECE8] bg-white p-4 shadow-[0_8px_30px_rgba(0,0,0,0.04)]";
 
 export const clinicHeroImageFrame =
-  "relative w-full overflow-hidden rounded-[28px] border border-white shadow-[0_20px_60px_rgba(0,0,0,0.08)]";
+  "relative w-full overflow-hidden rounded-[20px] border border-white shadow-[0_20px_60px_rgba(0,0,0,0.08)] md:rounded-[28px]";
 
 export const clinicSelectionBanner =
   "border border-[#5D7F6D]/35 bg-[#F0F4F1] text-[#2F3B34]";

@@ -141,3 +141,11 @@
     transform: translateY(0);
   }
 }
+
+/* Mobile hero: tighter vertical rhythm without affecting desktop */
+@media (max-width: 767px) {
+  body.clinic-site .clinic-hero-shell {
+    padding-top: 0.75rem;
+    padding-bottom: 1rem;
+  }
+}
