@@ -108,10 +108,7 @@ export function getAllowedTreatmentNames(site = getClinicSite()) {
 }
 
 export function filterTreatmentsForClinic(treatments = [], site = getClinicSite()) {
-  if (!site) return treatments;
-
-  const allowedNames = new Set(getAllowedTreatmentNames(site));
-  return treatments.filter((treatment) => allowedNames.has(String(treatment?.name || "").trim()));
+  return filterByClinicTenant(treatments, site);
 }
 
 export function filterByClinicTenant(rows = [], site = getClinicSite()) {

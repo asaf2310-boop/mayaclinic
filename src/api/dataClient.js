@@ -45,7 +45,7 @@ function requestHeaders(extra = {}) {
 }
 
 function withTenantId(row = {}) {
-  const tenantId = String(import.meta.env.VITE_CLINIC_TENANT_ID || "").trim();
+  const tenantId = getClinicTenantId();
   if (!tenantId || row.tenant_id) return row;
   return { ...row, tenant_id: tenantId };
 }
