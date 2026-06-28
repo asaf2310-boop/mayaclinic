@@ -127,7 +127,7 @@ export default function Home() {
                       <img
                         src={clinicSite.heroImage}
                         alt={clinicSite.clinicTitle}
-                        className="mx-auto h-auto max-h-[220px] w-full object-contain md:max-h-[440px]"
+                        className="h-[220px] w-full object-cover md:h-auto md:max-h-[440px] md:object-contain"
                         loading="eager"
                         decoding="async"
                         onError={() => setHeroImageMissing(true)}
