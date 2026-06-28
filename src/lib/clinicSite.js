@@ -174,24 +174,16 @@ function rowBelongsToHolistic(row) {
 }
 
 /**
- * @param {{ strictSeedNames?: boolean }} options
- *   strictSeedNames — booking page: only seedTreatments names (default false for admin).
+ * Maya: tenant_id=maya rows, excluding holistic treatment names.
+ * Holistic: tenant_id=holistic rows only.
  */
-export function filterTreatmentsForClinic(treatments = [], site = getClinicSite(), options = {}) {
+export function filterTreatmentsForClinic(treatments = [], site = getClinicSite()) {
   if (!site) return treatments;
 
-  const { strictSeedNames = false } = options;
   let filtered = filterByClinicTenant(treatments, site);
 
   if (isMayaTenant(site)) {
     filtered = filtered.filter((treatment) => !isHolisticTreatmentName(treatment?.name));
-
-    if (strictSeedNames) {
-      const allowedNames = new Set(getAllowedTreatmentNames(site));
-      filtered = filtered.filter((treatment) =>
-        allowedNames.has(String(treatment?.name || "").trim())
-      );
-    }
   }
 
   return filtered;
