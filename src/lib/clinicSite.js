@@ -102,40 +102,149 @@ export function isProductionClinicHost(hostname = typeof window !== "undefined" 
 
 
 
+/** Holistic-center treatment names seeded in supabase/multi-tenant.sql */
+const HOLISTIC_TREATMENT_NAME_MARKERS = [
+  "עיסוי תאילנדי",
+  "טיפול במגע עם איגנט",
+  "טיפול במגע עם עומר",
+  "עיסוי 4 ידיים",
+  "עיסוי זוגי",
+];
+
+export function isHolisticTreatmentName(name) {
+  const normalized = String(name || "").trim();
+  if (!normalized) return false;
+
+  return HOLISTIC_TREATMENT_NAME_MARKERS.some(
+    (marker) => normalized === marker || normalized.startsWith(marker)
+  );
+}
+
 export function getAllowedTreatmentNames(site = getClinicSite()) {
   if (!site) return null;
   return site.seedTreatments.map((treatment) => treatment.name);
 }
 
-export function filterTreatmentsForClinic(treatments = [], site = getClinicSite()) {
-  return filterByClinicTenant(treatments, site);
+function rowTenantId(row) {
+  return String(row?.tenant_id || "").trim();
+}
+
+function rowsHaveTenantColumn(rows = []) {
+  return rows.some((row) => Object.prototype.hasOwnProperty.call(row, "tenant_id"));
+}
+
+function rowsHaveAnyTenant(rows = []) {
+  return rows.some((row) => rowTenantId(row));
+}
+
+function isMayaTenant(site = getClinicSite()) {
+  return site?.id === "maya";
+}
+
+function isHolisticTenant(site = getClinicSite()) {
+  return site?.id === "holistic";
+}
+
+function rowBelongsToMaya(row, site = getClinicSite()) {
+  const tenant = rowTenantId(row);
+  if (tenant === "holistic") return false;
+  if (tenant === "maya") return true;
+
+  const treatmentName = String(row?.treatment_name || row?.name || "").trim();
+  if (treatmentName && isHolisticTreatmentName(treatmentName)) return false;
+
+  return true;
+}
+
+function rowBelongsToHolistic(row) {
+  const tenant = rowTenantId(row);
+  if (tenant === "maya") return false;
+  if (tenant === "holistic") return true;
+
+  const treatmentName = String(row?.treatment_name || row?.name || "").trim();
+  if (treatmentName) return isHolisticTreatmentName(treatmentName);
+
+  return false;
+}
+
+/**
+ * @param {{ strictSeedNames?: boolean }} options
+ *   strictSeedNames — booking page: only seedTreatments names (default false for admin).
+ */
+export function filterTreatmentsForClinic(treatments = [], site = getClinicSite(), options = {}) {
+  if (!site) return treatments;
+
+  const { strictSeedNames = false } = options;
+  let filtered = filterByClinicTenant(treatments, site);
+
+  if (isMayaTenant(site)) {
+    filtered = filtered.filter((treatment) => !isHolisticTreatmentName(treatment?.name));
+
+    if (strictSeedNames) {
+      const allowedNames = new Set(getAllowedTreatmentNames(site));
+      filtered = filtered.filter((treatment) =>
+        allowedNames.has(String(treatment?.name || "").trim())
+      );
+    }
+  }
+
+  return filtered;
 }
 
 export function filterByClinicTenant(rows = [], site = getClinicSite()) {
   if (!site) return rows;
 
   const tenantId = site.id;
-  const hasTenantColumn = rows.some((row) => Object.prototype.hasOwnProperty.call(row, "tenant_id"));
-  if (!hasTenantColumn) return rows;
+  const hasTenantColumn = rowsHaveTenantColumn(rows);
+  const hasAnyTenant = hasTenantColumn && rowsHaveAnyTenant(rows);
 
-  const hasAnyTenant = rows.some((row) => String(row?.tenant_id || "").trim());
-  if (!hasAnyTenant) return rows;
+  if (hasAnyTenant) {
+    return rows.filter((row) => {
+      const tenant = rowTenantId(row);
+      if (tenant) return tenant === tenantId;
+      if (isMayaTenant(site)) return rowBelongsToMaya(row, site);
+      if (isHolisticTenant(site)) return rowBelongsToHolistic(row);
+      return true;
+    });
+  }
 
-  return rows.filter((row) => String(row?.tenant_id || "").trim() === tenantId);
+  if (isMayaTenant(site)) {
+    return rows.filter((row) => rowBelongsToMaya(row, site));
+  }
+
+  if (isHolisticTenant(site)) {
+    return rows.filter((row) => rowBelongsToHolistic(row));
+  }
+
+  return rows;
 }
 
 export function filterAppointmentsForClinic(appointments = [], site = getClinicSite()) {
   if (!site) return appointments;
 
-  const allowedNames = new Set(getAllowedTreatmentNames(site));
+  const allowedNames = new Set(getAllowedTreatmentNames(site) || []);
   const tenantId = site.id;
 
   return appointments.filter((appointment) => {
-    const rowTenant = String(appointment?.tenant_id || "").trim();
-    if (rowTenant) return rowTenant === tenantId;
+    const tenant = rowTenantId(appointment);
+    if (tenant) return tenant === tenantId;
 
     const treatmentName = String(appointment?.treatment_name || "").trim();
-    return allowedNames.has(treatmentName);
+    if (isMayaTenant(site)) {
+      if (isHolisticTreatmentName(treatmentName)) return false;
+      if (allowedNames.size > 0) return allowedNames.has(treatmentName);
+      return true;
+    }
+
+    if (isHolisticTenant(site)) {
+      return isHolisticTreatmentName(treatmentName);
+    }
+
+    return true;
   });
+}
+
+export function filterPatientProfilesForClinic(profiles = [], site = getClinicSite()) {
+  return filterByClinicTenant(profiles, site);
 }
 

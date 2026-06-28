@@ -8,7 +8,11 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CalendarPlus, CalendarCheck, Loader2 } from "lucide-react";
 import { format, isBefore, startOfDay } from "date-fns";
-import { getClinicSite } from "@/lib/clinicSite";
+import {
+  filterAppointmentsForClinic,
+  filterByClinicTenant,
+  getClinicSite,
+} from "@/lib/clinicSite";
 import {
   clinicCheckboxPanel,
   clinicFormHint,
@@ -55,38 +59,53 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
 
   const bookingDurationMinutes = selectedTreatment?.duration_minutes ?? 60;
 
+  const clinicAvailability = useMemo(
+    () => filterByClinicTenant(availabilityRecords, clinicSite),
+    [availabilityRecords, clinicSite]
+  );
+
+  const clinicAppointments = useMemo(
+    () => filterAppointmentsForClinic(allAppointments, clinicSite),
+    [allAppointments, clinicSite]
+  );
+
+  const clinicAppointmentsForDate = useMemo(
+    () => filterAppointmentsForClinic(existingAppointments, clinicSite),
+    [existingAppointments, clinicSite]
+  );
+
   const appointmentsByDate = useMemo(() => {
     const byDate = {};
-    for (const appointment of allAppointments) {
+    for (const appointment of clinicAppointments) {
       if (!appointment.date) continue;
       if (!byDate[appointment.date]) byDate[appointment.date] = [];
       byDate[appointment.date].push(appointment);
     }
     return byDate;
-  }, [allAppointments]);
+  }, [clinicAppointments]);
 
   const activeDates = useMemo(() => {
     return new Set(
-      availabilityRecords.filter((r) => r.is_active && r.slots?.length > 0).map((r) => r.date)
+      clinicAvailability.filter((r) => r.is_active && r.slots?.length > 0).map((r) => r.date)
     );
-  }, [availabilityRecords]);
+  }, [clinicAvailability]);
 
   const slotCountByDate = useMemo(
     () =>
-      countAvailableSlotsByDate(availabilityRecords, appointmentsByDate, {
+      countAvailableSlotsByDate(clinicAvailability, appointmentsByDate, {
         bookingDurationMinutes,
       }),
-    [availabilityRecords, appointmentsByDate, bookingDurationMinutes]
+    [clinicAvailability, appointmentsByDate, bookingDurationMinutes]
   );
 
   const availableSlots = useMemo(() => {
     if (!form.date) return [];
-    const rec = availabilityRecords.find((r) => r.date === form.date && r.is_active);
+    const rec = clinicAvailability.find((r) => r.date === form.date && r.is_active);
     if (!rec) return [];
-    return filterAvailableSlots(rec.slots, existingAppointments, {
+    return filterAvailableSlots(rec.slots, clinicAppointmentsForDate, {
       bookingDurationMinutes,
     });
-  }, [form.date, availabilityRecords, existingAppointments, bookingDurationMinutes]);
+  }, [form.date, clinicAvailability, clinicAppointmentsForDate, bookingDurationMinutes]);
 
   const handleChange = (field, value) => {
     setForm((prev) => {

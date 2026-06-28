@@ -1,4 +1,5 @@
 import { filterByClinicTenant, getClinicSite } from "./clinicSite";
+import { getClinicTenantId } from "./tenant";
 import { createEmptyWeeklyTemplate } from "./weeklySchedule";
 
 export const AVAILABILITY_CLEARED_KEY = "clinic-availability-cleared";
@@ -53,7 +54,7 @@ function availabilityPayload(site, date) {
     slots: [...site.defaultSlots],
     is_active: true,
   };
-  const tenantId = String(import.meta.env.VITE_CLINIC_TENANT_ID || "").trim();
+  const tenantId = getClinicTenantId();
   if (tenantId) payload.tenant_id = tenantId;
   return payload;
 }
@@ -83,7 +84,7 @@ export async function restoreDefaultWeeklySchedule(base44, site = getClinicSite(
     removed += 1;
   }
 
-  const tenantId = String(import.meta.env.VITE_CLINIC_TENANT_ID || "").trim();
+  const tenantId = getClinicTenantId();
   for (const day of createEmptyWeeklyTemplate()) {
     const payload = {
       day_of_week: day.day_of_week,

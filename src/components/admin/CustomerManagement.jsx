@@ -24,7 +24,7 @@ import {
 import { ContactChannelIcon } from "@/lib/contactIcons";
 import { buildCustomers, buildWhatsAppUrl, formatDate, statusMeta } from "@/lib/customers";
 import { buildProfileMap, listPatientProfiles, profileSummaryChips } from "@/lib/patientProfiles";
-import { getClinicSite } from "@/lib/clinicSite";
+import { filterPatientProfilesForClinic, getClinicSite } from "@/lib/clinicSite";
 import { clinicGlassCard, clinicOutlineBtn, clinicTextPrimary } from "@/lib/clinicUi";
 
 function PatientDetailsDialog({ customer, profile, open, onOpenChange }) {
@@ -188,7 +188,15 @@ export default function CustomerManagement({ appointments }) {
     queryFn: listPatientProfiles,
   });
 
-  const profileByKey = useMemo(() => buildProfileMap(patientProfiles), [patientProfiles]);
+  const clinicPatientProfiles = useMemo(
+    () => filterPatientProfilesForClinic(patientProfiles, clinicSite),
+    [patientProfiles, clinicSite]
+  );
+
+  const profileByKey = useMemo(
+    () => buildProfileMap(clinicPatientProfiles),
+    [clinicPatientProfiles]
+  );
 
   const filteredCustomers = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();

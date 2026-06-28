@@ -37,7 +37,7 @@ export default function Book() {
   });
 
   const visibleTreatments = useMemo(
-    () => filterTreatmentsForClinic(treatments, clinicSite),
+    () => filterTreatmentsForClinic(treatments, clinicSite, { strictSeedNames: true }),
     [treatments, clinicSite]
   );
 
