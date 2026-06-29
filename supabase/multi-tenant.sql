@@ -76,6 +76,7 @@ on conflict (id) do update set name = excluded.name;
 
 alter table treatments add column if not exists tenant_id text references clinic_tenants(id);
 alter table treatments add column if not exists external_id text;
+alter table treatments add column if not exists paybox_link text;
 
 alter table availability add column if not exists tenant_id text references clinic_tenants(id);
 

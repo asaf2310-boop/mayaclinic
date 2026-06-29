@@ -67,6 +67,29 @@ async function listAllAvailability(base44) {
 }
 
 /**
+ * Returns true when Supabase reads work for the current tenant (RLS + env OK).
+ */
+export async function verifyClinicBackend(base44) {
+  try {
+    await base44.entities.Treatment.list();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function createSeedTreatment(base44, seedTreatment) {
+  try {
+    await base44.entities.Treatment.create(seedTreatment);
+    return true;
+  } catch {
+    const { paybox_link: _paybox, ...withoutPaybox } = seedTreatment;
+    await base44.entities.Treatment.create(withoutPaybox);
+    return true;
+  }
+}
+
+/**
  * Remove duplicate weekly template rows and reset to an inactive empty template.
  */
 export async function restoreDefaultWeeklySchedule(base44, site = getClinicSite()) {
@@ -141,13 +164,32 @@ export async function restoreDefaultAvailability(base44, site = getClinicSite(),
 
 export async function ensureClinicSeedData(base44) {
   const site = getClinicSite();
-  if (!site) return { restoredTreatments: 0, restoredAvailability: 0 };
+  if (!site) {
+    return { restoredTreatments: 0, restoredAvailability: 0, coreOk: true, seedErrors: [] };
+  }
+
+  const coreOk = await verifyClinicBackend(base44);
+  if (!coreOk) {
+    return {
+      restoredTreatments: 0,
+      restoredAvailability: 0,
+      coreOk: false,
+      seedErrors: [{ step: "verify_backend" }],
+    };
+  }
 
   let restoredTreatments = 0;
   let restoredAvailability = 0;
+  const seedErrors = [];
 
-  const treatments = await base44.entities.Treatment.list();
-  const treatmentList = filterByClinicTenant(Array.isArray(treatments) ? treatments : [], site);
+  let treatmentList = [];
+  try {
+    const treatments = await base44.entities.Treatment.list();
+    treatmentList = filterByClinicTenant(Array.isArray(treatments) ? treatments : [], site);
+  } catch (error) {
+    seedErrors.push({ step: "list_treatments", message: String(error?.message || error) });
+    return { restoredTreatments, restoredAvailability, coreOk: true, seedErrors };
+  }
 
   for (const seedTreatment of site.seedTreatments) {
     const exists = treatmentList.some(
@@ -155,23 +197,46 @@ export async function ensureClinicSeedData(base44) {
     );
     if (exists) continue;
 
-    await base44.entities.Treatment.create(seedTreatment);
-    restoredTreatments += 1;
+    try {
+      await createSeedTreatment(base44, seedTreatment);
+      restoredTreatments += 1;
+    } catch (error) {
+      seedErrors.push({
+        step: "create_treatment",
+        name: seedTreatment.name,
+        message: String(error?.message || error),
+      });
+    }
   }
 
   if (!isAvailabilityCleared()) {
-    const availability = await listAllAvailability(base44);
-    const availabilityList = filterByClinicTenant(Array.isArray(availability) ? availability : [], site);
+    let availabilityList = [];
+    try {
+      const availability = await listAllAvailability(base44);
+      availabilityList = filterByClinicTenant(Array.isArray(availability) ? availability : [], site);
+    } catch (error) {
+      seedErrors.push({ step: "list_availability", message: String(error?.message || error) });
+      return { restoredTreatments, restoredAvailability, coreOk: true, seedErrors };
+    }
+
     const existingDates = new Set(availabilityList.map((row) => row.date));
 
     for (let offset = 1; offset <= DEFAULT_AVAILABILITY_DAYS; offset += 1) {
       const date = formatDate(addDays(new Date(), offset));
       if (existingDates.has(date)) continue;
 
-      await base44.entities.Availability.create(availabilityPayload(site, date));
-      restoredAvailability += 1;
+      try {
+        await base44.entities.Availability.create(availabilityPayload(site, date));
+        restoredAvailability += 1;
+      } catch (error) {
+        seedErrors.push({
+          step: "create_availability",
+          date,
+          message: String(error?.message || error),
+        });
+      }
     }
   }
 
-  return { restoredTreatments, restoredAvailability };
+  return { restoredTreatments, restoredAvailability, coreOk: true, seedErrors };
 }

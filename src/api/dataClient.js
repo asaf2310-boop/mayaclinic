@@ -50,6 +50,12 @@ function withTenantId(row = {}) {
   return { ...row, tenant_id: tenantId };
 }
 
+/** PATCH must not send tenant_id — RLS uses the request header; sending it can break updates. */
+function updatePayload(row = {}) {
+  const { tenant_id: _ignored, ...fields } = row;
+  return fields;
+}
+
 async function requestJson(url, options = {}) {
   const response = await fetch(url, {
     ...options,
@@ -125,7 +131,7 @@ function createEntity(tableName) {
       const data = await requestJson(buildUrl(tableName, { id }, { select: "*" }), {
         method: "PATCH",
         headers: { Prefer: "return=representation" },
-        body: JSON.stringify(withTenantId(row)),
+        body: JSON.stringify(updatePayload(row)),
       });
 
       return data?.[0] ?? data;

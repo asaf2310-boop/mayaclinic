@@ -37,6 +37,29 @@ VITE_DEMO_MODE=true
 
 Run the app: `npm run dev`
 
+## Maya / ofirbaby production (Vercel)
+
+פרויקטים כמו `ofirbaby.vercel.app` ו-`maya-clinic.vercel.app` חייבים Supabase בפרויקט Vercel (Settings → Environment Variables):
+
+```env
+VITE_SUPABASE_URL=https://furrjspvtmyvjikynkfj.supabase.co
+VITE_SUPABASE_ANON_KEY=<anon public key from Supabase Dashboard → API>
+```
+
+אופציונלי (ברירת מחדל מהדומיין — `maya`):
+
+```env
+VITE_CLINIC_TENANT_ID=maya
+```
+
+אחרי הוספת משתנים: **Redeploy** (Build לא קורא env חדש בלי פריסה מחדש).
+
+ב-Supabase SQL Editor, ודאו שרצו לפחות:
+
+1. `supabase/schema.sql`
+2. `supabase/multi-tenant.sql` (כולל `paybox_link` ו-`tenant_id`)
+3. `supabase/treatments-paybox.sql` — רק אם ה-DB נוצר לפני שהעמודה נוספה ל-schema
+
 ## Demo deployment
 
 הדמו לא צריך GitHub repo נפרד. משתמשים באותו repo של `mayaclinic`, ויוצרים ממנו Project נוסף ב־Vercel.

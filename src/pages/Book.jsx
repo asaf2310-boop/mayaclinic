@@ -99,12 +99,19 @@ export default function Book() {
     onError: (error) => {
       const message = String(error?.message || "");
       const isTimeConflict = message.includes("appointment_time_conflict");
+      const isTenantMismatch = message.includes("tenant_mismatch");
 
       toast({
-        title: isTimeConflict ? "השעה כבר לא זמינה" : "לא ניתן לאשר את התור",
+        title: isTimeConflict
+          ? "השעה כבר לא זמינה"
+          : isTenantMismatch
+            ? "שגיאת הגדרות מערכת"
+            : "לא ניתן לאשר את התור",
         description: isTimeConflict
           ? "נבחר תור אחר בטווח של שעה וחצי מהתור הקיים. חזרו לבחירת שעה אחרת."
-          : "נסו שוב בעוד רגע או צרו קשר טלפוני.",
+          : isTenantMismatch
+            ? "פנו למנהל המערכת — ייתכן שחסר VITE_CLINIC_TENANT_ID=maya בפרויקט Vercel."
+            : "נסו שוב בעוד רגע או צרו קשר טלפוני.",
         variant: "destructive",
       });
     },

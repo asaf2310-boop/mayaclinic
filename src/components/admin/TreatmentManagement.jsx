@@ -126,8 +126,18 @@ export default function TreatmentManagement({ treatments = [] }) {
       setDialogOpen(false);
       toast({ title: "הטיפול עודכן" });
     },
-    onError: () => {
-      toast({ title: "לא ניתן לעדכן את הטיפול", variant: "destructive" });
+    onError: (error) => {
+      const message = String(error?.message || "");
+      const missingPayboxColumn =
+        message.includes("paybox_link") &&
+        (message.includes("column") || message.includes("PGRST204"));
+      toast({
+        title: "לא ניתן לעדכן את הטיפול",
+        description: missingPayboxColumn
+          ? "חסרה עמודת paybox_link ב-Supabase — הריצי supabase/treatments-paybox.sql."
+          : undefined,
+        variant: "destructive",
+      });
     },
   });
 
