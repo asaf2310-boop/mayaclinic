@@ -1,5 +1,11 @@
 import { cleanEnvValue, supabaseAnonKey, supabaseConfigured, supabaseUrl } from "./supabase";
 import { CLINIC_TENANT_HEADER, getClinicTenantId } from "@/lib/tenant";
+import {
+  firstRepresentationRow,
+  missingColumnFromPostgrestError,
+  omitRowKeys,
+  stripTenantIdFromUpdate,
+} from "@/lib/supabaseWriteHelpers";
 
 function assertSupabaseConfigured() {
   if (!supabaseConfigured) {
@@ -50,12 +56,6 @@ function withTenantId(row = {}) {
   return { ...row, tenant_id: tenantId };
 }
 
-/** PATCH must not send tenant_id — RLS uses the request header; sending it can break updates. */
-function updatePayload(row = {}) {
-  const { tenant_id: _ignored, ...fields } = row;
-  return fields;
-}
-
 async function requestJson(url, options = {}) {
   const response = await fetch(url, {
     ...options,
@@ -71,6 +71,62 @@ async function requestJson(url, options = {}) {
 
   const text = await response.text();
   return text ? JSON.parse(text) : null;
+}
+
+async function postRow(tableName, row) {
+  let payload = withTenantId(row);
+
+  while (true) {
+    try {
+      const data = await requestJson(buildUrl(tableName, {}, { select: "*" }), {
+        method: "POST",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify(payload),
+      });
+      return firstRepresentationRow(data);
+    } catch (error) {
+      const missingColumn = missingColumnFromPostgrestError(error.message);
+      if (missingColumn && Object.prototype.hasOwnProperty.call(payload, missingColumn)) {
+        payload = omitRowKeys(payload, [missingColumn]);
+        continue;
+      }
+      throw error;
+    }
+  }
+}
+
+async function patchRow(tableName, id, row) {
+  let payload = stripTenantIdFromUpdate(row);
+
+  while (true) {
+    try {
+      const data = await requestJson(buildUrl(tableName, { id }, { select: "*" }), {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify(payload),
+      });
+
+      const updated = firstRepresentationRow(data);
+      if (!updated) {
+        throw new Error(
+          JSON.stringify({
+            code: "treatment_update_blocked",
+            message:
+              "Update returned no rows — check tenant_id on the treatment and VITE_CLINIC_TENANT_ID / X-Clinic-Tenant-Id header.",
+          })
+        );
+      }
+
+      return updated;
+    } catch (error) {
+      const missingColumn = missingColumnFromPostgrestError(error.message);
+      if (missingColumn === "tenant_id" && Object.prototype.hasOwnProperty.call(payload, "tenant_id")) {
+        payload = omitRowKeys(payload, ["tenant_id"]);
+        continue;
+      }
+      throw error;
+    }
+  }
 }
 
 function createEntity(tableName) {
@@ -108,33 +164,21 @@ function createEntity(tableName) {
     },
 
     async create(row) {
-      const data = await requestJson(buildUrl(tableName, {}, { select: "*" }), {
-        method: "POST",
-        headers: { Prefer: "return=representation" },
-        body: JSON.stringify(withTenantId(row)),
-      });
-
-      return data?.[0] ?? data;
+      return postRow(tableName, row);
     },
 
     async bulkCreate(rows) {
       if (!rows?.length) return [];
 
-      return (await requestJson(buildUrl(tableName, {}, { select: "*" }), {
-        method: "POST",
-        headers: { Prefer: "return=representation" },
-        body: JSON.stringify(rows.map((row) => withTenantId(row))),
-      })) ?? [];
+      const created = [];
+      for (const row of rows) {
+        created.push(await postRow(tableName, row));
+      }
+      return created;
     },
 
     async update(id, row) {
-      const data = await requestJson(buildUrl(tableName, { id }, { select: "*" }), {
-        method: "PATCH",
-        headers: { Prefer: "return=representation" },
-        body: JSON.stringify(updatePayload(row)),
-      });
-
-      return data?.[0] ?? data;
+      return patchRow(tableName, id, row);
     },
 
     async delete(id) {

@@ -131,11 +131,16 @@ export default function TreatmentManagement({ treatments = [] }) {
       const missingPayboxColumn =
         message.includes("paybox_link") &&
         (message.includes("column") || message.includes("PGRST204"));
+      const tenantBlocked =
+        message.includes("treatment_update_blocked") ||
+        (message.includes("tenant_id") && message.includes("X-Clinic-Tenant-Id"));
       toast({
         title: "לא ניתן לעדכן את הטיפול",
         description: missingPayboxColumn
           ? "חסרה עמודת paybox_link ב-Supabase — הריצי supabase/treatments-paybox.sql."
-          : undefined,
+          : tenantBlocked
+            ? "בדקי ש-VITE_CLINIC_TENANT_ID=maya מוגדר ב-Vercel ושהטיפול שייך ל-tenant maya."
+            : undefined,
         variant: "destructive",
       });
     },
