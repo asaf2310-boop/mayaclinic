@@ -1,11 +1,12 @@
 {
   "name": "אופיר - מרכז טיפול הוליסטי",
   "short_name": "אופיר",
-  "description": "קביעת תורים באופיר - מרכז טיפול הוליסטי",
-  "start_url": "/book",
+  "description": "אופיר - מרכז טיפול הוליסטי",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#f7f3ee",
-  "theme_color": "#2eb88a",
+  "theme_color": "#5D7F6D",
   "lang": "he",
   "dir": "rtl",
   "icons": [
@@ -18,6 +19,20 @@
       "src": "https://media.base44.com/images/public/69ff3dea5e105013fde56ce0/e149fd61a_IMG_8737.jpg",
       "sizes": "512x512",
       "type": "image/jpeg"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "קביעת תור",
+      "short_name": "תור",
+      "description": "קביעת תור לקליניקה",
+      "url": "/book"
+    },
+    {
+      "name": "ניהול",
+      "short_name": "ניהול",
+      "description": "ניהול קליניקה",
+      "url": "/admin"
     }
   ]
 }

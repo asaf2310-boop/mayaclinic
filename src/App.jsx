@@ -11,6 +11,7 @@ import Admin from './pages/Admin';
 import AdminPatient from './pages/AdminPatient';
 import DemoDocumentTitle from './components/DemoDocumentTitle';
 import ClinicBootstrap from './components/ClinicBootstrap';
+import AdminPwaManifest from './components/AdminPwaManifest';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -52,6 +53,7 @@ function App() {
         <DemoDocumentTitle />
         <ClinicBootstrap />
         <Router>
+          <AdminPwaManifest />
           <AuthenticatedApp />
         </Router>
         <Toaster />

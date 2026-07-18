@@ -66,27 +66,55 @@ function demoBrandingPlugin() {
     closeBundle() {
       if (!isDemoBuild) return
 
-      const manifestPath = path.resolve('dist/manifest.json')
+      const distDir = path.resolve('dist')
+      const demoIcons = [
+        {
+          src: '/demo-icon.svg',
+          sizes: '512x512',
+          type: 'image/svg+xml',
+        },
+      ]
       const demoManifest = {
         name: 'מערכת דמו לקליניקה',
         short_name: 'דמו קליניקה',
         description: 'מערכת דמו לקביעת תורים וניהול קליניקה',
         start_url: '/',
+        scope: '/',
         display: 'standalone',
         background_color: '#f7f3ee',
         theme_color: '#2eb88a',
         lang: 'he',
         dir: 'rtl',
-        icons: [
+        icons: demoIcons,
+        shortcuts: [
           {
-            src: '/demo-icon.svg',
-            sizes: '512x512',
-            type: 'image/svg+xml',
+            name: 'קביעת תור',
+            short_name: 'תור',
+            url: '/book',
+          },
+          {
+            name: 'ניהול',
+            short_name: 'ניהול',
+            url: '/admin',
           },
         ],
       }
+      const demoAdminManifest = {
+        name: 'ניהול - דמו קליניקה',
+        short_name: 'ניהול',
+        description: 'ניהול קליניקה - סביבת דמו',
+        start_url: '/admin',
+        scope: '/',
+        display: 'standalone',
+        background_color: '#f7f3ee',
+        theme_color: '#2eb88a',
+        lang: 'he',
+        dir: 'rtl',
+        icons: demoIcons,
+      }
 
-      fs.writeFileSync(manifestPath, `${JSON.stringify(demoManifest, null, 2)}\n`)
+      fs.writeFileSync(path.join(distDir, 'manifest.json'), `${JSON.stringify(demoManifest, null, 2)}\n`)
+      fs.writeFileSync(path.join(distDir, 'admin-manifest.json'), `${JSON.stringify(demoAdminManifest, null, 2)}\n`)
     },
   }
 }
