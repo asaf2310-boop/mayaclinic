@@ -15,12 +15,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Loader2, Save, Trash2, RotateCcw, ChevronRight, ChevronLeft, CalendarDays, CalendarRange, Clock } from "lucide-react";
+import { Loader2, Save, Trash2, RotateCcw, ChevronRight, ChevronLeft, CalendarDays, CalendarRange } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { restoreDefaultAvailability, clearAvailabilityClearedMark } from "@/lib/mayaBootstrap";
-import { ALL_SLOTS, DAY_NAMES } from "@/lib/weeklySchedule";
+import { ALL_SLOTS, DAY_NAMES, DAY_NAMES_FULL } from "@/lib/weeklySchedule";
 import WeeklyScheduleEditor from "@/components/admin/WeeklyScheduleEditor";
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isBefore, startOfDay } from "date-fns";
+import { format, addMonths, subMonths, addDays, startOfMonth, endOfMonth, eachDayOfInterval, isBefore, startOfDay } from "date-fns";
 import { he } from "date-fns/locale";
 import { filterByClinicTenant, getClinicSite } from "@/lib/clinicSite";
 import { clinicGlassPanel, clinicPrimaryBtn, clinicOutlineBtn } from "@/lib/clinicUi";
@@ -92,31 +92,53 @@ export default function AvailabilityManager() {
     }
   };
 
-  const todayStr = format(new Date(), "yyyy-MM-dd");
-  const isSelectedToday = selectedDate === todayStr;
+  // Apply the currently marked slots to every upcoming date that shares the
+  // selected day's weekday, across the next APPLY_WEEKDAY_HORIZON_WEEKS weeks.
+  const APPLY_WEEKDAY_HORIZON_WEEKS = 12;
 
-  const handleApplyFromNow = async () => {
-    if (!selectedDate || !isSelectedToday) return;
-    const nowStr = format(new Date(), "HH:mm");
-    const upcoming = [...editSlots].filter((s) => s >= nowStr).sort();
-    const removed = editSlots.length - upcoming.length;
+  const selectedWeekdayFull = useMemo(() => {
+    if (!selectedDate) return "";
+    return DAY_NAMES_FULL[new Date(selectedDate + "T00:00:00").getDay()] || "";
+  }, [selectedDate]);
+
+  const selectedWeekdayShort = selectedWeekdayFull.replace(/^יום\s+/, "");
+
+  const handleApplyToWeekday = async () => {
+    if (!selectedDate) return;
+    if (editSlots.length === 0) {
+      toast({
+        title: "לא נבחרו שעות",
+        description: "יש לבחור שעות פנויות לפני החלה על שאר הימים.",
+      });
+      return;
+    }
+    const slots = [...editSlots].sort();
+    const base = startOfDay(new Date(selectedDate + "T00:00:00"));
+    const todayStart = startOfDay(new Date());
+
+    const targetDates = [];
+    for (let week = 0; week < APPLY_WEEKDAY_HORIZON_WEEKS; week += 1) {
+      const date = addDays(base, week * 7);
+      if (isBefore(date, todayStart)) continue;
+      targetDates.push(format(date, "yyyy-MM-dd"));
+    }
+
     setSaving(true);
     try {
-      const payload = { date: selectedDate, slots: upcoming, is_active: upcoming.length > 0 };
-      if (selectedRecord?.id) {
-        await base44.entities.Availability.update(selectedRecord.id, payload);
-      } else {
-        await base44.entities.Availability.create(payload);
+      for (const dateStr of targetDates) {
+        const existing = availMap[dateStr];
+        const payload = { date: dateStr, slots, is_active: slots.length > 0 };
+        if (existing?.id) {
+          await base44.entities.Availability.update(existing.id, payload);
+        } else {
+          await base44.entities.Availability.create(payload);
+        }
       }
-      setEditSlots(upcoming);
       clearAvailabilityClearedMark();
       await queryClient.invalidateQueries({ queryKey: ["availability"] });
       toast({
-        title: "עודכן מעכשיו והלאה",
-        description:
-          upcoming.length > 0
-            ? `נשמרו ${upcoming.length} שעות מ-${nowStr} והלאה${removed > 0 ? ` (${removed} שעות שעברו הוסרו)` : ""}: ${upcoming.join(", ")}`
-            : "כל השעות להיום כבר עברו — לא נותרו שעות פנויות",
+        title: `הוחל על ${targetDates.length} ${selectedWeekdayShort ? `ימי ${selectedWeekdayShort}` : "תאריכים"}`,
+        description: `אותן ${slots.length} שעות נשמרו לכל ימי ${selectedWeekdayShort || "השבוע"} הקרובים (עד ${APPLY_WEEKDAY_HORIZON_WEEKS} שבועות קדימה): ${slots.join(", ")}`,
       });
     } finally {
       setSaving(false);
@@ -316,22 +338,20 @@ export default function AvailabilityManager() {
                 שמור
               </Button>
 
-              {isSelectedToday && (
-                <>
-                  <button
-                    type="button"
-                    onClick={handleApplyFromNow}
-                    disabled={saving}
-                    className={`${clinicOutlineBtn} w-full gap-2 !py-3 disabled:opacity-60`}
-                  >
-                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Clock className="w-4 h-4" />}
-                    החל מעכשיו והלאה (היום)
-                  </button>
-                  <p className="text-center text-xs text-muted-foreground">
-                    שומר להיום רק את השעות מהשעה הנוכחית והלאה, ומסיר שעות שכבר עברו.
-                  </p>
-                </>
-              )}
+              <>
+                <button
+                  type="button"
+                  onClick={handleApplyToWeekday}
+                  disabled={saving || editSlots.length === 0}
+                  className={`${clinicOutlineBtn} w-full gap-2 !py-3 disabled:opacity-60`}
+                >
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CalendarRange className="w-4 h-4" />}
+                  {selectedWeekdayShort ? `החל על כל ימי ${selectedWeekdayShort} הקרובים` : "החל על אותו יום בשבוע בהמשך"}
+                </button>
+                <p className="text-center text-xs text-muted-foreground">
+                  מחיל את השעות המסומנות על כל ימי {selectedWeekdayShort || "השבוע"} הקרובים (עד {APPLY_WEEKDAY_HORIZON_WEEKS} שבועות קדימה).
+                </p>
+              </>
             </Card>
           )}
 
