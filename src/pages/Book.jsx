@@ -189,6 +189,11 @@ export default function Book() {
                         <p className={`mt-2 text-sm ${clinicTextMuted}`}>
                           {visibleTreatments[0].duration_minutes} דקות · ₪{visibleTreatments[0].price}
                         </p>
+                        {visibleTreatments[0].description ? (
+                          <p className={`mt-3 text-sm leading-relaxed ${clinicTextMuted}`}>
+                            {visibleTreatments[0].description}
+                          </p>
+                        ) : null}
                       </Card>
                     ) : (
                       <TreatmentSelector

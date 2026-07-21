@@ -62,6 +62,15 @@ export default function TreatmentSelector({ treatments, selectedId, onSelect }) 
                         <Banknote className="h-3 w-3" /> ₪{t.price}
                       </span>
                     </div>
+                    {t.description ? (
+                      <p
+                        className={`mt-1.5 text-xs leading-relaxed ${
+                          clinicSite ? clinicTextMuted : "text-muted-foreground"
+                        }`}
+                      >
+                        {t.description}
+                      </p>
+                    ) : null}
                   </div>
                 </div>
                 {isSelected && (
