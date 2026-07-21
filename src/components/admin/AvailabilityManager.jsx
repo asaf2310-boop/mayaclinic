@@ -15,7 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Loader2, Save, Trash2, RotateCcw, ChevronRight, ChevronLeft, CalendarDays, CalendarRange } from "lucide-react";
+import { Loader2, Save, Trash2, RotateCcw, ChevronRight, ChevronLeft, CalendarDays, CalendarRange, Clock } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { restoreDefaultAvailability, clearAvailabilityClearedMark } from "@/lib/mayaBootstrap";
 import { ALL_SLOTS, DAY_NAMES } from "@/lib/weeklySchedule";
@@ -23,7 +23,7 @@ import WeeklyScheduleEditor from "@/components/admin/WeeklyScheduleEditor";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isBefore, startOfDay } from "date-fns";
 import { he } from "date-fns/locale";
 import { filterByClinicTenant, getClinicSite } from "@/lib/clinicSite";
-import { clinicGlassPanel, clinicPrimaryBtn } from "@/lib/clinicUi";
+import { clinicGlassPanel, clinicPrimaryBtn, clinicOutlineBtn } from "@/lib/clinicUi";
 
 export default function AvailabilityManager() {
   const queryClient = useQueryClient();
@@ -87,6 +87,37 @@ export default function AvailabilityManager() {
       clearAvailabilityClearedMark();
       await queryClient.invalidateQueries({ queryKey: ["availability"] });
       toast({ title: `נשמר ל-${selectedDate}` });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const todayStr = format(new Date(), "yyyy-MM-dd");
+  const isSelectedToday = selectedDate === todayStr;
+
+  const handleApplyFromNow = async () => {
+    if (!selectedDate || !isSelectedToday) return;
+    const nowStr = format(new Date(), "HH:mm");
+    const upcoming = [...editSlots].filter((s) => s >= nowStr).sort();
+    const removed = editSlots.length - upcoming.length;
+    setSaving(true);
+    try {
+      const payload = { date: selectedDate, slots: upcoming, is_active: upcoming.length > 0 };
+      if (selectedRecord?.id) {
+        await base44.entities.Availability.update(selectedRecord.id, payload);
+      } else {
+        await base44.entities.Availability.create(payload);
+      }
+      setEditSlots(upcoming);
+      clearAvailabilityClearedMark();
+      await queryClient.invalidateQueries({ queryKey: ["availability"] });
+      toast({
+        title: "עודכן מעכשיו והלאה",
+        description:
+          upcoming.length > 0
+            ? `נשמרו ${upcoming.length} שעות מ-${nowStr} והלאה${removed > 0 ? ` (${removed} שעות שעברו הוסרו)` : ""}: ${upcoming.join(", ")}`
+            : "כל השעות להיום כבר עברו — לא נותרו שעות פנויות",
+      });
     } finally {
       setSaving(false);
     }
@@ -284,6 +315,23 @@ export default function AvailabilityManager() {
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 שמור
               </Button>
+
+              {isSelectedToday && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleApplyFromNow}
+                    disabled={saving}
+                    className={`${clinicOutlineBtn} w-full gap-2 !py-3 disabled:opacity-60`}
+                  >
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Clock className="w-4 h-4" />}
+                    החל מעכשיו והלאה (היום)
+                  </button>
+                  <p className="text-center text-xs text-muted-foreground">
+                    שומר להיום רק את השעות מהשעה הנוכחית והלאה, ומסיר שעות שכבר עברו.
+                  </p>
+                </>
+              )}
             </Card>
           )}
 
