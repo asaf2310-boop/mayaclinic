@@ -1,6 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { ArrowRight, CreditCard, CheckCircle2, Loader2 } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { ArrowRight, CreditCard, Loader2, Lock } from "lucide-react";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
 import { getClinicSite } from "@/lib/clinicSite";
@@ -14,12 +13,6 @@ import {
   clinicTextPrimary,
 } from "@/lib/clinicUi";
 import {
-  buildDynamicPayboxUrl,
-  getPayboxPaymentDetails,
-  openPayboxLink,
-  resolvePayboxLink,
-} from "@/lib/paymentLinks";
-import {
   createBookingRef,
   fetchPelecardStatus,
   initPelecardSession,
@@ -29,38 +22,14 @@ import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { getClinicTenantId } from "@/lib/tenant";
 
-const PHONE = "0549000301";
-const BIT_LOGO = "/payment/bit-logo.png";
-const PAYBOX_LOGO = "/payment/paybox-logo.png";
+const VISA_LOGO = "/payment/visa-logo.svg";
+const MASTERCARD_LOGO = "/payment/mastercard-logo.svg";
 
-function tryOpenBitApp() {
-  if (typeof navigator === "undefined") return "desktop";
-
-  const ua = navigator.userAgent;
-  if (/Android/i.test(ua)) {
-    window.location.href =
-      "intent://#Intent;package=com.bnhp.payments.paymentsapp;scheme=bit;end";
-    return "android";
-  }
-  if (/iPhone|iPad|iPod/i.test(ua)) {
-    window.location.href = "https://apps.apple.com/il/app/bit/id1182007739";
-    return "ios";
-  }
-  return "desktop";
-}
-
-export default function PaymentStep({
-  formData,
-  treatment,
-  onConfirm,
-  onBack,
-  isSubmitting,
-}) {
+export default function PaymentStep({ formData, treatment, onBack }) {
   const appointments = formData.appointments || [];
   const unitPrice = treatment?.price ?? 250;
   const totalPrice = unitPrice * appointments.length;
-  const [bitGuideOpen, setBitGuideOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState("card");
+  const [showCheckout, setShowCheckout] = useState(false);
   const [pelecardConfigured, setPelecardConfigured] = useState(null);
   const [iframeUrl, setIframeUrl] = useState("");
   const [bookingRef, setBookingRef] = useState("");
@@ -68,27 +37,15 @@ export default function PaymentStep({
   const [isInitLoading, setIsInitLoading] = useState(false);
   const [paymentDone, setPaymentDone] = useState(false);
   const clinicSite = getClinicSite();
-  const bitQrImage = clinicSite?.bitQrImage;
-  const payboxLink = resolvePayboxLink(treatment, clinicSite);
   const { toast } = useToast();
   const navigate = useNavigate();
-
-  const payboxDetails = useMemo(
-    () => getPayboxPaymentDetails(payboxLink, totalPrice),
-    [payboxLink, totalPrice],
-  );
-  const payboxUrl = payboxLink ? payboxDetails.url : buildDynamicPayboxUrl(PHONE, totalPrice);
-
-  const bitUrl = `https://www.bitpay.co.il/app/pay?phone=${PHONE}&amount=${totalPrice}`;
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       const status = await fetchPelecardStatus();
       if (cancelled) return;
-      const configured = Boolean(status?.configured);
-      setPelecardConfigured(configured);
-      if (!configured) setPaymentMethod("bit");
+      setPelecardConfigured(Boolean(status?.configured));
     })();
     return () => {
       cancelled = true;
@@ -96,7 +53,7 @@ export default function PaymentStep({
   }, []);
 
   useEffect(() => {
-    if (pelecardConfigured !== true || paymentMethod !== "card" || paymentDone) return;
+    if (!showCheckout || pelecardConfigured !== true || paymentDone) return;
 
     let cancelled = false;
     (async () => {
@@ -128,11 +85,9 @@ export default function PaymentStep({
       } catch (error) {
         if (cancelled) return;
         setInitError(error?.message || "לא ניתן לפתוח את דף הסליקה");
-        setPelecardConfigured(false);
-        setPaymentMethod("bit");
         toast({
           title: "סליקת אשראי לא זמינה כרגע",
-          description: "אפשר לשלם בביט או PayBox.",
+          description: error?.message || "נסו שוב בעוד רגע או צרו קשר עם הקליניקה.",
           variant: "destructive",
         });
       } finally {
@@ -144,8 +99,8 @@ export default function PaymentStep({
       cancelled = true;
     };
   }, [
+    showCheckout,
     pelecardConfigured,
-    paymentMethod,
     paymentDone,
     totalPrice,
     treatment?.name,
@@ -157,7 +112,7 @@ export default function PaymentStep({
   ]);
 
   useEffect(() => {
-    if (paymentMethod !== "card" || paymentDone) return;
+    if (!showCheckout || paymentDone) return;
 
     function onMessage(event) {
       if (!isPelecardReturnMessage(event)) return;
@@ -182,34 +137,19 @@ export default function PaymentStep({
 
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [paymentMethod, paymentDone, bookingRef, navigate]);
+  }, [showCheckout, paymentDone, bookingRef, navigate]);
 
-  const handleBitClick = () => {
-    setPaymentMethod("bit");
-    setBitGuideOpen(true);
-    tryOpenBitApp();
-  };
-
-  const handleOpenPaybox = () => {
-    setPaymentMethod("paybox");
-    const result = openPayboxLink(payboxLink);
-    if (result?.opened) {
+  const handleStartCreditPayment = () => {
+    if (pelecardConfigured === false) {
       toast({
-        title: "נפתח קישור התשלום",
-        description: result.instructionText,
+        title: "סליקת אשראי לא מוגדרת",
+        description: "יש להגדיר פרטי Pelecard בשרת לפני תשלום באשראי.",
+        variant: "destructive",
       });
       return;
     }
-    if (result?.missingConfig) {
-      toast({
-        title: "קישור PayBox חסר",
-        description: "יש להגדיר קישור PayBox בהגדרות הקליניקה.",
-        variant: "destructive",
-      });
-    }
+    setShowCheckout(true);
   };
-
-  const showManualConfirm = paymentMethod !== "card" || pelecardConfigured === false;
 
   return (
     <motion.div
@@ -218,190 +158,125 @@ export default function PaymentStep({
       className={`px-2 py-8 ${clinicSite ? `${clinicGlassPanel} p-6 md:p-8` : ""}`}
       dir="rtl"
     >
-      <div className="text-center mb-8">
+      <div className="mb-8 text-center">
         <div
-          className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 ${
-            clinicSite
-              ? clinicIconSurface
-              : "bg-primary/10"
+          className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl ${
+            clinicSite ? clinicIconSurface : "bg-primary/10"
           }`}
         >
-          <CreditCard className={`w-8 h-8 ${clinicSite ? clinicTextPrimary : "text-primary"}`} />
+          <CreditCard className={`h-8 w-8 ${clinicSite ? clinicTextPrimary : "text-primary"}`} />
         </div>
-        <h2 className={`mb-2 text-2xl font-bold tracking-tight ${clinicSite ? clinicTextHeading : "text-foreground"}`}>
+        <h2
+          className={`mb-2 text-2xl font-bold tracking-tight ${
+            clinicSite ? clinicTextHeading : "text-foreground"
+          }`}
+        >
           תשלום על התור
         </h2>
         <p className={clinicSite ? clinicTextMuted : "text-muted-foreground"}>
-          לפני אישור התור, יש לשלם את עלות הטיפול
+          לפני אישור התור, יש לשלם את עלות הטיפול בכרטיס אשראי
         </p>
       </div>
 
       <div
-        className={`mb-6 space-y-2 rounded-2xl p-5 text-sm ${clinicSite ? clinicGlassCard : "bg-muted/50"}`}
+        className={`mb-6 space-y-2 rounded-2xl p-5 text-sm ${
+          clinicSite ? clinicGlassCard : "bg-muted/50"
+        }`}
       >
         <div className="flex justify-between">
           <span className={clinicSite ? clinicTextMuted : "text-muted-foreground"}>טיפול:</span>
-          <span className={`font-medium ${clinicSite ? clinicTextHeading : ""}`}>{treatment?.name}</span>
+          <span className={`font-medium ${clinicSite ? clinicTextHeading : ""}`}>
+            {treatment?.name}
+          </span>
         </div>
         <div className="space-y-2">
           <span className={clinicSite ? clinicTextMuted : "text-muted-foreground"}>תורים:</span>
           <div className="space-y-1">
             {appointments.map((appointment) => (
-              <div key={`${appointment.date}-${appointment.time}`} className="flex justify-between">
+              <div
+                key={`${appointment.date}-${appointment.time}`}
+                className="flex justify-between"
+              >
                 <span className={`font-medium ${clinicSite ? clinicTextHeading : ""}`}>
                   {format(new Date(appointment.date + "T00:00:00"), "dd/MM/yyyy")}
                 </span>
-                <span className={`font-medium ${clinicSite ? clinicTextHeading : ""}`}>{appointment.time}</span>
+                <span className={`font-medium ${clinicSite ? clinicTextHeading : ""}`}>
+                  {appointment.time}
+                </span>
               </div>
             ))}
           </div>
         </div>
         <div className="flex justify-between">
-          <span className={clinicSite ? clinicTextMuted : "text-muted-foreground"}>כמות תורים:</span>
-          <span className={`font-medium ${clinicSite ? clinicTextHeading : ""}`}>{appointments.length}</span>
+          <span className={clinicSite ? clinicTextMuted : "text-muted-foreground"}>
+            כמות תורים:
+          </span>
+          <span className={`font-medium ${clinicSite ? clinicTextHeading : ""}`}>
+            {appointments.length}
+          </span>
         </div>
-        <div className={`mt-2 flex justify-between border-t pt-2 ${clinicSite ? "border-[#E8ECE8]" : "border-border"}`}>
+        <div
+          className={`mt-2 flex justify-between border-t pt-2 ${
+            clinicSite ? "border-[#E8ECE8]" : "border-border"
+          }`}
+        >
           <span className={clinicSite ? clinicTextMuted : "text-muted-foreground"}>לתשלום:</span>
-          <span className={`text-lg font-bold ${clinicSite ? clinicTextPrimary : "text-foreground"}`}>₪{totalPrice}</span>
+          <span
+            className={`text-lg font-bold ${clinicSite ? clinicTextPrimary : "text-foreground"}`}
+          >
+            ₪{totalPrice}
+          </span>
         </div>
       </div>
 
-      <p className={`mb-3 text-center text-sm font-semibold ${clinicSite ? clinicTextHeading : "text-foreground"}`}>
-        אמצעי תשלום
-      </p>
-      <div className="mb-6 flex flex-wrap items-start justify-center gap-8">
-        {pelecardConfigured !== false && (
+      {!showCheckout ? (
+        <div className="mb-6">
           <button
             type="button"
-            onClick={() => setPaymentMethod("card")}
-            className={`inline-flex shrink-0 flex-col items-center gap-1 transition-transform hover:opacity-85 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2F6B4F] ${
-              paymentMethod === "card" ? "scale-105 opacity-100" : "opacity-90"
+            onClick={handleStartCreditPayment}
+            disabled={pelecardConfigured === null}
+            className={`mb-3 flex w-full flex-col items-center gap-3 px-6 py-5 text-lg transition-transform active:scale-[0.99] disabled:opacity-60 ${
+              clinicSite
+                ? clinicPrimaryBtn
+                : "rounded-xl bg-primary py-6 font-medium text-primary-foreground"
             }`}
-            aria-label="תשלום בכרטיס אשראי"
-            aria-pressed={paymentMethod === "card"}
+            aria-label={`תשלום באשראי על סך ₪${totalPrice}`}
           >
-            <div
-              className={`flex h-12 w-12 items-center justify-center rounded-xl ${
-                paymentMethod === "card"
-                  ? "bg-[#2F6B4F] text-white"
-                  : clinicSite
-                    ? "bg-[#E8F0EA] text-[#2F6B4F]"
-                    : "bg-muted text-foreground"
-              }`}
-            >
-              <CreditCard className="h-6 w-6" />
-            </div>
-            <span
-              className={`text-xs font-semibold uppercase tracking-wide ${
-                clinicSite ? "text-[#5D7F6D]" : "text-[#6B746F]"
-              }`}
-            >
-              אשראי
+            <span className="inline-flex items-center gap-2">
+              <Lock className="h-5 w-5" />
+              תשלום באשראי · ₪{totalPrice}
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <img
+                src={VISA_LOGO}
+                alt="Visa"
+                className="h-7 w-auto rounded-[4px] bg-white/95 shadow-sm"
+                width={48}
+                height={32}
+              />
+              <img
+                src={MASTERCARD_LOGO}
+                alt="Mastercard"
+                className="h-7 w-auto rounded-[4px] bg-white/95 shadow-sm"
+                width={48}
+                height={32}
+              />
             </span>
           </button>
-        )}
-
-        {bitQrImage ? (
-          <button
-            type="button"
-            onClick={handleBitClick}
-            className={`inline-flex shrink-0 flex-col items-center gap-1 transition-transform hover:opacity-85 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0079C1] ${
-              paymentMethod === "bit" && bitGuideOpen ? "scale-105 opacity-100" : "opacity-90"
+          <p
+            className={`text-center text-xs ${
+              clinicSite ? clinicTextMuted : "text-muted-foreground"
             }`}
-            aria-label={`תשלום ₪${totalPrice} בביט`}
-            aria-expanded={bitGuideOpen}
           >
-            <img
-              src={BIT_LOGO}
-              alt="ביט"
-              className="block h-12 w-auto max-w-[120px] object-contain"
-              width={48}
-              height={48}
-            />
-            <span
-              className={`text-xs font-semibold uppercase tracking-wide ${
-                clinicSite ? "text-[#5D7F6D]" : "text-[#6B746F]"
-              }`}
-            >
-              BIT
-            </span>
-          </button>
-        ) : (
-          <a
-            href={bitUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => setPaymentMethod("bit")}
-            className="inline-flex shrink-0 flex-col items-center gap-1 transition-transform hover:opacity-85 active:scale-95"
-            aria-label={`תשלום ₪${totalPrice} בביט`}
-          >
-            <img
-              src={BIT_LOGO}
-              alt="ביט"
-              className="block h-12 w-auto max-w-[120px] object-contain"
-              width={48}
-              height={48}
-            />
-            <span
-              className={`text-xs font-semibold uppercase tracking-wide ${
-                clinicSite ? "text-[#5D7F6D]" : "text-[#6B746F]"
-              }`}
-            >
-              BIT
-            </span>
-          </a>
-        )}
-
-        {payboxLink ? (
-          <button
-            type="button"
-            onClick={handleOpenPaybox}
-            className="inline-flex shrink-0 flex-col items-center gap-1 opacity-90 transition-transform hover:opacity-85 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7B3FBE]"
-            aria-label="תשלום ב-PayBox"
-          >
-            <img
-              src={PAYBOX_LOGO}
-              alt="Paybox"
-              className="block h-12 w-auto max-w-[120px] object-contain"
-              width={48}
-              height={48}
-            />
-            <span
-              className={`text-xs font-semibold uppercase tracking-wide ${
-                clinicSite ? "text-[#5D7F6D]" : "text-[#6B746F]"
-              }`}
-            >
-              PAYBOX
-            </span>
-          </button>
-        ) : (
-          <a
-            href={payboxUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => setPaymentMethod("paybox")}
-            className="inline-flex shrink-0 flex-col items-center gap-1 transition-transform hover:opacity-85 active:scale-95"
-            aria-label="תשלום ב-PayBox"
-          >
-            <img
-              src={PAYBOX_LOGO}
-              alt="Paybox"
-              className="block h-12 w-auto max-w-[120px] object-contain"
-              width={48}
-              height={48}
-            />
-            <span
-              className={`text-xs font-semibold uppercase tracking-wide ${
-                clinicSite ? "text-[#5D7F6D]" : "text-[#6B746F]"
-              }`}
-            >
-              PAYBOX
-            </span>
-          </a>
-        )}
-      </div>
-
-      {paymentMethod === "card" && pelecardConfigured && (
+            תשלום מאובטח בדף סליקה · Visa ו־Mastercard
+          </p>
+          {pelecardConfigured === false && (
+            <p className="mt-3 text-center text-sm text-[#9B2C2C]">
+              סליקת אשראי עדיין לא הוגדרה בשרת.
+            </p>
+          )}
+        </div>
+      ) : (
         <div className="mb-6">
           {isInitLoading || paymentDone ? (
             <div
@@ -409,11 +284,13 @@ export default function PaymentStep({
                 clinicSite ? "border-[#E8ECE8] bg-white/70" : "border-border bg-muted/30"
               }`}
             >
-              <Loader2 className={`h-7 w-7 animate-spin ${clinicSite ? clinicTextPrimary : "text-primary"}`} />
+              <Loader2
+                className={`h-7 w-7 animate-spin ${
+                  clinicSite ? clinicTextPrimary : "text-primary"
+                }`}
+              />
               <p className={`text-sm ${clinicSite ? clinicTextMuted : "text-muted-foreground"}`}>
-                {paymentDone
-                  ? "מעבירים לדף האישור…"
-                  : "טוענים את דף הסליקה המאובטח…"}
+                {paymentDone ? "מעבירים לדף האישור…" : "טוענים את דף הסליקה המאובטח…"}
               </p>
             </div>
           ) : iframeUrl ? (
@@ -423,13 +300,15 @@ export default function PaymentStep({
               }`}
             >
               <div
-                className={`border-b px-4 py-2.5 text-center text-xs font-medium ${
+                className={`flex items-center justify-center gap-3 border-b px-4 py-2.5 text-xs font-medium ${
                   clinicSite
                     ? "border-[#E8ECE8] bg-[#F0F4F1] text-[#5D7F6D]"
                     : "border-border bg-muted text-muted-foreground"
                 }`}
               >
-                דף תשלום מאובטח · SSL
+                <span>דף תשלום מאובטח · SSL</span>
+                <img src={VISA_LOGO} alt="" className="h-5 w-auto" width={36} height={24} />
+                <img src={MASTERCARD_LOGO} alt="" className="h-5 w-auto" width={36} height={24} />
               </div>
               <iframe
                 title="סליקת אשראי Pelecard"
@@ -439,60 +318,36 @@ export default function PaymentStep({
               />
             </div>
           ) : (
-            <p className={`text-center text-sm ${clinicSite ? clinicTextMuted : "text-muted-foreground"}`}>
+            <p
+              className={`text-center text-sm ${
+                clinicSite ? clinicTextMuted : "text-muted-foreground"
+              }`}
+            >
               {initError || "דף הסליקה לא זמין כרגע."}
             </p>
           )}
         </div>
       )}
 
-      {bitQrImage && paymentMethod === "bit" && bitGuideOpen && (
-        <div className="mb-6 flex flex-col items-center rounded-xl border-2 border-[#0079C1]/30 bg-[#0079C1]/5 p-4 text-center text-sm">
-          <p className="mb-3 font-semibold text-[#0079C1]">
-            סרקו את הברקוד לתשלום בביט על סך ₪{totalPrice.toLocaleString("he-IL")}
-          </p>
-          <div className="flex w-full justify-center">
-            <div className="mx-auto max-w-[200px] overflow-hidden rounded-xl border border-[#0079C1]/30 bg-white p-2">
-              <img
-                src={bitQrImage}
-                alt="ברקוד לתשלום בביט"
-                className="mx-auto block h-auto w-full object-contain"
-              />
-            </div>
-          </div>
-          <p className="mt-3 text-xs text-muted-foreground">
-            פתחו ביט בטלפון וסרקו את הקוד. לאחר התשלום לחצו "שילמתי — אשר את התור".
-          </p>
-        </div>
-      )}
-
-      {showManualConfirm && (
-        <Button
-          onClick={() => onConfirm?.({ paid: false })}
-          disabled={isSubmitting}
-          size="lg"
-          className={`mb-3 w-full gap-2 text-lg ${clinicSite ? clinicPrimaryBtn : "rounded-xl py-6"}`}
-        >
-          {isSubmitting ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : (
-            <CheckCircle2 className="w-5 h-5" />
-          )}
-          {isSubmitting ? "שולח..." : "שילמתי — אשר את התור"}
-        </Button>
-      )}
-
       <button
         type="button"
-        onClick={onBack}
+        onClick={() => {
+          if (showCheckout && !paymentDone) {
+            setShowCheckout(false);
+            setIframeUrl("");
+            setInitError("");
+            return;
+          }
+          onBack?.();
+        }}
         className={`flex w-full items-center justify-center gap-1 py-2 text-sm transition-colors ${
           clinicSite
             ? `${clinicTextMuted} hover:text-[#5D7F6D]`
             : "text-muted-foreground hover:text-foreground"
         }`}
       >
-        <ArrowRight className="w-4 h-4" />
-        חזרה לטופס
+        <ArrowRight className="h-4 w-4" />
+        {showCheckout && !paymentDone ? "חזרה לסיכום התשלום" : "חזרה לטופס"}
       </button>
     </motion.div>
   );

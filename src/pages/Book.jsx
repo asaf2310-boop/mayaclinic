@@ -1,15 +1,13 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import Navbar from "../components/layout/Navbar";
 import TreatmentSelector from "../components/booking/TreatmentSelector";
 import BookingForm from "../components/booking/BookingForm";
 import BookingContact from "../components/booking/BookingContact";
-import BookingSuccess from "../components/booking/BookingSuccess";
 import PaymentStep from "../components/booking/PaymentStep";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
-import { useToast } from "@/components/ui/use-toast";
 import { filterTreatmentsForClinic, getClinicSite } from "@/lib/clinicSite";
 import {
   clinicBookPageSubtitle,
@@ -21,14 +19,10 @@ import {
   clinicTextHeading,
   clinicTextMuted,
 } from "@/lib/clinicUi";
-import { sendBookingConfirmationEmail } from "@/api/bookingEmail";
 
 export default function Book() {
   const [selectedTreatment, setSelectedTreatment] = useState(null);
   const [pendingFormData, setPendingFormData] = useState(null);
-  const [bookedAppointment, setBookedAppointment] = useState(null);
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
   const clinicSite = getClinicSite();
 
   const { data: treatments = [], isLoading } = useQuery({
@@ -57,87 +51,8 @@ export default function Book() {
     setSelectedTreatment(visibleTreatments[0]);
   }, [clinicSite, selectedTreatment, visibleTreatments]);
 
-  const createMutation = useMutation({
-    mutationFn: async ({ formData, paid = false, paymentNote = "" }) => {
-      const baseNotes = String(formData.notes || "").trim();
-      const notes = [baseNotes, paymentNote].filter(Boolean).join("\n");
-
-      const rows = formData.appointments.map((appointment) => ({
-        patient_name: formData.patient_name,
-        patient_phone: formData.patient_phone,
-        patient_email: formData.patient_email,
-        notes,
-        marketing_consent: Boolean(formData.marketing_consent),
-        treatment_id: formData.treatment_id,
-        treatment_name: formData.treatment_name,
-        treatment_price: selectedTreatment?.price,
-        date: appointment.date,
-        time: appointment.time,
-        paid: Boolean(paid),
-      }));
-
-      if (typeof base44.entities.Appointment.bulkCreate === "function") {
-        return base44.entities.Appointment.bulkCreate(rows);
-      }
-
-      return Promise.all(rows.map((row) => base44.entities.Appointment.create(row)));
-    },
-    onSuccess: (data) => {
-      const createdAppointments = Array.isArray(data) ? data : [data];
-      queryClient.invalidateQueries({ queryKey: ["appointments"] });
-      queryClient.invalidateQueries({ queryKey: ["appointments-for-booking"] });
-      createdAppointments.forEach((appointment) => {
-        queryClient.invalidateQueries({ queryKey: ["appointments-for-date", appointment?.date] });
-      });
-      setBookedAppointment({
-        appointments: createdAppointments,
-        treatment_name: selectedTreatment?.name,
-        treatment_price: selectedTreatment?.price,
-      });
-      setPendingFormData(null);
-
-      sendBookingConfirmationEmail(
-        createdAppointments.map((appointment) => appointment?.id).filter(Boolean)
-      );
-    },
-    onError: (error) => {
-      const message = String(error?.message || "");
-      const isTimeConflict = message.includes("appointment_time_conflict");
-      const isTenantMismatch = message.includes("tenant_mismatch");
-
-      toast({
-        title: isTimeConflict
-          ? "השעה כבר לא זמינה"
-          : isTenantMismatch
-            ? "שגיאת הגדרות מערכת"
-            : "לא ניתן לאשר את התור",
-        description: isTimeConflict
-          ? "נבחר תור אחר בטווח של שעה וחצי מהתור הקיים. חזרו לבחירת שעה אחרת."
-          : isTenantMismatch
-            ? "פנו למנהל המערכת — ייתכן שחסר VITE_CLINIC_TENANT_ID=maya בפרויקט Vercel."
-            : "נסו שוב בעוד רגע או צרו קשר טלפוני.",
-        variant: "destructive",
-      });
-    },
-  });
-
   const handleFormSubmit = (formData) => {
     setPendingFormData(formData);
-  };
-
-  const handleConfirmAfterPayment = (options = {}) => {
-    if (!pendingFormData) return;
-    createMutation.mutate({
-      formData: pendingFormData,
-      paid: Boolean(options.paid),
-      paymentNote: "",
-    });
-  };
-
-  const handleReset = () => {
-    setSelectedTreatment(null);
-    setPendingFormData(null);
-    setBookedAppointment(null);
   };
 
   return (
@@ -147,15 +62,11 @@ export default function Book() {
       <Navbar />
       <main className="relative pt-24 pb-16 px-6" dir="rtl">
         <div className={`relative mx-auto max-w-2xl ${clinicSite ? clinicFadeIn : ""}`}>
-          {bookedAppointment ? (
-            <BookingSuccess appointment={bookedAppointment} onReset={handleReset} />
-          ) : pendingFormData ? (
+          {pendingFormData ? (
             <PaymentStep
               formData={pendingFormData}
               treatment={selectedTreatment}
-              onConfirm={handleConfirmAfterPayment}
               onBack={() => setPendingFormData(null)}
-              isSubmitting={createMutation.isPending}
             />
           ) : (
             <>
