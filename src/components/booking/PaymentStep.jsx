@@ -4,9 +4,6 @@ import { format } from "date-fns";
 import { motion } from "framer-motion";
 import { getClinicSite } from "@/lib/clinicSite";
 import {
-  clinicGlassCard,
-  clinicGlassPanel,
-  clinicIconSurface,
   clinicTextHeading,
   clinicTextMuted,
   clinicTextPrimary,
@@ -157,13 +154,36 @@ export default function PaymentStep({ formData, treatment, onBack }) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`px-2 py-8 ${clinicSite ? `${clinicGlassPanel} p-6 md:p-8` : ""}`}
+      className={`relative overflow-hidden px-2 py-8 ${
+        clinicSite
+          ? "rounded-[28px] border border-[#D5E0D8]/80 bg-gradient-to-b from-[#F3F7F4]/92 via-[#EAF1EC]/88 to-[#F7F8F6]/90 p-6 shadow-[0_16px_48px_rgba(93,127,109,0.12)] backdrop-blur-[18px] md:p-8"
+          : ""
+      }`}
       dir="rtl"
     >
-      <div className="mb-8 text-center">
+      {clinicSite && (
+        <>
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -left-16 top-8 h-48 w-48 rounded-full bg-[#5D7F6D]/12 blur-3xl"
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -right-10 bottom-20 h-56 w-56 rounded-full bg-[#A8C4B4]/25 blur-3xl"
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-8 top-0 h-32 bg-gradient-to-b from-white/35 to-transparent"
+          />
+        </>
+      )}
+
+      <div className="relative mb-8 text-center">
         <div
           className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl ${
-            clinicSite ? clinicIconSurface : "bg-primary/10"
+            clinicSite
+              ? "border border-[#D5E0D8] bg-[#F0F4F1]/90 shadow-[0_8px_24px_rgba(93,127,109,0.1)]"
+              : "bg-primary/10"
           }`}
         >
           <CreditCard className={`h-8 w-8 ${clinicSite ? clinicTextPrimary : "text-primary"}`} />
@@ -181,8 +201,10 @@ export default function PaymentStep({ formData, treatment, onBack }) {
       </div>
 
       <div
-        className={`mb-6 space-y-2 rounded-2xl p-5 text-sm ${
-          clinicSite ? clinicGlassCard : "bg-muted/50"
+        className={`relative mb-6 space-y-2 rounded-2xl p-5 text-sm ${
+          clinicSite
+            ? "border border-[#D5E0D8]/90 bg-[#F7FAF8]/75 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] backdrop-blur-sm"
+            : "bg-muted/50"
         }`}
       >
         <div className="flex justify-between">
@@ -283,7 +305,9 @@ export default function PaymentStep({ formData, treatment, onBack }) {
           {isInitLoading || paymentDone ? (
             <div
               className={`flex min-h-[320px] flex-col items-center justify-center gap-3 rounded-2xl border p-6 text-center ${
-                clinicSite ? "border-[#E8ECE8] bg-white/70" : "border-border bg-muted/30"
+                clinicSite
+                  ? "border-[#D5E0D8] bg-gradient-to-b from-[#F3F7F4]/90 to-[#EAF1EC]/80"
+                  : "border-border bg-muted/30"
               }`}
             >
               <Loader2
@@ -297,14 +321,16 @@ export default function PaymentStep({ formData, treatment, onBack }) {
             </div>
           ) : iframeUrl ? (
             <div
-              className={`overflow-hidden rounded-[20px] border shadow-[0_8px_30px_rgba(0,0,0,0.05)] ${
-                clinicSite ? "border-[#E8ECE8] bg-[#F7F8F6]" : "border-border bg-background"
+              className={`overflow-hidden rounded-[20px] border shadow-[0_12px_36px_rgba(93,127,109,0.12)] ${
+                clinicSite
+                  ? "border-[#D5E0D8] bg-gradient-to-b from-[#F3F7F4] to-[#E8F0EA]"
+                  : "border-border bg-background"
               }`}
             >
               <div
                 className={`flex items-center justify-center gap-2.5 border-b px-4 py-3 text-xs font-semibold ${
                   clinicSite
-                    ? "border-[#E8ECE8] bg-white text-[#5D7F6D]"
+                    ? "border-[#D5E0D8] bg-[#F0F4F1]/95 text-[#5D7F6D]"
                     : "border-border bg-muted text-muted-foreground"
                 }`}
               >
@@ -317,7 +343,9 @@ export default function PaymentStep({ formData, treatment, onBack }) {
               <iframe
                 title="סליקת אשראי Pelecard"
                 src={iframeUrl}
-                className="h-[580px] w-full border-0 bg-[#F7F8F6]"
+                className={`h-[580px] w-full border-0 ${
+                  clinicSite ? "bg-[#F3F7F4]" : "bg-background"
+                }`}
                 allow="payment *"
               />
             </div>
