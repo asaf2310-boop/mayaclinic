@@ -235,31 +235,31 @@ export default function PaymentStep({ formData, treatment, onBack }) {
             type="button"
             onClick={handleStartCreditPayment}
             disabled={pelecardConfigured === null}
-            className={`mb-3 flex w-full flex-col items-center gap-3 px-6 py-5 text-lg transition-transform active:scale-[0.99] disabled:opacity-60 ${
+            className={`mb-3 flex w-full flex-col items-center justify-center gap-2.5 px-6 py-4 text-base font-medium transition-transform active:scale-[0.99] disabled:opacity-60 ${
               clinicSite
-                ? clinicPrimaryBtn
-                : "rounded-xl bg-primary py-6 font-medium text-primary-foreground"
+                ? "rounded-2xl bg-[#5D7F6D] text-white shadow-[0_8px_24px_rgba(93,127,109,0.22)] hover:bg-[#4F6F5F]"
+                : "rounded-xl bg-primary text-primary-foreground"
             }`}
             aria-label={`תשלום באשראי על סך ₪${totalPrice}`}
           >
-            <span className="inline-flex items-center gap-2">
-              <Lock className="h-5 w-5" />
-              תשלום באשראי · ₪{totalPrice}
+            <span className="inline-flex items-center justify-center gap-2 leading-none">
+              <Lock className="h-4 w-4 shrink-0" />
+              <span>תשלום באשראי · ₪{totalPrice}</span>
             </span>
-            <span className="inline-flex items-center gap-2">
+            <span className="inline-flex items-center justify-center gap-2 leading-none">
               <img
                 src={VISA_LOGO}
                 alt="Visa"
-                className="h-7 w-auto rounded-[4px] bg-white/95 shadow-sm"
-                width={48}
-                height={32}
+                className="h-6 w-auto rounded-[4px] bg-white shadow-sm"
+                width={42}
+                height={28}
               />
               <img
                 src={MASTERCARD_LOGO}
                 alt="Mastercard"
-                className="h-7 w-auto rounded-[4px] bg-white/95 shadow-sm"
-                width={48}
-                height={32}
+                className="h-6 w-auto rounded-[4px] bg-white shadow-sm"
+                width={42}
+                height={28}
               />
             </span>
           </button>

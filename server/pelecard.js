@@ -86,7 +86,7 @@ export async function initPelecardPayment({
   userKey = "",
   customerIdField = "optional",
   cardHolderName = "hide",
-  cvv2Field = "optional",
+  cvv2Field = "Must",
   emailField = "hide",
   telField = "hide",
   topText = "",

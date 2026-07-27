@@ -93,8 +93,9 @@ export default async function handler(req, res) {
       topText,
       bottomText,
       publicOrigin: origin,
+      // Pelecard ManualIframe accepts: Must | Hide | optional (not "required")
       customerIdField: "optional",
-      cvv2Field: "required",
+      cvv2Field: "Must",
       cardHolderName: "optional",
     });
 
