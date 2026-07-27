@@ -1,29 +1,8 @@
-/* Maya Clinic — Pelecard ManualIframe theme
- * Palette aligned with src/lib/clinicUi.js + index.css
- * Served as CssURL for PaymentGW/init
- */
-@import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&display=swap');
-
-:root {
-  --clinic-heading: #2F3B34;
-  --clinic-muted: #6B746F;
-  --clinic-primary: #5D7F6D;
-  --clinic-primary-hover: #4F6F5F;
-  --clinic-primary-soft: #6F9180;
-  --clinic-accent: #7F9B8A;
-  --clinic-border: #E8ECE8;
-  --clinic-border-strong: #DDE4DD;
-  --clinic-surface: #FFFFFF;
-  --clinic-surface-soft: #F7F8F6;
-  --clinic-surface-tint: #F0F4F1;
-  --clinic-danger: #9B2C2C;
-  --clinic-radius: 12px;
-  --clinic-radius-lg: 16px;
-  --clinic-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
-}
+/* Maya Clinic Pelecard theme v3 — matches clinicUi palette */
+/* CssURL for PaymentGW/init — no @import (gateway-safe) */
 
 html {
-    font-family: sans-serif;
+    font-family: Heebo, 'Segoe UI', Tahoma, Arial, sans-serif;
     -webkit-text-size-adjust: 100%;
     -ms-text-size-adjust: 100%;
 }
@@ -44,10 +23,10 @@ img {
 }
 
 body {
-    font-family: Arial, sans-serif;
+    font-family: Heebo, 'Segoe UI', Tahoma, Arial, sans-serif;
     font-size: 14px;
     color: #333;
-    background: #fff;
+    background: #F7F8F6;
     margin: 0;
     padding: 0;
     direction: rtl;
@@ -70,7 +49,7 @@ form {
 
 
 input, button, select, textarea {
-    font-family: sans-serif;
+    font-family: Heebo, 'Segoe UI', Tahoma, Arial, sans-serif;
     font-family: inherit;
     font-size: inherit;
     line-height: inherit;
@@ -131,7 +110,7 @@ button, select {
     display: flex;
     justify-content: center;
     align-items: center;
-    font-family: 'Segoe UI', sans-serif;
+    font-family: Heebo, 'Segoe UI', Tahoma, Arial, sans-serif;
 }
 
 .popup-content {
@@ -286,9 +265,9 @@ button#openFinanceTabBtn::before {
 }
 
 .credit-title {
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid #E8ECE8;
     padding: 7px 0 2px;
-    background-color: #f1f1f1;
+    background-color: #F0F4F1;
     box-shadow: inset 1px -2px 5px rgba(0, 0, 0, 0.12);
 }
 
@@ -312,7 +291,7 @@ button#openFinanceTabBtn::before {
         font-size: 27px;
         font-weight: 500;
         margin: 17px 0 0;
-        color: #2B6EAF;
+        color: #5D7F6D;
         text-shadow: 1px 1px 0 rgba(255, 255, 255, 1);
     }
 
@@ -334,8 +313,8 @@ button#openFinanceTabBtn::before {
 }
 
 .footer {
-    border-top: 1px solid #ddd;
-    background-color: #f1f1f1;
+    border-top: 1px solid #E8ECE8;
+    background-color: #F0F4F1;
     padding: 15px 0;
 }
 
@@ -389,9 +368,9 @@ button#openFinanceTabBtn::before {
     line-height: 1.428571429;
     color: #000;
     vertical-align: middle;
-    background-color: #f4f4f4;
-    border: 1px solid #070707;
-    border-radius: 1px;
+    background-color: #FFFFFF;
+    border: 1px solid #E8ECE8;
+    border-radius: 12px;
     box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.025);
     transition: border-color ease-in-out 0.15s, box-shadow ease-in-out 0.15s, background-color ease-in-out 0.15s;
 }
@@ -408,15 +387,15 @@ select.form-control {
 .form-control:focus {
     color: #333;
     outline: 0;
-    background-color: #fff;
+    background-color: #FFFFFF;
     border-color: #03519e;
     box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.095), 0 0px 4px rgba(83, 137, 191, .85);
 }
 
 .form-control.read-only, .form-control.read-only:focus {
     color: #333;
-    background-color: #f4f4f4;
-    border: 1px solid #070707;
+    background-color: #FFFFFF;
+    border: 1px solid #E8ECE8;
     box-shadow: 0 2px 2px rgba(0, 0, 0, 0.095);
     background: -moz-linear-gradient(top, #ffffff 0%, #f4f4f4 100%);
     background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#ffffff), color-stop(100%,#f4f4f4));
@@ -541,7 +520,7 @@ div.form-control, span.form-control {
         margin-right: -20px;
         position: absolute;
         line-height: normal;
-        border: 1px solid #070707;
+        border: 1px solid #E8ECE8;
     }
 
 .btn {
@@ -557,13 +536,13 @@ div.form-control, span.form-control {
     white-space: nowrap;
     vertical-align: middle;
     cursor: pointer;
-    border: 1px solid #070707;
+    border: 1px solid #E8ECE8;
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
     -o-user-select: one;
     user-select: none;
-    border-radius: 4px;
+    border-radius: 14px;
 }
 
 @media (min-width: 390px ) {
@@ -575,7 +554,7 @@ div.form-control, span.form-control {
 .btn-submit {
     margin: 0 auto;
     font-size: 1.0231em;
-    border-color: #070707;
+    border-color: #E8ECE8;
     color: #322e00;
     text-shadow: 0 1px 1px rgba(255,255,255,.9);
     font-weight: bold;
@@ -675,7 +654,7 @@ div.form-control, span.form-control {
         line-height: 14px;
         font-size: 14px;
         padding: 2px 5px;
-        color: #2b6eaf;
+        color: #5D7F6D;
         border: 1px solid #ddd;
         background: #ededed;
         background: -moz-linear-gradient(top, #ededed 0%, #dddddd 100%);
@@ -759,7 +738,7 @@ div.form-control, span.form-control {
 .form-group-sup .title {
     margin: 0 0 .01em;
     font-size: .92em;
-    color: #2b6eaf;
+    color: #5D7F6D;
 }
 
 .form-group-sup-in {
@@ -1081,295 +1060,227 @@ p.block_ui_cancel_gama {
 }
 
 
-/* ===== Clinic visual overrides (after Pelecard base) ===== */
-
+/* ===== Strong clinic theme overrides ===== */
 html, body {
-  font-family: 'Heebo', system-ui, -apple-system, sans-serif !important;
-  color: var(--clinic-heading) !important;
-  background:
-    linear-gradient(160deg, rgba(247, 248, 246, 0.98) 0%, #ffffff 45%, #f0f4f1 100%) !important;
-  direction: rtl;
+  font-family: Heebo, "Segoe UI", Tahoma, Arial, sans-serif !important;
+  color: #2F3B34 !important;
+  background: #F7F8F6 !important;
+  direction: rtl !important;
 }
 
 body {
   font-size: 15px !important;
   line-height: 1.45 !important;
   -webkit-font-smoothing: antialiased;
+  margin: 0 !important;
+  padding: 8px 0 16px !important;
 }
 
 .container {
-  max-width: 560px !important;
-  padding: 12px 14px 20px !important;
+  max-width: 520px !important;
+  margin: 0 auto !important;
+  padding: 0 10px !important;
 }
 
 .main {
-  background: var(--clinic-surface) !important;
-  border: 1px solid var(--clinic-border) !important;
+  background: #FFFFFF !important;
+  border: 1px solid #E8ECE8 !important;
   border-radius: 20px !important;
-  box-shadow: var(--clinic-shadow) !important;
-  overflow: hidden;
-  margin-top: 8px !important;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.05) !important;
+  overflow: hidden !important;
 }
 
 .main-content {
-  padding: 18px 16px 12px !important;
+  padding: 16px 16px 8px !important;
 }
 
 .main-title {
+  color: #2F3B34 !important;
   font-size: 1.05rem !important;
   font-weight: 600 !important;
-  color: var(--clinic-heading) !important;
-  margin-bottom: 1rem !important;
+  text-align: center !important;
+  margin: 0 0 1rem !important;
 }
 
-.credit-title {
+.credit-title,
+.topRef {
   background: linear-gradient(90deg, #F0F4F1 0%, #FFFFFF 55%, #F7F8F6 100%) !important;
-  border-bottom: 1px solid var(--clinic-border) !important;
+  border-bottom: 1px solid #E8ECE8 !important;
   box-shadow: none !important;
   padding: 14px 16px !important;
 }
 
-.credit-title .title {
-  color: var(--clinic-primary) !important;
+.credit-title .title,
+.main-title,
+.form-group-sup .title {
+  color: #5D7F6D !important;
   text-shadow: none !important;
-  font-size: 1.35rem !important;
   font-weight: 700 !important;
-  margin-top: 10px !important;
 }
 
 .credit-title .logo {
-  width: 140px !important;
-  height: 56px !important;
-  opacity: 0.85;
+  display: none !important;
 }
 
-.topRef {
-  background: transparent !important;
-  border: 0 !important;
-  color: var(--clinic-muted) !important;
-  font-size: 12px !important;
-  padding: 6px 0 !important;
-}
-
-.errorRow {
-  background: #FCE8E8 !important;
-  color: var(--clinic-danger) !important;
-  border-radius: 10px;
-  margin: 8px 12px;
-  padding: 10px 12px !important;
-  font-weight: 600;
-}
-
-.footer {
-  background: var(--clinic-surface-soft) !important;
-  border-top: 1px solid var(--clinic-border) !important;
-  padding: 14px 12px !important;
-}
-
-.footer-title {
-  color: var(--clinic-muted) !important;
-  font-size: 0.85rem !important;
-  font-weight: 500 !important;
-}
-
-.control-label {
-  color: var(--clinic-heading) !important;
+.control-label,
+.credit_caption,
+label {
+  color: #2F3B34 !important;
   font-size: 0.875rem !important;
   font-weight: 600 !important;
-  width: 130px !important;
-}
-
-.form-control,
-select.form-control,
-input.form-control,
-textarea.form-control {
-  height: 44px !important;
-  padding: 10px 12px !important;
-  font-size: 15px !important;
-  color: var(--clinic-heading) !important;
-  background-color: #FFFFFF !important;
-  border: 1px solid var(--clinic-border) !important;
-  border-radius: var(--clinic-radius) !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
-  background-image: none !important;
-  filter: none !important;
-}
-
-.form-control:hover {
-  border-color: #C9D5CC !important;
-}
-
-.form-control:focus {
-  color: var(--clinic-heading) !important;
-  background-color: #FFFFFF !important;
-  border-color: rgba(93, 127, 109, 0.55) !important;
-  box-shadow: 0 0 0 3px rgba(93, 127, 109, 0.2) !important;
-  outline: none !important;
-}
-
-.form-control.read-only,
-.form-control.read-only:focus {
-  background: var(--clinic-surface-tint) !important;
-  border-color: var(--clinic-border) !important;
-  color: var(--clinic-heading) !important;
-  box-shadow: none !important;
-  filter: none !important;
-}
-
-#dateContainer .delimiter {
-  line-height: 44px !important;
-  color: var(--clinic-muted) !important;
-}
-
-#each_payment_input,
-#first_payment_input,
-#totalAll {
-  color: var(--clinic-primary) !important;
-  font-weight: 700 !important;
 }
 
 .form-group {
   margin-bottom: 14px !important;
 }
 
-.form-group-submit {
-  margin: 18px 0 8px !important;
-}
-
-.btn {
-  border-radius: 14px !important;
-  border: 1px solid var(--clinic-border-strong) !important;
+.form-control,
+input.form-control,
+select.form-control,
+textarea.form-control,
+input[type="text"],
+input[type="tel"],
+input[type="number"],
+input[type="password"],
+select {
+  height: 44px !important;
+  min-height: 44px !important;
+  padding: 10px 12px !important;
+  font-size: 15px !important;
+  color: #2F3B34 !important;
   background: #FFFFFF !important;
-  color: var(--clinic-primary) !important;
-  font-family: inherit !important;
-  font-weight: 600 !important;
-  padding: 12px 20px !important;
-  transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease !important;
+  background-image: none !important;
+  border: 1px solid #E8ECE8 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03) !important;
+  filter: none !important;
 }
 
-.btn-submit {
-  width: 100%;
-  max-width: 320px;
-  display: inline-block !important;
+.form-control:focus,
+input:focus,
+select:focus {
+  outline: none !important;
+  border-color: rgba(93,127,109,0.55) !important;
+  box-shadow: 0 0 0 3px rgba(93,127,109,0.2) !important;
+  background: #FFFFFF !important;
+}
+
+.form-control.read-only,
+.form-control[readonly],
+input[readonly] {
+  background: #F0F4F1 !important;
+  border-color: #E8ECE8 !important;
+  color: #2F3B34 !important;
+  font-weight: 700 !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+#totalAll,
+#each_payment_input,
+#first_payment_input {
+  color: #5D7F6D !important;
+  font-weight: 700 !important;
+}
+
+.errorRow,
+.error,
+.field-validation-error,
+span.field-validation-error {
+  background: #FCE8E8 !important;
+  color: #9B2C2C !important;
+  border-radius: 10px !important;
   border: 0 !important;
+}
+
+.form-group-submit {
+  text-align: center !important;
+  margin: 18px 0 10px !important;
+}
+
+.btn,
+button,
+input[type="submit"],
+input[type="button"] {
+  font-family: inherit !important;
+}
+
+.btn-submit,
+button.btn-submit,
+input.btn-submit,
+#submit,
+button[type="submit"] {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: inline-block !important;
+  padding: 14px 20px !important;
+  border: 0 !important;
+  border-radius: 16px !important;
   color: #FFFFFF !important;
-  text-shadow: none !important;
   font-size: 1.05rem !important;
   font-weight: 600 !important;
-  letter-spacing: 0.01em;
+  text-shadow: none !important;
   background: linear-gradient(90deg, #5D7F6D 0%, #6F9180 100%) !important;
-  box-shadow: 0 8px 24px rgba(93, 127, 109, 0.22) !important;
+  box-shadow: 0 8px 24px rgba(93,127,109,0.22) !important;
   filter: none !important;
+  cursor: pointer !important;
 }
 
 .btn-submit:hover,
-.btn-submit:focus {
-  border: 0 !important;
-  color: #FFFFFF !important;
+.btn-submit:focus,
+button.btn-submit:hover,
+button[type="submit"]:hover {
   background: linear-gradient(90deg, #4F6F5F 0%, #5D7F6D 100%) !important;
-  box-shadow: 0 10px 28px rgba(93, 127, 109, 0.28) !important;
-  transform: translateY(-1px);
+  color: #FFFFFF !important;
+  border: 0 !important;
+  box-shadow: 0 10px 28px rgba(93,127,109,0.28) !important;
   filter: none !important;
 }
 
-.btn-submit:active {
-  transform: translateY(0) scale(0.98);
+.footer {
+  background: #F7F8F6 !important;
+  border-top: 1px solid #E8ECE8 !important;
+  padding: 12px !important;
 }
 
-.form-group-sup .title {
-  color: var(--clinic-muted) !important;
+.footer-title {
+  color: #6B746F !important;
   font-size: 0.8rem !important;
   font-weight: 500 !important;
 }
 
-.form-group-sup-1 .form-group-sup-in > div,
-.form-group-sup-2 .form-group-sup-in > a,
-.form-group-sup-2 .form-group-sup-in > div {
-  border-radius: 10px;
-  background-color: var(--clinic-surface-soft);
+.form-group-sup .title {
+  color: #6B746F !important;
+  font-size: 0.78rem !important;
+  font-weight: 500 !important;
 }
 
-.checkbox input[type="checkbox"] {
-  border: 1px solid var(--clinic-border-strong) !important;
-  accent-color: var(--clinic-primary);
-}
-
-.popup-overlay {
-  background: rgba(47, 59, 52, 0.45) !important;
-  backdrop-filter: blur(4px);
+/* Soften card brand strip */
+.form-group-sup {
+  padding-top: 4px !important;
 }
 
 .popup-content {
   border-radius: 20px !important;
-  border: 1px solid var(--clinic-border);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12) !important;
-  font-family: 'Heebo', sans-serif !important;
+  border: 1px solid #E8ECE8 !important;
+  font-family: Heebo, "Segoe UI", Tahoma, Arial, sans-serif !important;
 }
 
 .popup-title,
-.popup-subtitle,
-.popup-timer {
-  color: var(--clinic-heading) !important;
+.popup-subtitle {
+  color: #2F3B34 !important;
 }
 
-.popup-close-icon {
-  background-color: var(--clinic-surface-tint) !important;
-}
-
-.popup-close-icon .x-icon {
-  color: var(--clinic-heading) !important;
-}
-
-.popup-qrcode-wrapper {
-  background-color: var(--clinic-surface-tint) !important;
-  border-radius: 14px;
-}
-
-.popup-link,
-.popup-timer-highlight {
-  background-color: var(--clinic-primary) !important;
-  color: #fff !important;
-}
-
-.popup-link:hover {
-  background-color: var(--clinic-primary-hover) !important;
-}
-
-.popup-timer-highlight {
-  background: transparent !important;
-  color: var(--clinic-primary) !important;
+.popup-link {
+  background: #5D7F6D !important;
+  border-radius: 12px !important;
 }
 
 @media (max-width: 750px) {
-  .container {
-    padding: 8px 8px 16px !important;
-  }
-
-  .main {
-    border-radius: 16px !important;
-  }
-
-  .control-label {
-    width: 100% !important;
-    display: block !important;
-    margin-bottom: 4px !important;
-  }
-
-  .form-group,
-  .control-group {
-    display: block !important;
-  }
-
-  .control-label,
-  .control-value {
-    display: block !important;
-  }
-
-  .control-value {
-    padding-right: 0 !important;
-  }
-
-  .credit-title .title {
-    font-size: 1.15rem !important;
-  }
+  .container { padding: 0 8px !important; }
+  .main { border-radius: 16px !important; }
+  .control-label { width: 100% !important; display: block !important; margin-bottom: 4px !important; }
+  .form-group, .control-group { display: block !important; width: 100% !important; }
+  .control-label, .control-value { display: block !important; }
+  .control-value { padding-right: 0 !important; }
 }

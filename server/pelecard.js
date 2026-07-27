@@ -109,9 +109,13 @@ export async function initPelecardPayment({
     throw error;
   }
 
-  const resolvedCssUrl =
+  const cssVersion = String(process.env.PELECARD_CSS_VERSION || "clinic-3").trim();
+  const resolvedCssUrlRaw =
     absolutePublicUrl(publicOrigin, cssUrl || config.cssPath) ||
     `${config.gatewayBase}/Content/Css/variant-he-1.css`;
+  const resolvedCssUrl = resolvedCssUrlRaw.includes("pelecard-clinic.css")
+    ? `${resolvedCssUrlRaw}${resolvedCssUrlRaw.includes("?") ? "&" : "?"}v=${encodeURIComponent(cssVersion)}`
+    : resolvedCssUrlRaw;
   const resolvedLogoUrl = absolutePublicUrl(publicOrigin, logoUrl || config.logoPath);
 
   const payload = {
@@ -146,21 +150,24 @@ export async function initPelecardPayment({
     AddHolderNameToXParam: "False",
     CssURL: resolvedCssUrl,
     ShowConfirmationCheckbox: "False",
-    HiddenPelecardLogo: resolvedLogoUrl ? "False" : "True",
-    HiddenPciLogo: "False",
+    HiddenPelecardLogo: "True",
+    HiddenPciLogo: "True",
+    HiddenSslSeal: "True",
     AccessibilityMode: "True",
     TakeIshurPopUp: "False",
   };
+
+  // Prefer clinic logo when provided; otherwise keep Pelecard logo hidden.
+  if (resolvedLogoUrl) {
+    payload.LogoURL = resolvedLogoUrl;
+    payload.HiddenPelecardLogo = "False";
+  }
 
   if (serverSideGoodFeedbackUrl) {
     payload.ServerSideGoodFeedbackURL = serverSideGoodFeedbackUrl;
   }
   if (serverSideErrorFeedbackUrl) {
     payload.ServerSideErrorFeedbackURL = serverSideErrorFeedbackUrl;
-  }
-
-  if (resolvedLogoUrl) {
-    payload.LogoURL = resolvedLogoUrl;
   }
 
   if (userKey) payload.UserKey = String(userKey).slice(0, 120);

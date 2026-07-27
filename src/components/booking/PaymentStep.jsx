@@ -295,24 +295,26 @@ export default function PaymentStep({ formData, treatment, onBack }) {
           ) : iframeUrl ? (
             <div
               className={`overflow-hidden rounded-[20px] border shadow-[0_8px_30px_rgba(0,0,0,0.05)] ${
-                clinicSite ? "border-[#E8ECE8] bg-white" : "border-border bg-background"
+                clinicSite ? "border-[#E8ECE8] bg-[#F7F8F6]" : "border-border bg-background"
               }`}
             >
               <div
-                className={`flex items-center justify-center gap-3 border-b px-4 py-2.5 text-xs font-medium ${
+                className={`flex items-center justify-center gap-2.5 border-b px-4 py-3 text-xs font-semibold ${
                   clinicSite
-                    ? "border-[#E8ECE8] bg-[#F0F4F1] text-[#5D7F6D]"
+                    ? "border-[#E8ECE8] bg-white text-[#5D7F6D]"
                     : "border-border bg-muted text-muted-foreground"
                 }`}
               >
-                <span>דף תשלום מאובטח · SSL</span>
+                <Lock className="h-3.5 w-3.5" />
+                <span>תשלום מאובטח</span>
+                <span className="opacity-40">·</span>
                 <img src={VISA_LOGO} alt="" className="h-5 w-auto" width={36} height={24} />
                 <img src={MASTERCARD_LOGO} alt="" className="h-5 w-auto" width={36} height={24} />
               </div>
               <iframe
                 title="סליקת אשראי Pelecard"
                 src={iframeUrl}
-                className="h-[560px] w-full border-0 bg-[#F7F8F6]"
+                className="h-[580px] w-full border-0 bg-[#F7F8F6]"
                 allow="payment *"
               />
             </div>
