@@ -2,7 +2,6 @@ import {
   getPelecardConfig,
   resolvePelecardCssUrl,
   DEFAULT_PELECARD_CSS_CDN,
-  DEFAULT_PELECARD_LOGO_CDN,
 } from "../../server/pelecard.js";
 
 /** Lightweight public flag — does not expose credentials. */
@@ -19,8 +18,7 @@ export default async function handler(req, res) {
     gatewayBase,
     maxPayments,
     minPayments,
-    cssPath,
+    cssPath: cssPath || null,
     cssUrl,
-    logoUrl: DEFAULT_PELECARD_LOGO_CDN,
   });
 }

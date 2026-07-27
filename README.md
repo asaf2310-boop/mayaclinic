@@ -72,12 +72,12 @@ PELECARD_PASSWORD=...
 PELECARD_GATEWAY_BASE=https://gateway20.pelecard.biz
 PELECARD_MAX_PAYMENTS=1
 PELECARD_MIN_PAYMENTS=1
-PELECARD_CSS_CDN=https://cdn.jsdelivr.net/gh/asaf2310-boop/mayaclinic@main/public/payment/clinic-v4.css
+PELECARD_CSS_CDN=https://gateway20.pelecard.biz/Content/Css/variant-he-3.css
 PELECARD_PUBLIC_ORIGIN=https://ofirbaby.vercel.app
 PELECARD_TOP_TEXT=אופיר - מרכז טיפול הוליסטי
 ```
 
-עיצוב ה־iframe נשלח ב־`CssURL` דרך jsDelivr (לא מ־Vercel ישירות — חלק מטרמינלי Pelecard לא מצליחים למשוך קבצים מדומיין Vercel). הכפתור אמור להיות ירוק־מרווה `#5D7F6D`. **חובה להתחיל תשלום חדש** אחרי כל עדכון — סשן iframe ישן לא מתעדכן.
+**חשוב:** טרמינל Pelecard הנוכחי מתעלם מ־`CssURL` חיצוני (Vercel/jsDelivr) וטוען תמיד את ברירת המחדל הכתומה (`variant-he-1`) אלא אם שולחים ערכת CSS **של Pelecard עצמם**. לכן ברירת המחדל היא `variant-he-3` (כפתור כחול מודרני). לעיצוב מותאם אישית מלא צריך לפנות לתמיכת Pelecard להפעלת CSS מותאם בטרמינל.
 
 ### משוב לצד שרת + דפי הצלחה/כישלון
 

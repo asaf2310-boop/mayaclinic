@@ -28,23 +28,21 @@ process.env.PELECARD_PASSWORD = "p1";
 const cfg = getPelecardConfig();
 assert.equal(cfg.configured, true);
 assert.equal(cfg.gatewayBase, "https://gateway20.pelecard.biz");
-assert.equal(cfg.cssPath, "/payment/clinic-v4.css");
 
 assert.equal(
   absolutePublicUrl("https://ofirbaby.com", "/payment/clinic-v4.css"),
   "https://ofirbaby.com/payment/clinic-v4.css"
 );
-assert.equal(
-  absolutePublicUrl("https://ofirbaby.com", "https://cdn.example/a.css"),
-  "https://cdn.example/a.css"
-);
 
 assert.equal(resolvePelecardCssUrl("https://ofirbaby.vercel.app"), DEFAULT_PELECARD_CSS_CDN);
-assert.ok(DEFAULT_PELECARD_CSS_CDN.includes("jsdelivr.net"));
-assert.ok(DEFAULT_PELECARD_CSS_CDN.includes("clinic-v4.css"));
+assert.ok(DEFAULT_PELECARD_CSS_CDN.includes("gateway20.pelecard.biz"));
+assert.ok(DEFAULT_PELECARD_CSS_CDN.includes("variant-he-3.css"));
 
-process.env.PELECARD_CSS_URL = "https://cdn.example/x.css?v=1";
-assert.equal(resolvePelecardCssUrl("https://ofirbaby.vercel.app"), "https://cdn.example/x.css");
+process.env.PELECARD_CSS_URL = "https://gateway20.pelecard.biz/Content/Css/variant-he-4.css?v=1";
+assert.equal(
+  resolvePelecardCssUrl("https://ofirbaby.vercel.app"),
+  "https://gateway20.pelecard.biz/Content/Css/variant-he-4.css"
+);
 delete process.env.PELECARD_CSS_URL;
 
 console.log("pelecard helpers ok");
