@@ -3,7 +3,7 @@ import {
   shekelsToAgorot,
   getPelecardConfig,
   absolutePublicUrl,
-} from "../api/lib/pelecard.js";
+} from "../server/pelecard.js";
 
 assert.equal(shekelsToAgorot(320), 32000);
 assert.equal(shekelsToAgorot("250.5"), 25050);

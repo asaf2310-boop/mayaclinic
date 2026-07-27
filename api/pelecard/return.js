@@ -1,4 +1,4 @@
-import { resolvePublicOrigin } from "../lib/pelecard.js";
+import { resolvePublicOrigin } from "../../server/pelecard.js";
 
 /**
  * Pelecard GoodURL / ErrorURL landing page.

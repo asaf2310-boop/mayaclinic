@@ -1,4 +1,4 @@
-import { getPelecardConfig, validatePelecardPayment } from "../lib/pelecard.js";
+import { getPelecardConfig, validatePelecardPayment } from "../../server/pelecard.js";
 
 function readBody(req) {
   if (!req.body) return {};

@@ -1,7 +1,7 @@
 import {
   collectPelecardParams,
   finalizePaymentFromPelecard,
-} from "../lib/pelecardPayments.js";
+} from "../../server/pelecardPayments.js";
 
 /**
  * Server-side feedback from Pelecard (ServerSideGoodFeedbackURL / Error).

@@ -1,6 +1,6 @@
-import { buildConfirmationEmail } from "./lib/emailTemplates.js";
-import { getClinicName, isEmailConfigured, sendEmail } from "./lib/gmail.js";
-import { fetchRecentAppointmentsByIds } from "./lib/supabaseServer.js";
+import { buildConfirmationEmail } from "../server/emailTemplates.js";
+import { getClinicName, isEmailConfigured, sendEmail } from "../server/gmail.js";
+import { fetchRecentAppointmentsByIds } from "../server/supabaseServer.js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {

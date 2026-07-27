@@ -3,12 +3,12 @@ import {
   initPelecardPayment,
   resolvePublicOrigin,
   shekelsToAgorot,
-} from "../lib/pelecard.js";
+} from "../../server/pelecard.js";
 import {
   createPaymentSession,
   isBookingPayloadValid,
   normalizeBookingPayload,
-} from "../lib/pelecardPayments.js";
+} from "../../server/pelecardPayments.js";
 
 const CLINIC_PAYMENT_TOP =
   process.env.PELECARD_TOP_TEXT || "אופיר - מרכז טיפול הוליסטי";

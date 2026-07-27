@@ -1,4 +1,4 @@
-import { getPelecardConfig } from "../lib/pelecard.js";
+import { getPelecardConfig } from "../../server/pelecard.js";
 
 /** Lightweight public flag — does not expose credentials. */
 export default async function handler(req, res) {

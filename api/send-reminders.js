@@ -1,9 +1,9 @@
-import { buildReminderEmail } from "./lib/emailTemplates.js";
-import { getClinicName, isEmailConfigured, sendEmail } from "./lib/gmail.js";
+import { buildReminderEmail } from "../server/emailTemplates.js";
+import { getClinicName, isEmailConfigured, sendEmail } from "../server/gmail.js";
 import {
   fetchTomorrowAppointmentsNeedingReminder,
   markReminderSent,
-} from "./lib/supabaseServer.js";
+} from "../server/supabaseServer.js";
 
 function isAuthorized(req) {
   const secret = process.env.CRON_SECRET;

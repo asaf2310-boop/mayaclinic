@@ -1,5 +1,5 @@
-import { getPaymentSessionByRef } from "../lib/pelecardPayments.js";
-import { supabaseRequest } from "../lib/supabaseServer.js";
+import { getPaymentSessionByRef } from "../../server/pelecardPayments.js";
+import { supabaseRequest } from "../../server/supabaseServer.js";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
