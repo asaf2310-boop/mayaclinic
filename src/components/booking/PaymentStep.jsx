@@ -7,7 +7,6 @@ import {
   clinicGlassCard,
   clinicGlassPanel,
   clinicIconSurface,
-  clinicPrimaryBtn,
   clinicTextHeading,
   clinicTextMuted,
   clinicTextPrimary,
