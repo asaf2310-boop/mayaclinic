@@ -52,37 +52,78 @@ export default async function handler(req, res) {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <title>${escapeHtml(title)}</title>
   <style>
+    :root {
+      --heading: #2F3B34;
+      --muted: #6B746F;
+      --primary: #5D7F6D;
+      --border: #E8ECE8;
+      --ok: #2F6B4F;
+      --err: #9B2C2C;
+    }
+    * { box-sizing: border-box; }
     body {
       margin: 0;
       min-height: 100vh;
       display: grid;
       place-items: center;
-      font-family: "Heebo", "Assistant", Arial, sans-serif;
-      background: linear-gradient(160deg, #f4f7f5 0%, #e8f0ec 55%, #dfe9e3 100%);
-      color: #1f2d26;
+      font-family: "Heebo", system-ui, sans-serif;
+      background:
+        linear-gradient(160deg, rgba(247, 248, 246, 0.98) 0%, #ffffff 45%, #f0f4f1 100%);
+      color: var(--heading);
+      -webkit-font-smoothing: antialiased;
     }
     .box {
       text-align: center;
-      padding: 1.5rem;
+      padding: 1.75rem 1.5rem;
       max-width: 22rem;
+      width: calc(100% - 2rem);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.92);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.05);
+    }
+    .icon {
+      width: 52px;
+      height: 52px;
+      margin: 0 auto 0.85rem;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      font-size: 1.4rem;
+      font-weight: 700;
+    }
+    .ok .icon {
+      background: #F0F4F1;
+      color: var(--ok);
+    }
+    .err .icon {
+      background: #FCE8E8;
+      color: var(--err);
     }
     h1 {
-      margin: 0 0 0.5rem;
-      font-size: 1.35rem;
+      margin: 0 0 0.45rem;
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
     }
     p {
       margin: 0;
-      color: #5a6b62;
-      line-height: 1.5;
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 0.95rem;
     }
-    .ok h1 { color: #1f6b45; }
-    .err h1 { color: #9b2c2c; }
+    .ok h1 { color: var(--ok); }
+    .err h1 { color: var(--err); }
   </style>
 </head>
 <body>
   <div class="box ${isSuccess ? "ok" : "err"}">
+    <div class="icon" aria-hidden="true">${isSuccess ? "✓" : "!"}</div>
     <h1>${escapeHtml(title)}</h1>
     <p>${escapeHtml(message)}</p>
   </div>

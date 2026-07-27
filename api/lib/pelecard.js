@@ -10,6 +10,8 @@ export function getPelecardConfig() {
 
   const maxPayments = Math.max(1, Number(process.env.PELECARD_MAX_PAYMENTS) || 1);
   const minPayments = Math.max(1, Number(process.env.PELECARD_MIN_PAYMENTS) || 1);
+  const cssPath = String(process.env.PELECARD_CSS_PATH || "/payment/pelecard-clinic.css").trim();
+  const logoPath = String(process.env.PELECARD_LOGO_PATH || "").trim();
 
   return {
     terminal,
@@ -18,8 +20,19 @@ export function getPelecardConfig() {
     gatewayBase,
     maxPayments,
     minPayments: Math.min(minPayments, maxPayments),
+    cssPath: cssPath || "/payment/pelecard-clinic.css",
+    logoPath,
     configured: Boolean(terminal && user && password),
   };
+}
+
+export function absolutePublicUrl(origin, pathOrUrl) {
+  const value = String(pathOrUrl || "").trim();
+  if (!value) return "";
+  if (/^https?:\/\//i.test(value)) return value;
+  const base = String(origin || "").replace(/\/$/, "");
+  const path = value.startsWith("/") ? value : `/${value}`;
+  return base ? `${base}${path}` : path;
 }
 
 export function shekelsToAgorot(amountShekels) {
@@ -76,6 +89,9 @@ export async function initPelecardPayment({
   telField = "hide",
   topText = "",
   bottomText = "",
+  publicOrigin = "",
+  cssUrl = "",
+  logoUrl = "",
 }) {
   const config = getPelecardConfig();
   if (!config.configured) {
@@ -90,6 +106,11 @@ export async function initPelecardPayment({
     error.status = 400;
     throw error;
   }
+
+  const resolvedCssUrl =
+    absolutePublicUrl(publicOrigin, cssUrl || config.cssPath) ||
+    `${config.gatewayBase}/Content/Css/variant-he-1.css`;
+  const resolvedLogoUrl = absolutePublicUrl(publicOrigin, logoUrl || config.logoPath);
 
   const payload = {
     terminal: config.terminal,
@@ -119,13 +140,17 @@ export async function initPelecardPayment({
     ParamX: String(paramX || "").slice(0, 120),
     ShowXParam: "False",
     AddHolderNameToXParam: "False",
-    CssURL: `${config.gatewayBase}/Content/Css/variant-he-1.css`,
-    LogoURL: `${config.gatewayBase}/Content/images/Pelecard.png`,
+    CssURL: resolvedCssUrl,
     ShowConfirmationCheckbox: "False",
-    HiddenPelecardLogo: "False",
+    HiddenPelecardLogo: resolvedLogoUrl ? "False" : "True",
+    HiddenPciLogo: "False",
     AccessibilityMode: "True",
     TakeIshurPopUp: "False",
   };
+
+  if (resolvedLogoUrl) {
+    payload.LogoURL = resolvedLogoUrl;
+  }
 
   if (userKey) payload.UserKey = String(userKey).slice(0, 120);
   if (topText) payload.TopText = String(topText).slice(0, 200);

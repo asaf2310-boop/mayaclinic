@@ -448,14 +448,23 @@ export default function PaymentStep({
             </div>
           ) : iframeUrl ? (
             <div
-              className={`overflow-hidden rounded-2xl border ${
+              className={`overflow-hidden rounded-[20px] border shadow-[0_8px_30px_rgba(0,0,0,0.05)] ${
                 clinicSite ? "border-[#E8ECE8] bg-white" : "border-border bg-background"
               }`}
             >
+              <div
+                className={`border-b px-4 py-2.5 text-center text-xs font-medium ${
+                  clinicSite
+                    ? "border-[#E8ECE8] bg-[#F0F4F1] text-[#5D7F6D]"
+                    : "border-border bg-muted text-muted-foreground"
+                }`}
+              >
+                דף תשלום מאובטח · SSL
+              </div>
               <iframe
                 title="סליקת אשראי Pelecard"
                 src={iframeUrl}
-                className="h-[520px] w-full border-0 bg-white"
+                className="h-[560px] w-full border-0 bg-[#F7F8F6]"
                 allow="payment *"
               />
             </div>

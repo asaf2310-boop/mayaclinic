@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   shekelsToAgorot,
   getPelecardConfig,
+  absolutePublicUrl,
 } from "../api/lib/pelecard.js";
 
 assert.equal(shekelsToAgorot(320), 32000);
@@ -20,5 +21,15 @@ process.env.PELECARD_PASSWORD = "p1";
 const cfg = getPelecardConfig();
 assert.equal(cfg.configured, true);
 assert.equal(cfg.gatewayBase, "https://gateway20.pelecard.biz");
+assert.equal(cfg.cssPath, "/payment/pelecard-clinic.css");
+
+assert.equal(
+  absolutePublicUrl("https://ofirbaby.com", "/payment/pelecard-clinic.css"),
+  "https://ofirbaby.com/payment/pelecard-clinic.css"
+);
+assert.equal(
+  absolutePublicUrl("https://ofirbaby.com", "https://cdn.example/a.css"),
+  "https://cdn.example/a.css"
+);
 
 console.log("pelecard helpers ok");

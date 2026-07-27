@@ -5,6 +5,9 @@ import {
   shekelsToAgorot,
 } from "../lib/pelecard.js";
 
+const CLINIC_PAYMENT_TOP =
+  process.env.PELECARD_TOP_TEXT || "אופיר - מרכז טיפול הוליסטי";
+
 function readBody(req) {
   if (!req.body) return {};
   if (typeof req.body === "string") {
@@ -56,9 +59,10 @@ export default async function handler(req, res) {
     const errorUrl = `${origin}/api/pelecard/return?outcome=error`;
 
     const treatmentName = String(body.treatmentName || "").trim();
-    const topText = treatmentName
-      ? `תשלום עבור: ${treatmentName}`
-      : "תשלום עבור התור";
+    const topText = CLINIC_PAYMENT_TOP;
+    const bottomText = treatmentName
+      ? `תשלום מאובטח עבור: ${treatmentName}`
+      : "תשלום מאובטח עבור התור";
 
     const session = await initPelecardPayment({
       totalAgorot,
@@ -67,6 +71,8 @@ export default async function handler(req, res) {
       paramX: bookingRef,
       userKey: bookingRef,
       topText,
+      bottomText,
+      publicOrigin: origin,
       customerIdField: "optional",
       cvv2Field: "required",
       cardHolderName: "optional",
@@ -80,6 +86,7 @@ export default async function handler(req, res) {
       bookingRef,
       totalAgorot: session.totalAgorot,
       amount: amountShekels,
+      cssUrl: `${origin}/payment/pelecard-clinic.css`,
     });
   } catch (error) {
     const status = error?.status && Number.isInteger(error.status) ? error.status : 500;

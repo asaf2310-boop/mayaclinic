@@ -72,7 +72,11 @@ PELECARD_PASSWORD=...
 PELECARD_GATEWAY_BASE=https://gateway20.pelecard.biz
 PELECARD_MAX_PAYMENTS=1
 PELECARD_MIN_PAYMENTS=1
+PELECARD_CSS_PATH=/payment/pelecard-clinic.css
+PELECARD_TOP_TEXT=אופיר - מרכז טיפול הוליסטי
 ```
+
+עיצוב ה־iframe משתמש ב־`CssURL` מותאם (`public/payment/pelecard-clinic.css`) בפלטת הקליניקה (Heebo, ירוק־מרווה `#5D7F6D`, רקעים רכים וכפתור תשלום תואם).
 
 אחרי תשלום מוצלח המערכת מאמתת מול `PaymentGW/ValidateByUniqueKey` ויוצרת תור עם `paid=true`.
 בלי פרטי Pelecard נשארים Bit / PayBox כמו קודם.
