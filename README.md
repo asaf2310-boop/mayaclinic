@@ -54,6 +54,29 @@ VITE_CLINIC_TENANT_ID=maya
 
 אחרי הוספת משתנים: **Redeploy** (Build לא קורא env חדש בלי פריסה מחדש).
 
+## סליקת אשראי — Pelecard (ManualIframe)
+
+בשלב התשלום בקביעת תור מוצג iframe של Pelecard (`PaymentGW/init` לפי [מדריך ManualIframe](https://gateway20.pelecard.biz/ManualIframe)).
+
+ב־Vercel (או `.env.local` מקומי ל־API) הגדירו:
+
+```env
+PELECARD_TERMINAL=...
+PELECARD_USER=...
+PELECARD_PASSWORD=...
+```
+
+אופציונלי:
+
+```env
+PELECARD_GATEWAY_BASE=https://gateway20.pelecard.biz
+PELECARD_MAX_PAYMENTS=1
+PELECARD_MIN_PAYMENTS=1
+```
+
+אחרי תשלום מוצלח המערכת מאמתת מול `PaymentGW/ValidateByUniqueKey` ויוצרת תור עם `paid=true`.
+בלי פרטי Pelecard נשארים Bit / PayBox כמו קודם.
+
 ב-Supabase SQL Editor, ודאו שרצו לפחות:
 
 1. `supabase/schema.sql`

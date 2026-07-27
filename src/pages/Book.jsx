@@ -58,18 +58,22 @@ export default function Book() {
   }, [clinicSite, selectedTreatment, visibleTreatments]);
 
   const createMutation = useMutation({
-    mutationFn: async (data) => {
-      const rows = data.appointments.map((appointment) => ({
-        patient_name: data.patient_name,
-        patient_phone: data.patient_phone,
-        patient_email: data.patient_email,
-        notes: data.notes,
-        marketing_consent: Boolean(data.marketing_consent),
-        treatment_id: data.treatment_id,
-        treatment_name: data.treatment_name,
+    mutationFn: async ({ formData, paid = false, paymentNote = "" }) => {
+      const baseNotes = String(formData.notes || "").trim();
+      const notes = [baseNotes, paymentNote].filter(Boolean).join("\n");
+
+      const rows = formData.appointments.map((appointment) => ({
+        patient_name: formData.patient_name,
+        patient_phone: formData.patient_phone,
+        patient_email: formData.patient_email,
+        notes,
+        marketing_consent: Boolean(formData.marketing_consent),
+        treatment_id: formData.treatment_id,
+        treatment_name: formData.treatment_name,
         treatment_price: selectedTreatment?.price,
         date: appointment.date,
         time: appointment.time,
+        paid: Boolean(paid),
       }));
 
       if (typeof base44.entities.Appointment.bulkCreate === "function") {
@@ -121,8 +125,23 @@ export default function Book() {
     setPendingFormData(formData);
   };
 
-  const handleConfirmAfterPayment = () => {
-    createMutation.mutate(pendingFormData);
+  const handleConfirmAfterPayment = (options = {}) => {
+    if (!pendingFormData) return;
+    createMutation.mutate({
+      formData: pendingFormData,
+      paid: Boolean(options.paid),
+      paymentNote: "",
+    });
+  };
+
+  const handlePelecardPaid = (payment) => {
+    if (!pendingFormData) return;
+    const tx = payment?.pelecardTransactionId || payment?.bookingRef || "";
+    createMutation.mutate({
+      formData: pendingFormData,
+      paid: true,
+      paymentNote: tx ? `Pelecard: ${tx}` : "Pelecard: paid",
+    });
   };
 
   const handleReset = () => {
@@ -145,6 +164,7 @@ export default function Book() {
               formData={pendingFormData}
               treatment={selectedTreatment}
               onConfirm={handleConfirmAfterPayment}
+              onPelecardPaid={handlePelecardPaid}
               onBack={() => setPendingFormData(null)}
               isSubmitting={createMutation.isPending}
             />
