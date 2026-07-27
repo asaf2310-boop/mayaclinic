@@ -72,12 +72,12 @@ PELECARD_PASSWORD=...
 PELECARD_GATEWAY_BASE=https://gateway20.pelecard.biz
 PELECARD_MAX_PAYMENTS=1
 PELECARD_MIN_PAYMENTS=1
-PELECARD_CSS_PATH=/payment/clinic-v4.css
+PELECARD_CSS_CDN=https://cdn.jsdelivr.net/gh/asaf2310-boop/mayaclinic@main/public/payment/clinic-v4.css
 PELECARD_PUBLIC_ORIGIN=https://ofirbaby.vercel.app
 PELECARD_TOP_TEXT=אופיר - מרכז טיפול הוליסטי
 ```
 
-עיצוב ה־iframe משתמש ב־`CssURL` מותאם (`public/payment/clinic-v4.css`, ללא `?query`) בפלטת הקליניקה (ירוק־מרווה `#5D7F6D`). חשוב להתחיל תשלום חדש אחרי כל עדכון עיצוב — סשן iframe ישן לא מקבל CssURL חדש.
+עיצוב ה־iframe נשלח ב־`CssURL` דרך jsDelivr (לא מ־Vercel ישירות — חלק מטרמינלי Pelecard לא מצליחים למשוך קבצים מדומיין Vercel). הכפתור אמור להיות ירוק־מרווה `#5D7F6D`. **חובה להתחיל תשלום חדש** אחרי כל עדכון — סשן iframe ישן לא מתעדכן.
 
 ### משוב לצד שרת + דפי הצלחה/כישלון
 
