@@ -7,11 +7,12 @@ export default async function handler(req, res) {
     return;
   }
 
-  const { configured, gatewayBase, maxPayments, minPayments } = getPelecardConfig();
+  const { configured, gatewayBase, maxPayments, minPayments, cssPath } = getPelecardConfig();
   res.status(200).json({
     configured,
     gatewayBase,
     maxPayments,
     minPayments,
+    cssPath,
   });
 }
