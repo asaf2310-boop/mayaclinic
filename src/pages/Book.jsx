@@ -134,16 +134,6 @@ export default function Book() {
     });
   };
 
-  const handlePelecardPaid = (payment) => {
-    if (!pendingFormData) return;
-    const tx = payment?.pelecardTransactionId || payment?.bookingRef || "";
-    createMutation.mutate({
-      formData: pendingFormData,
-      paid: true,
-      paymentNote: tx ? `Pelecard: ${tx}` : "Pelecard: paid",
-    });
-  };
-
   const handleReset = () => {
     setSelectedTreatment(null);
     setPendingFormData(null);
@@ -164,7 +154,6 @@ export default function Book() {
               formData={pendingFormData}
               treatment={selectedTreatment}
               onConfirm={handleConfirmAfterPayment}
-              onPelecardPaid={handlePelecardPaid}
               onBack={() => setPendingFormData(null)}
               isSubmitting={createMutation.isPending}
             />

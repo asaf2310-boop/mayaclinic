@@ -17,11 +17,11 @@ export async function fetchPelecardStatus() {
   }
 }
 
-export async function initPelecardSession({ amount, bookingRef, treatmentName }) {
+export async function initPelecardSession({ amount, bookingRef, treatmentName, booking }) {
   const response = await fetch("/api/pelecard/init", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ amount, bookingRef, treatmentName }),
+    body: JSON.stringify({ amount, bookingRef, treatmentName, booking }),
   });
 
   const data = await response.json().catch(() => ({}));
@@ -46,6 +46,17 @@ export async function validatePelecardSession(payload) {
     const error = new Error(data.error || "Failed to validate Pelecard");
     error.status = response.status;
     error.data = data;
+    throw error;
+  }
+  return data;
+}
+
+export async function fetchPelecardSession(bookingRef) {
+  const response = await fetch(`/api/pelecard/session?ref=${encodeURIComponent(bookingRef)}`);
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(data.error || "Failed to load payment session");
+    error.status = response.status;
     throw error;
   }
   return data;

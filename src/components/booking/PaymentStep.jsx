@@ -24,9 +24,10 @@ import {
   fetchPelecardStatus,
   initPelecardSession,
   isPelecardReturnMessage,
-  validatePelecardSession,
 } from "@/lib/pelecard";
 import { useToast } from "@/components/ui/use-toast";
+import { useNavigate } from "react-router-dom";
+import { getClinicTenantId } from "@/lib/tenant";
 
 const PHONE = "0549000301";
 const BIT_LOGO = "/payment/bit-logo.png";
@@ -54,7 +55,6 @@ export default function PaymentStep({
   onConfirm,
   onBack,
   isSubmitting,
-  onPelecardPaid,
 }) {
   const appointments = formData.appointments || [];
   const unitPrice = treatment?.price ?? 250;
@@ -64,15 +64,14 @@ export default function PaymentStep({
   const [pelecardConfigured, setPelecardConfigured] = useState(null);
   const [iframeUrl, setIframeUrl] = useState("");
   const [bookingRef, setBookingRef] = useState("");
-  const [totalAgorot, setTotalAgorot] = useState(0);
   const [initError, setInitError] = useState("");
   const [isInitLoading, setIsInitLoading] = useState(false);
-  const [isValidating, setIsValidating] = useState(false);
   const [paymentDone, setPaymentDone] = useState(false);
   const clinicSite = getClinicSite();
   const bitQrImage = clinicSite?.bitQrImage;
   const payboxLink = resolvePayboxLink(treatment, clinicSite);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const payboxDetails = useMemo(
     () => getPayboxPaymentDetails(payboxLink, totalPrice),
@@ -109,11 +108,22 @@ export default function PaymentStep({
         const session = await initPelecardSession({
           amount: totalPrice,
           bookingRef: ref,
-          treatmentName: treatment?.name || "",
+          treatmentName: treatment?.name || formData.treatment_name || "",
+          booking: {
+            patient_name: formData.patient_name,
+            patient_phone: formData.patient_phone,
+            patient_email: formData.patient_email,
+            notes: formData.notes,
+            marketing_consent: formData.marketing_consent,
+            treatment_id: formData.treatment_id || treatment?.id,
+            treatment_name: formData.treatment_name || treatment?.name,
+            treatment_price: treatment?.price ?? formData.treatment_price ?? null,
+            tenant_id: getClinicTenantId() || clinicSite?.id || "maya",
+            appointments: formData.appointments || [],
+          },
         });
         if (cancelled) return;
         setBookingRef(session.bookingRef || ref);
-        setTotalAgorot(session.totalAgorot || Math.round(totalPrice * 100));
         setIframeUrl(session.url || "");
       } catch (error) {
         if (cancelled) return;
@@ -133,84 +143,46 @@ export default function PaymentStep({
     return () => {
       cancelled = true;
     };
-  }, [pelecardConfigured, paymentMethod, paymentDone, totalPrice, treatment?.name, toast]);
+  }, [
+    pelecardConfigured,
+    paymentMethod,
+    paymentDone,
+    totalPrice,
+    treatment?.name,
+    treatment?.id,
+    treatment?.price,
+    formData,
+    clinicSite?.id,
+    toast,
+  ]);
 
   useEffect(() => {
-    if (paymentMethod !== "card" || paymentDone || isValidating) return;
+    if (paymentMethod !== "card" || paymentDone) return;
 
-    async function onMessage(event) {
+    function onMessage(event) {
       if (!isPelecardReturnMessage(event)) return;
       const data = event.data;
-      if (!data.ok) {
-        toast({
-          title: "התשלום לא הושלם",
-          description: "אפשר לנסות שוב בדף הסליקה, או לבחור אמצעי אחר.",
-          variant: "destructive",
-        });
+      const ref = data.bookingRef || data.paramX || data.userKey || bookingRef;
+      setPaymentDone(true);
+
+      if (data.redirectUrl) {
+        window.location.assign(data.redirectUrl);
         return;
       }
 
-      setIsValidating(true);
-      try {
-        const uniqueKey = data.userKey || data.paramX || bookingRef;
-        const result = await validatePelecardSession({
-          confirmationKey: data.confirmationKey,
-          uniqueKey,
-          bookingRef: bookingRef || uniqueKey,
-          totalAgorot: totalAgorot || Math.round(totalPrice * 100),
-          pelecardStatusCode: data.pelecardStatusCode,
-          pelecardTransactionId: data.pelecardTransactionId,
-        });
-
-        if (!result?.valid) {
-          toast({
-            title: "לא ניתן לאמת את התשלום",
-            description: "אם חויבתם — צרו קשר עם הקליניקה.",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        setPaymentDone(true);
-        toast({
-          title: "התשלום אושר",
-          description: "מאשרים את התור…",
-        });
-
-        if (typeof onPelecardPaid === "function") {
-          onPelecardPaid({
-            bookingRef: bookingRef || uniqueKey,
-            pelecardTransactionId: data.pelecardTransactionId || result.pelecardTransactionId,
-            confirmationKey: data.confirmationKey,
-            totalAgorot: totalAgorot || Math.round(totalPrice * 100),
-          });
-        } else {
-          onConfirm?.({ paid: true });
-        }
-      } catch (error) {
-        toast({
-          title: "שגיאה באימות התשלום",
-          description: error?.message || "נסו שוב בעוד רגע.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsValidating(false);
+      if (data.ok) {
+        navigate(`/payment/success?ref=${encodeURIComponent(ref || "")}`, { replace: true });
+      } else {
+        navigate(
+          `/payment/failure?ref=${encodeURIComponent(ref || "")}&code=${encodeURIComponent(data.pelecardStatusCode || "error")}`,
+          { replace: true }
+        );
       }
     }
 
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [
-    paymentMethod,
-    paymentDone,
-    isValidating,
-    bookingRef,
-    totalAgorot,
-    totalPrice,
-    onPelecardPaid,
-    onConfirm,
-    toast,
-  ]);
+  }, [paymentMethod, paymentDone, bookingRef, navigate]);
 
   const handleBitClick = () => {
     setPaymentMethod("bit");
@@ -431,7 +403,7 @@ export default function PaymentStep({
 
       {paymentMethod === "card" && pelecardConfigured && (
         <div className="mb-6">
-          {isInitLoading || isValidating || paymentDone ? (
+          {isInitLoading || paymentDone ? (
             <div
               className={`flex min-h-[320px] flex-col items-center justify-center gap-3 rounded-2xl border p-6 text-center ${
                 clinicSite ? "border-[#E8ECE8] bg-white/70" : "border-border bg-muted/30"
@@ -440,10 +412,8 @@ export default function PaymentStep({
               <Loader2 className={`h-7 w-7 animate-spin ${clinicSite ? clinicTextPrimary : "text-primary"}`} />
               <p className={`text-sm ${clinicSite ? clinicTextMuted : "text-muted-foreground"}`}>
                 {paymentDone
-                  ? "התשלום אושר — מאשרים את התור…"
-                  : isValidating
-                    ? "מאמתים את התשלום…"
-                    : "טוענים את דף הסליקה המאובטח…"}
+                  ? "מעבירים לדף האישור…"
+                  : "טוענים את דף הסליקה המאובטח…"}
               </p>
             </div>
           ) : iframeUrl ? (

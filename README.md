@@ -78,7 +78,19 @@ PELECARD_TOP_TEXT=אופיר - מרכז טיפול הוליסטי
 
 עיצוב ה־iframe משתמש ב־`CssURL` מותאם (`public/payment/pelecard-clinic.css`) בפלטת הקליניקה (Heebo, ירוק־מרווה `#5D7F6D`, רקעים רכים וכפתור תשלום תואם).
 
-אחרי תשלום מוצלח המערכת מאמתת מול `PaymentGW/ValidateByUniqueKey` ויוצרת תור עם `paid=true`.
+### משוב לצד שרת + דפי הצלחה/כישלון
+
+ב־`PaymentGW/init` מוגדרים:
+- `ServerSideGoodFeedbackURL` / `ServerSideErrorFeedbackURL` → `/api/pelecard/feedback`
+- `FeedbackOnTop=True` + `GoodURL`/`ErrorURL` → `/api/pelecard/return` שמעביר ל־`/payment/success` או `/payment/failure`
+
+ב־Supabase SQL Editor הריצו גם:
+
+```text
+supabase/pelecard-payments.sql
+```
+
+אחרי תשלום מוצלח השרת מאמת עם `ValidateByUniqueKey`, יוצר תורים עם `paid=true`, והלקוח מגיע לדף ההצלחה.
 בלי פרטי Pelecard נשארים Bit / PayBox כמו קודם.
 
 ב-Supabase SQL Editor, ודאו שרצו לפחות:
@@ -86,6 +98,7 @@ PELECARD_TOP_TEXT=אופיר - מרכז טיפול הוליסטי
 1. `supabase/schema.sql`
 2. `supabase/multi-tenant.sql` (כולל `paybox_link` ו-`tenant_id`)
 3. `supabase/treatments-paybox.sql` — רק אם ה-DB נוצר לפני שהעמודה נוספה ל-schema
+4. `supabase/pelecard-payments.sql` — לסליקת Pelecard (משוב שרת + דפי הצלחה/כישלון)
 
 ## Demo deployment
 

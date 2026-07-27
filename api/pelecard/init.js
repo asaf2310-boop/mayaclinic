@@ -4,6 +4,11 @@ import {
   resolvePublicOrigin,
   shekelsToAgorot,
 } from "../lib/pelecard.js";
+import {
+  createPaymentSession,
+  isBookingPayloadValid,
+  normalizeBookingPayload,
+} from "../lib/pelecardPayments.js";
 
 const CLINIC_PAYMENT_TOP =
   process.env.PELECARD_TOP_TEXT || "אופיר - מרכז טיפול הוליסטי";
@@ -44,6 +49,14 @@ export default async function handler(req, res) {
       return;
     }
 
+    const booking = normalizeBookingPayload(body.booking || {});
+    if (!isBookingPayloadValid(booking)) {
+      res.status(400).json({
+        error: "booking payload is required (patient, treatment, appointments)",
+      });
+      return;
+    }
+
     const bookingRef =
       String(body.bookingRef || "").trim() ||
       (typeof crypto !== "undefined" && crypto.randomUUID
@@ -55,10 +68,15 @@ export default async function handler(req, res) {
       return;
     }
 
-    const goodUrl = `${origin}/api/pelecard/return?outcome=good`;
-    const errorUrl = `${origin}/api/pelecard/return?outcome=error`;
+    // Browser lands here (FeedbackOnTop) → redirects to SPA success/failure.
+    const goodUrl = `${origin}/api/pelecard/return?outcome=good&ref=${encodeURIComponent(bookingRef)}`;
+    const errorUrl = `${origin}/api/pelecard/return?outcome=error&ref=${encodeURIComponent(bookingRef)}`;
+    // Pelecard server notifies our backend (authoritative).
+    const serverSideGoodFeedbackUrl = `${origin}/api/pelecard/feedback?outcome=good&ref=${encodeURIComponent(bookingRef)}`;
+    const serverSideErrorFeedbackUrl = `${origin}/api/pelecard/feedback?outcome=error&ref=${encodeURIComponent(bookingRef)}`;
 
-    const treatmentName = String(body.treatmentName || "").trim();
+    const treatmentName =
+      String(body.treatmentName || booking.treatment_name || "").trim();
     const topText = CLINIC_PAYMENT_TOP;
     const bottomText = treatmentName
       ? `תשלום מאובטח עבור: ${treatmentName}`
@@ -68,6 +86,8 @@ export default async function handler(req, res) {
       totalAgorot,
       goodUrl,
       errorUrl,
+      serverSideGoodFeedbackUrl,
+      serverSideErrorFeedbackUrl,
       paramX: bookingRef,
       userKey: bookingRef,
       topText,
@@ -76,6 +96,14 @@ export default async function handler(req, res) {
       customerIdField: "optional",
       cvv2Field: "required",
       cardHolderName: "optional",
+    });
+
+    await createPaymentSession({
+      bookingRef,
+      totalAgorot: session.totalAgorot,
+      confirmationKey: session.confirmationKey,
+      bookingPayload: booking,
+      tenantId: booking.tenant_id,
     });
 
     res.status(200).json({
@@ -87,11 +115,20 @@ export default async function handler(req, res) {
       totalAgorot: session.totalAgorot,
       amount: amountShekels,
       cssUrl: `${origin}/payment/pelecard-clinic.css`,
+      successPath: `/payment/success?ref=${encodeURIComponent(bookingRef)}`,
+      failurePath: `/payment/failure?ref=${encodeURIComponent(bookingRef)}`,
     });
   } catch (error) {
     const status = error?.status && Number.isInteger(error.status) ? error.status : 500;
+    const message = error?.message || "Failed to init Pelecard payment";
+    const missingTable =
+      String(message).includes("pelecard_payments") ||
+      String(message).includes("Could not find the table");
+
     res.status(status).json({
-      error: error?.message || "Failed to init Pelecard payment",
+      error: missingTable
+        ? "חסרה טבלת pelecard_payments — הריצו supabase/pelecard-payments.sql"
+        : message,
       configured: true,
     });
   }

@@ -80,6 +80,8 @@ export async function initPelecardPayment({
   totalAgorot,
   goodUrl,
   errorUrl,
+  serverSideGoodFeedbackUrl = "",
+  serverSideErrorFeedbackUrl = "",
   paramX = "",
   userKey = "",
   customerIdField = "optional",
@@ -130,7 +132,9 @@ export async function initPelecardPayment({
     EmailField: emailField,
     TelField: telField,
     SplitCCNumber: "False",
-    FeedbackOnTop: "False",
+    // Break out of iframe so the shopper lands on our success/failure pages.
+    FeedbackOnTop: "True",
+    FeedbackDataTransferMethod: "GET",
     UseBuildInFeedbackPage: "False",
     MaxPayments: String(config.maxPayments),
     MinPayments: String(config.minPayments),
@@ -147,6 +151,13 @@ export async function initPelecardPayment({
     AccessibilityMode: "True",
     TakeIshurPopUp: "False",
   };
+
+  if (serverSideGoodFeedbackUrl) {
+    payload.ServerSideGoodFeedbackURL = serverSideGoodFeedbackUrl;
+  }
+  if (serverSideErrorFeedbackUrl) {
+    payload.ServerSideErrorFeedbackURL = serverSideErrorFeedbackUrl;
+  }
 
   if (resolvedLogoUrl) {
     payload.LogoURL = resolvedLogoUrl;

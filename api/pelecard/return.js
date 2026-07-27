@@ -1,8 +1,9 @@
+import { resolvePublicOrigin } from "../lib/pelecard.js";
+
 /**
- * Pelecard GoodURL / ErrorURL landing page (loads inside the payment iframe).
- * Notifies the parent window via postMessage, then shows a short status.
- *
- * ManualIframe flow: https://gateway20.pelecard.biz/ManualIframe
+ * Pelecard GoodURL / ErrorURL landing page.
+ * With FeedbackOnTop=True this loads in the top window, then redirects
+ * the shopper to the SPA success / failure pages.
  */
 function escapeHtml(value) {
   return String(value || "")
@@ -28,30 +29,39 @@ export default async function handler(req, res) {
   const outcome = String(params.outcome || "").toLowerCase();
   const statusCode = String(params.PelecardStatusCode || "").trim();
   const isSuccess = outcome === "good" && (!statusCode || statusCode === "000");
+  const bookingRef = String(params.ref || params.ParamX || params.UserKey || "").trim();
+  const origin = resolvePublicOrigin(req);
+
+  const redirectPath = isSuccess
+    ? `/payment/success?ref=${encodeURIComponent(bookingRef)}`
+    : `/payment/failure?ref=${encodeURIComponent(bookingRef)}&code=${encodeURIComponent(statusCode || "error")}`;
+  const redirectUrl = origin ? `${origin}${redirectPath}` : redirectPath;
 
   const payload = {
     source: "pelecard-return",
     ok: isSuccess,
     outcome: isSuccess ? "good" : "error",
+    bookingRef,
+    redirectUrl,
     pelecardStatusCode: statusCode,
     pelecardTransactionId: String(params.PelecardTransactionId || ""),
     confirmationKey: String(params.ConfirmationKey || ""),
     approvalNo: String(params.ApprovalNo || ""),
     paramX: String(params.ParamX || ""),
     userKey: String(params.UserKey || ""),
-    token: String(params.Token || ""),
   };
 
   const title = isSuccess ? "התשלום התקבל" : "התשלום לא הושלם";
   const message = isSuccess
-    ? "אפשר לסגור את חלון התשלום — התור יאושר אוטומטית."
-    : "אפשר לנסות שוב או לבחור אמצעי תשלום אחר.";
+    ? "מעבירים לדף האישור…"
+    : "מעבירים לדף השגיאה…";
 
   const html = `<!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="refresh" content="0;url=${escapeHtml(redirectUrl)}" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -97,19 +107,12 @@ export default async function handler(req, res) {
       font-size: 1.4rem;
       font-weight: 700;
     }
-    .ok .icon {
-      background: #F0F4F1;
-      color: var(--ok);
-    }
-    .err .icon {
-      background: #FCE8E8;
-      color: var(--err);
-    }
+    .ok .icon { background: #F0F4F1; color: var(--ok); }
+    .err .icon { background: #FCE8E8; color: var(--err); }
     h1 {
       margin: 0 0 0.45rem;
       font-size: 1.25rem;
       font-weight: 700;
-      letter-spacing: -0.01em;
     }
     p {
       margin: 0;
@@ -119,6 +122,12 @@ export default async function handler(req, res) {
     }
     .ok h1 { color: var(--ok); }
     .err h1 { color: var(--err); }
+    a {
+      display: inline-block;
+      margin-top: 1rem;
+      color: var(--primary);
+      font-weight: 600;
+    }
   </style>
 </head>
 <body>
@@ -126,15 +135,24 @@ export default async function handler(req, res) {
     <div class="icon" aria-hidden="true">${isSuccess ? "✓" : "!"}</div>
     <h1>${escapeHtml(title)}</h1>
     <p>${escapeHtml(message)}</p>
+    <a href="${escapeHtml(redirectUrl)}">המשך</a>
   </div>
   <script>
     (function () {
       var payload = ${JSON.stringify(payload)};
+      var target = ${JSON.stringify(redirectUrl)};
       try {
         if (window.parent && window.parent !== window) {
           window.parent.postMessage(payload, "*");
         }
       } catch (e) {}
+      try {
+        if (window.top && window.top !== window) {
+          window.top.location.replace(target);
+          return;
+        }
+      } catch (e) {}
+      window.location.replace(target);
     })();
   </script>
 </body>
