@@ -1,4 +1,5 @@
-/* Maya Clinic Pelecard theme v4 — full stylesheet replacement for CssURL */
+/** Clinic CSS for Pelecard CssURL — full stylesheet, inlined for Vercel. */
+export const CLINIC_PELECARD_CSS = `/* Maya Clinic Pelecard theme v4 — full stylesheet replacement for CssURL */
 html {
     font-family: sans-serif;
     -webkit-text-size-adjust: 100%;
@@ -1175,4 +1176,30 @@ input[type="submit"]:hover,
 .footer {
   background: #F7F8F6 !important;
   border-top: 1px solid #E8ECE8 !important;
+}
+`;
+
+/**
+ * GET /api/pelecard/theme
+ * Public CssURL endpoint for Pelecard ManualIframe branding.
+ */
+export default async function handler(req, res) {
+  if (req.method === "OPTIONS") {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
+    res.status(204).end();
+    return;
+  }
+
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    res.status(405).json({ error: "Method not allowed" });
+    return;
+  }
+
+  res.setHeader("Content-Type", "text/css; charset=utf-8");
+  res.setHeader("Cache-Control", "public, max-age=60, must-revalidate");
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
+  res.setHeader("X-Clinic-Theme", "v4");
+  res.status(200).send(req.method === "HEAD" ? "" : CLINIC_PELECARD_CSS);
 }

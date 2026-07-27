@@ -10,7 +10,8 @@ export function getPelecardConfig() {
 
   const maxPayments = Math.max(1, Number(process.env.PELECARD_MAX_PAYMENTS) || 1);
   const minPayments = Math.max(1, Number(process.env.PELECARD_MIN_PAYMENTS) || 1);
-  const cssPath = String(process.env.PELECARD_CSS_PATH || "/payment/pelecard-clinic.css").trim();
+  // Path-versioned static CSS (no ?query — Pelecard often rejects CssURL with params).
+  const cssPath = String(process.env.PELECARD_CSS_PATH || "/payment/clinic-v4.css").trim();
   const logoPath = String(process.env.PELECARD_LOGO_PATH || "").trim();
 
   return {
@@ -20,7 +21,7 @@ export function getPelecardConfig() {
     gatewayBase,
     maxPayments,
     minPayments: Math.min(minPayments, maxPayments),
-    cssPath: cssPath || "/payment/pelecard-clinic.css",
+    cssPath: cssPath || "/payment/clinic-v4.css",
     logoPath,
     configured: Boolean(terminal && user && password),
   };
@@ -109,13 +110,15 @@ export async function initPelecardPayment({
     throw error;
   }
 
-  const cssVersion = String(process.env.PELECARD_CSS_VERSION || "clinic-3").trim();
-  const resolvedCssUrlRaw =
-    absolutePublicUrl(publicOrigin, cssUrl || config.cssPath) ||
-    `${config.gatewayBase}/Content/Css/variant-he-1.css`;
-  const resolvedCssUrl = resolvedCssUrlRaw.includes("pelecard-clinic.css")
-    ? `${resolvedCssUrlRaw}${resolvedCssUrlRaw.includes("?") ? "&" : "?"}v=${encodeURIComponent(cssVersion)}`
-    : resolvedCssUrlRaw;
+  const resolvedCssUrl = String(
+    cssUrl ||
+      resolvePelecardCssUrl(publicOrigin) ||
+      absolutePublicUrl(publicOrigin, config.cssPath) ||
+      ""
+  )
+    .trim()
+    // Strip accidental cache-bust query — Pelecard CssURL is unreliable with ?params.
+    .split("?")[0];
   const resolvedLogoUrl = absolutePublicUrl(publicOrigin, logoUrl || config.logoPath);
 
   const payload = {
@@ -148,7 +151,7 @@ export async function initPelecardPayment({
     ParamX: String(paramX || "").slice(0, 120),
     ShowXParam: "False",
     AddHolderNameToXParam: "False",
-    CssURL: resolvedCssUrl,
+    ...(resolvedCssUrl ? { CssURL: resolvedCssUrl } : {}),
     ShowConfirmationCheckbox: "False",
     HiddenPelecardLogo: "True",
     HiddenPciLogo: "True",
@@ -189,6 +192,7 @@ export async function initPelecardPayment({
     confirmationKey: result.ConfirmationKey || "",
     error: result.Error || null,
     totalAgorot: Number(total),
+    cssUrl: resolvedCssUrl,
   };
 }
 
@@ -238,10 +242,50 @@ export async function validatePelecardPayment({
 }
 
 export function resolvePublicOrigin(req) {
+  const configured = String(
+    process.env.PELECARD_PUBLIC_ORIGIN ||
+      process.env.PUBLIC_SITE_URL ||
+      process.env.VITE_PUBLIC_SITE_URL ||
+      ""
+  )
+    .trim()
+    .replace(/\/$/, "");
+  if (configured) return configured;
+
   const proto = String(req.headers["x-forwarded-proto"] || "https").split(",")[0].trim();
   const host = String(req.headers["x-forwarded-host"] || req.headers.host || "")
     .split(",")[0]
-    .trim();
+    .trim()
+    .toLowerCase();
   if (!host) return "";
+
+  // Prefer canonical clinic hosts when Vercel internal host is forwarded.
+  if (
+    host.includes("ofirbaby") ||
+    host.includes("maya-clinic") ||
+    host === "localhost" ||
+    host === "127.0.0.1"
+  ) {
+    if (host.startsWith("www.")) {
+      return `${proto}://${host}`;
+    }
+    if (host === "ofirbaby.com" || host === "ofirbaby.vercel.app") {
+      return `${proto}://ofirbaby.vercel.app`;
+    }
+  }
+
   return `${proto}://${host}`;
+}
+
+export function resolvePelecardCssUrl(origin) {
+  const explicit = String(process.env.PELECARD_CSS_URL || "").trim().split("?")[0];
+  if (explicit) return explicit.replace(/\/$/, "");
+
+  const config = getPelecardConfig();
+  const base = String(origin || "").replace(/\/$/, "");
+  if (!base) return "";
+  // Prefer static path-versioned CSS (public/payment/clinic-v4.css).
+  // Fallback API theme serves the same full stylesheet.
+  const path = config.cssPath || "/payment/clinic-v4.css";
+  return absolutePublicUrl(base, path);
 }

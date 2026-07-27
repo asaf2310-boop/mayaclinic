@@ -1,0 +1,189 @@
+/* Maya Clinic theme for Pelecard PaymentGW iframe (compact overrides). */
+html, body {
+  font-family: Heebo, "Segoe UI", Tahoma, Arial, sans-serif !important;
+  color: #2F3B34 !important;
+  background: #F7F8F6 !important;
+  direction: rtl !important;
+  margin: 0 !important;
+  padding: 8px 0 16px !important;
+  font-size: 15px !important;
+  line-height: 1.45 !important;
+  -webkit-font-smoothing: antialiased;
+}
+
+.container {
+  max-width: 520px !important;
+  margin: 0 auto !important;
+  padding: 0 10px !important;
+}
+
+.main {
+  background: #FFFFFF !important;
+  border: 1px solid #E8ECE8 !important;
+  border-radius: 20px !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.05) !important;
+  overflow: hidden !important;
+}
+
+.main-content {
+  padding: 16px !important;
+}
+
+.main-title {
+  color: #2F3B34 !important;
+  font-size: 1.05rem !important;
+  font-weight: 600 !important;
+  text-align: center !important;
+}
+
+.credit-title,
+.topRef {
+  background: linear-gradient(90deg, #F0F4F1 0%, #FFFFFF 55%, #F7F8F6 100%) !important;
+  border-bottom: 1px solid #E8ECE8 !important;
+  box-shadow: none !important;
+  padding: 14px 16px !important;
+}
+
+.credit-title .title,
+.form-group-sup .title {
+  color: #5D7F6D !important;
+  text-shadow: none !important;
+  font-weight: 700 !important;
+}
+
+.credit-title .logo {
+  display: none !important;
+}
+
+.control-label,
+.credit_caption,
+label {
+  color: #2F3B34 !important;
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+}
+
+.form-group {
+  margin-bottom: 14px !important;
+}
+
+.form-control,
+input.form-control,
+select.form-control,
+textarea.form-control,
+input[type="text"],
+input[type="tel"],
+input[type="number"],
+input[type="password"],
+select {
+  height: 44px !important;
+  min-height: 44px !important;
+  padding: 10px 12px !important;
+  font-size: 15px !important;
+  color: #2F3B34 !important;
+  background: #FFFFFF !important;
+  background-image: none !important;
+  border: 1px solid #E8ECE8 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
+  filter: none !important;
+}
+
+.form-control:focus,
+input:focus,
+select:focus {
+  outline: none !important;
+  border-color: rgba(93, 127, 109, 0.55) !important;
+  box-shadow: 0 0 0 3px rgba(93, 127, 109, 0.2) !important;
+  background: #FFFFFF !important;
+}
+
+.form-control.read-only,
+.form-control[readonly],
+input[readonly] {
+  background: #F0F4F1 !important;
+  border-color: #E8ECE8 !important;
+  color: #5D7F6D !important;
+  font-weight: 700 !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+#totalAll,
+#each_payment_input,
+#first_payment_input {
+  color: #5D7F6D !important;
+  font-weight: 700 !important;
+}
+
+.errorRow,
+.error,
+.field-validation-error {
+  background: #FCE8E8 !important;
+  color: #9B2C2C !important;
+  border-radius: 10px !important;
+}
+
+.form-group-submit {
+  text-align: center !important;
+  margin: 18px 0 10px !important;
+}
+
+.btn-submit,
+button.btn-submit,
+input.btn-submit,
+#submit,
+button[type="submit"],
+input[type="submit"] {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: block !important;
+  margin: 0 auto !important;
+  padding: 14px 20px !important;
+  border: 0 !important;
+  border-radius: 16px !important;
+  color: #FFFFFF !important;
+  font-size: 1.05rem !important;
+  font-weight: 600 !important;
+  text-shadow: none !important;
+  background: #5D7F6D !important;
+  background-image: linear-gradient(90deg, #5D7F6D 0%, #6F9180 100%) !important;
+  box-shadow: 0 8px 24px rgba(93, 127, 109, 0.22) !important;
+  filter: none !important;
+  cursor: pointer !important;
+}
+
+.btn-submit:hover,
+.btn-submit:focus,
+button.btn-submit:hover,
+button[type="submit"]:hover,
+input[type="submit"]:hover {
+  background: #4F6F5F !important;
+  background-image: linear-gradient(90deg, #4F6F5F 0%, #5D7F6D 100%) !important;
+  color: #FFFFFF !important;
+  border: 0 !important;
+  box-shadow: 0 10px 28px rgba(93, 127, 109, 0.28) !important;
+  filter: none !important;
+}
+
+.footer {
+  background: #F7F8F6 !important;
+  border-top: 1px solid #E8ECE8 !important;
+  padding: 12px !important;
+}
+
+.footer-title,
+.form-group-sup .title {
+  color: #6B746F !important;
+  font-size: 0.8rem !important;
+  font-weight: 500 !important;
+}
+
+@media (max-width: 750px) {
+  .container { padding: 0 8px !important; }
+  .main { border-radius: 16px !important; }
+  .control-label { width: 100% !important; display: block !important; margin-bottom: 4px !important; }
+  .form-group, .control-group { display: block !important; width: 100% !important; }
+  .control-label, .control-value { display: block !important; }
+  .control-value { padding-right: 0 !important; }
+}
