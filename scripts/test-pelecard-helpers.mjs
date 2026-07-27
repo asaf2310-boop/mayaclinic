@@ -4,6 +4,7 @@ import {
   getPelecardConfig,
   absolutePublicUrl,
   resolvePelecardCssUrl,
+  DEFAULT_PELECARD_CSS_CDN,
 } from "../server/pelecard.js";
 
 assert.equal(shekelsToAgorot(320), 32000);
@@ -16,6 +17,9 @@ process.env.PELECARD_USER = "";
 process.env.PELECARD_PASSWORD = "";
 delete process.env.PELECARD_CSS_URL;
 delete process.env.PELECARD_CSS_PATH;
+delete process.env.PELECARD_CSS_CDN;
+delete process.env.PELECARD_LOGO_PATH;
+delete process.env.PELECARD_LOGO_URL;
 assert.equal(getPelecardConfig().configured, false);
 
 process.env.PELECARD_TERMINAL = "t1";
@@ -35,10 +39,9 @@ assert.equal(
   "https://cdn.example/a.css"
 );
 
-assert.equal(
-  resolvePelecardCssUrl("https://ofirbaby.vercel.app"),
-  "https://ofirbaby.vercel.app/payment/clinic-v4.css"
-);
+assert.equal(resolvePelecardCssUrl("https://ofirbaby.vercel.app"), DEFAULT_PELECARD_CSS_CDN);
+assert.ok(DEFAULT_PELECARD_CSS_CDN.includes("jsdelivr.net"));
+assert.ok(DEFAULT_PELECARD_CSS_CDN.includes("clinic-v4.css"));
 
 process.env.PELECARD_CSS_URL = "https://cdn.example/x.css?v=1";
 assert.equal(resolvePelecardCssUrl("https://ofirbaby.vercel.app"), "https://cdn.example/x.css");

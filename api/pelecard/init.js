@@ -115,7 +115,8 @@ export default async function handler(req, res) {
       bookingRef,
       totalAgorot: session.totalAgorot,
       amount: amountShekels,
-      cssUrl: session.cssUrl || `${origin}/payment/clinic-v4.css`,
+      cssUrl: session.cssUrl || "",
+      logoUrl: session.logoUrl || "",
       successPath: `/payment/success?ref=${encodeURIComponent(bookingRef)}`,
       failurePath: `/payment/failure?ref=${encodeURIComponent(bookingRef)}`,
     });

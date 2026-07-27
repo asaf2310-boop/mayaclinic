@@ -1,5 +1,12 @@
 const DEFAULT_GATEWAY = "https://gateway20.pelecard.biz";
 
+/** Hosted on jsDelivr so Pelecard can fetch CssURL even if Vercel origins are blocked. */
+export const DEFAULT_PELECARD_CSS_CDN =
+  "https://cdn.jsdelivr.net/gh/asaf2310-boop/mayaclinic@main/public/payment/clinic-v4.css";
+
+export const DEFAULT_PELECARD_LOGO_CDN =
+  "https://cdn.jsdelivr.net/gh/asaf2310-boop/mayaclinic@main/public/maya-hero.png";
+
 export function getPelecardConfig() {
   const terminal = String(process.env.PELECARD_TERMINAL || "").trim();
   const user = String(process.env.PELECARD_USER || "").trim();
@@ -12,7 +19,9 @@ export function getPelecardConfig() {
   const minPayments = Math.max(1, Number(process.env.PELECARD_MIN_PAYMENTS) || 1);
   // Path-versioned static CSS (no ?query — Pelecard often rejects CssURL with params).
   const cssPath = String(process.env.PELECARD_CSS_PATH || "/payment/clinic-v4.css").trim();
-  const logoPath = String(process.env.PELECARD_LOGO_PATH || "").trim();
+  const logoPath = String(
+    process.env.PELECARD_LOGO_PATH || process.env.PELECARD_LOGO_URL || DEFAULT_PELECARD_LOGO_CDN
+  ).trim();
 
   return {
     terminal,
@@ -113,13 +122,13 @@ export async function initPelecardPayment({
   const resolvedCssUrl = String(
     cssUrl ||
       resolvePelecardCssUrl(publicOrigin) ||
-      absolutePublicUrl(publicOrigin, config.cssPath) ||
-      ""
+      DEFAULT_PELECARD_CSS_CDN
   )
     .trim()
     // Strip accidental cache-bust query — Pelecard CssURL is unreliable with ?params.
     .split("?")[0];
-  const resolvedLogoUrl = absolutePublicUrl(publicOrigin, logoUrl || config.logoPath);
+  const resolvedLogoUrl =
+    absolutePublicUrl(publicOrigin, logoUrl || config.logoPath) || DEFAULT_PELECARD_LOGO_CDN;
 
   const payload = {
     terminal: config.terminal,
@@ -151,20 +160,17 @@ export async function initPelecardPayment({
     ParamX: String(paramX || "").slice(0, 120),
     ShowXParam: "False",
     AddHolderNameToXParam: "False",
-    ...(resolvedCssUrl ? { CssURL: resolvedCssUrl } : {}),
+    // Always send CssURL (WooCommerce does the same). Prefer CDN-hosted clinic CSS.
+    CssURL: resolvedCssUrl || DEFAULT_PELECARD_CSS_CDN,
+    LogoURL: resolvedLogoUrl,
     ShowConfirmationCheckbox: "False",
-    HiddenPelecardLogo: "True",
+    HiddenPelecardLogo: "False",
     HiddenPciLogo: "True",
     HiddenSslSeal: "True",
     AccessibilityMode: "True",
     TakeIshurPopUp: "False",
+    SetFocus: "CC",
   };
-
-  // Prefer clinic logo when provided; otherwise keep Pelecard logo hidden.
-  if (resolvedLogoUrl) {
-    payload.LogoURL = resolvedLogoUrl;
-    payload.HiddenPelecardLogo = "False";
-  }
 
   if (serverSideGoodFeedbackUrl) {
     payload.ServerSideGoodFeedbackURL = serverSideGoodFeedbackUrl;
@@ -192,7 +198,8 @@ export async function initPelecardPayment({
     confirmationKey: result.ConfirmationKey || "",
     error: result.Error || null,
     totalAgorot: Number(total),
-    cssUrl: resolvedCssUrl,
+    cssUrl: resolvedCssUrl || DEFAULT_PELECARD_CSS_CDN,
+    logoUrl: resolvedLogoUrl || "",
   };
 }
 
@@ -281,11 +288,13 @@ export function resolvePelecardCssUrl(origin) {
   const explicit = String(process.env.PELECARD_CSS_URL || "").trim().split("?")[0];
   if (explicit) return explicit.replace(/\/$/, "");
 
+  // Prefer jsDelivr CDN: Pelecard servers sometimes fail to fetch CssURL from Vercel.
+  const cdn = String(process.env.PELECARD_CSS_CDN || DEFAULT_PELECARD_CSS_CDN).trim().split("?")[0];
+  if (cdn) return cdn.replace(/\/$/, "");
+
   const config = getPelecardConfig();
   const base = String(origin || "").replace(/\/$/, "");
-  if (!base) return "";
-  // Prefer static path-versioned CSS (public/payment/clinic-v4.css).
-  // Fallback API theme serves the same full stylesheet.
+  if (!base) return DEFAULT_PELECARD_CSS_CDN;
   const path = config.cssPath || "/payment/clinic-v4.css";
-  return absolutePublicUrl(base, path);
+  return absolutePublicUrl(base, path) || DEFAULT_PELECARD_CSS_CDN;
 }

@@ -81,6 +81,9 @@ export default function PaymentStep({ formData, treatment, onBack }) {
         if (cancelled) return;
         setBookingRef(session.bookingRef || ref);
         setIframeUrl(session.url || "");
+        if (typeof console !== "undefined" && session?.cssUrl) {
+          console.info("[pelecard] CssURL", session.cssUrl, "LogoURL", session.logoUrl || "");
+        }
       } catch (error) {
         if (cancelled) return;
         setInitError(error?.message || "לא ניתן לפתוח את דף הסליקה");
