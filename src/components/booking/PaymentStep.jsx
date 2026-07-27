@@ -21,6 +21,13 @@ import { getClinicTenantId } from "@/lib/tenant";
 const VISA_LOGO = "/payment/visa-logo.svg";
 const MASTERCARD_LOGO = "/payment/mastercard-logo.svg";
 
+/** Pelecard he-3 form needs ~890px on mobile; keep a stable tall frame (no inner scroll / layout jump). */
+const PELECARD_IFRAME_HEIGHT_CLASS = "h-[max(920px,calc(100dvh-8.5rem))]";
+const PELECARD_IFRAME_STYLE = {
+  overflow: "hidden",
+  display: "block",
+};
+
 export default function PaymentStep({ formData, treatment, onBack }) {
   const appointments = formData.appointments || [];
   const unitPrice = treatment?.price ?? 250;
@@ -178,28 +185,33 @@ export default function PaymentStep({ formData, treatment, onBack }) {
         </>
       )}
 
-      <div className="relative mb-8 text-center">
-        <div
-          className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl ${
-            clinicSite
-              ? "border border-[#D5E0D8] bg-[#F0F4F1]/90 shadow-[0_8px_24px_rgba(93,127,109,0.1)]"
-              : "bg-primary/10"
-          }`}
-        >
-          <CreditCard className={`h-8 w-8 ${clinicSite ? clinicTextPrimary : "text-primary"}`} />
-        </div>
+      <div className={`relative text-center ${showCheckout ? "mb-4" : "mb-8"}`}>
+        {!showCheckout && (
+          <div
+            className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl ${
+              clinicSite
+                ? "border border-[#D5E0D8] bg-[#F0F4F1]/90 shadow-[0_8px_24px_rgba(93,127,109,0.1)]"
+                : "bg-primary/10"
+            }`}
+          >
+            <CreditCard className={`h-8 w-8 ${clinicSite ? clinicTextPrimary : "text-primary"}`} />
+          </div>
+        )}
         <h2
-          className={`mb-2 text-2xl font-bold tracking-tight ${
-            clinicSite ? clinicTextHeading : "text-foreground"
-          }`}
+          className={`font-bold tracking-tight ${
+            showCheckout ? "mb-0 text-lg" : "mb-2 text-2xl"
+          } ${clinicSite ? clinicTextHeading : "text-foreground"}`}
         >
-          תשלום על התור
+          {showCheckout ? "השלמת תשלום מאובטח" : "תשלום על התור"}
         </h2>
-        <p className={clinicSite ? clinicTextMuted : "text-muted-foreground"}>
-          לפני אישור התור, יש לשלם את עלות הטיפול בכרטיס אשראי
-        </p>
+        {!showCheckout && (
+          <p className={clinicSite ? clinicTextMuted : "text-muted-foreground"}>
+            לפני אישור התור, יש לשלם את עלות הטיפול בכרטיס אשראי
+          </p>
+        )}
       </div>
 
+      {!showCheckout && (
       <div
         className={`relative mb-6 space-y-2 rounded-2xl p-5 text-sm ${
           clinicSite
@@ -252,6 +264,22 @@ export default function PaymentStep({ formData, treatment, onBack }) {
           </span>
         </div>
       </div>
+      )}
+
+      {showCheckout && (
+        <div
+          className={`relative mb-3 flex items-center justify-between rounded-2xl px-4 py-3 text-sm ${
+            clinicSite
+              ? "border border-[#D5E0D8]/90 bg-[#F7FAF8]/80 text-[#2F3B34]"
+              : "bg-muted/50"
+          }`}
+        >
+          <span className={clinicSite ? clinicTextMuted : "text-muted-foreground"}>
+            {treatment?.name}
+          </span>
+          <span className={`font-bold ${clinicSite ? clinicTextPrimary : ""}`}>₪{totalPrice}</span>
+        </div>
+      )}
 
       {!showCheckout ? (
         <div className="mb-6">
@@ -301,10 +329,10 @@ export default function PaymentStep({ formData, treatment, onBack }) {
           )}
         </div>
       ) : (
-        <div className="mb-6">
+        <div className="mb-4">
           {isInitLoading || paymentDone ? (
             <div
-              className={`flex min-h-[320px] flex-col items-center justify-center gap-3 rounded-2xl border p-6 text-center ${
+              className={`flex ${PELECARD_IFRAME_HEIGHT_CLASS} flex-col items-center justify-center gap-3 overflow-hidden rounded-2xl border p-6 text-center ${
                 clinicSite
                   ? "border-[#D5E0D8] bg-gradient-to-b from-[#F3F7F4]/90 to-[#EAF1EC]/80"
                   : "border-border bg-muted/30"
@@ -328,7 +356,7 @@ export default function PaymentStep({ formData, treatment, onBack }) {
               }`}
             >
               <div
-                className={`flex items-center justify-center gap-2.5 border-b px-4 py-3 text-xs font-semibold ${
+                className={`flex items-center justify-center gap-2.5 border-b px-4 py-2.5 text-xs font-semibold ${
                   clinicSite
                     ? "border-[#D5E0D8] bg-[#F0F4F1]/95 text-[#5D7F6D]"
                     : "border-border bg-muted text-muted-foreground"
@@ -343,9 +371,11 @@ export default function PaymentStep({ formData, treatment, onBack }) {
               <iframe
                 title="סליקת אשראי Pelecard"
                 src={iframeUrl}
-                className={`h-[580px] w-full border-0 ${
+                scrolling="no"
+                className={`w-full border-0 ${PELECARD_IFRAME_HEIGHT_CLASS} ${
                   clinicSite ? "bg-[#F3F7F4]" : "bg-background"
                 }`}
+                style={PELECARD_IFRAME_STYLE}
                 allow="payment *"
               />
             </div>

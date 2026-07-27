@@ -177,6 +177,7 @@ export async function initPelecardPayment({
     AccessibilityMode: "True",
     TakeIshurPopUp: "False",
     SetFocus: "CC",
+    DisableZoom: "True",
     CaptionSet: {
       cs_submit: "לתשלום",
       cs_header_payment: "תשלום מאובטח",
