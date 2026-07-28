@@ -25,7 +25,7 @@ body {
     font-family: Arial, sans-serif;
     font-size: 14px;
     color: #333;
-    background: #fff;
+    background: #F3F7F4;
     margin: 0;
     padding: 0;
     direction: rtl;
@@ -1063,7 +1063,14 @@ p.block_ui_cancel_gama {
 html, body {
   font-family: Heebo, "Segoe UI", Tahoma, Arial, sans-serif !important;
   color: #2F3B34 !important;
-  background: #F7F8F6 !important;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(168, 196, 180, 0.35), transparent 42%),
+    radial-gradient(circle at 88% 78%, rgba(93, 127, 109, 0.16), transparent 40%),
+    linear-gradient(180deg, #F3F7F4 0%, #EAF1EC 55%, #F7F8F6 100%) !important;
+}
+
+.body-content {
+  background: transparent !important;
 }
 
 .container {
@@ -1073,10 +1080,10 @@ html, body {
 }
 
 .main {
-  background: #FFFFFF !important;
-  border: 1px solid #E8ECE8 !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  border: 1px solid #D5E0D8 !important;
   border-radius: 20px !important;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.05) !important;
+  box-shadow: 0 12px 36px rgba(93, 127, 109, 0.12) !important;
   overflow: hidden !important;
 }
 
@@ -1200,6 +1207,6 @@ export default async function handler(req, res) {
   res.setHeader("Cache-Control", "public, max-age=60, must-revalidate");
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
-  res.setHeader("X-Clinic-Theme", "v4");
+  res.setHeader("X-Clinic-Theme", "v4-whitelisted");
   res.status(200).send(req.method === "HEAD" ? "" : CLINIC_PELECARD_CSS);
 }

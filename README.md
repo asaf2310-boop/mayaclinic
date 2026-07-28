@@ -72,12 +72,12 @@ PELECARD_PASSWORD=...
 PELECARD_GATEWAY_BASE=https://gateway20.pelecard.biz
 PELECARD_MAX_PAYMENTS=1
 PELECARD_MIN_PAYMENTS=1
-PELECARD_CSS_CDN=https://gateway20.pelecard.biz/Content/Css/variant-he-3.css
+PELECARD_CSS_CDN=https://ofirbaby.vercel.app/payment/clinic-v4.css
 PELECARD_PUBLIC_ORIGIN=https://ofirbaby.vercel.app
 PELECARD_TOP_TEXT=אופיר - מרכז טיפול הוליסטי
 ```
 
-**חשוב:** טרמינל Pelecard הנוכחי מתעלם מ־`CssURL` חיצוני (Vercel/jsDelivr) וטוען תמיד את ברירת המחדל הכתומה (`variant-he-1`) אלא אם שולחים ערכת CSS **של Pelecard עצמם**. לכן ברירת המחדל היא `variant-he-3` (כפתור כחול מודרני). לעיצוב מותאם אישית מלא צריך לפנות לתמיכת Pelecard להפעלת CSS מותאם בטרמינל.
+עיצוב ה־iframe משתמש ב־`CssURL` המותאם של הקליניקה (`https://ofirbaby.vercel.app/payment/clinic-v4.css`) — הכתובת ב־whitelist אצל Pelecard. הכפתור ירוק־מרווה `#5D7F6D` ורקע טיפולי רך. **חובה להתחיל תשלום חדש** אחרי עדכון עיצוב.
 
 ### משוב לצד שרת + דפי הצלחה/כישלון
 
