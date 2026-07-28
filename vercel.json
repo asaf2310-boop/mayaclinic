@@ -1,10 +1,28 @@
 {
-  "buildCommand": "node scripts/patch-vercel-demo-hosts.mjs && node scripts/generate-demo-landing-pages.mjs && npm run build",
+  "buildCommand": "node scripts/patch-vercel-demo-hosts.mjs && node scripts/generate-demo-landing-pages.mjs && npm run build && node scripts/ensure-apple-pay-well-known.mjs",
   "outputDirectory": "dist",
   "crons": [
     {
       "path": "/api/send-reminders",
       "schedule": "0 6 * * *"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/.well-known/apple-developer-merchantid-domain-association.txt",
+      "headers": [
+        { "key": "Content-Type", "value": "text/plain; charset=utf-8" },
+        { "key": "Content-Disposition", "value": "inline" },
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/.well-known/apple-developer-merchantid-domain-association",
+      "headers": [
+        { "key": "Content-Type", "value": "text/plain; charset=utf-8" },
+        { "key": "Content-Disposition", "value": "inline" },
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+      ]
     }
   ],
   "routes": [
@@ -38,6 +56,14 @@
     },
     {
       "handle": "filesystem"
+    },
+    {
+      "src": "/\\.well-known/apple-developer-merchantid-domain-association\\.txt",
+      "dest": "/.well-known/apple-developer-merchantid-domain-association.txt"
+    },
+    {
+      "src": "/\\.well-known/apple-developer-merchantid-domain-association",
+      "dest": "/.well-known/apple-developer-merchantid-domain-association"
     },
     {
       "src": "/(.*)",
