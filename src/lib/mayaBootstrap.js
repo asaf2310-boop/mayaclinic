@@ -219,21 +219,21 @@ export async function ensureClinicSeedData(base44) {
       return { restoredTreatments, restoredAvailability, coreOk: true, seedErrors };
     }
 
-    const existingDates = new Set(availabilityList.map((row) => row.date));
-
-    for (let offset = 1; offset <= DEFAULT_AVAILABILITY_DAYS; offset += 1) {
-      const date = formatDate(addDays(new Date(), offset));
-      if (existingDates.has(date)) continue;
-
-      try {
-        await base44.entities.Availability.create(availabilityPayload(site, date));
-        restoredAvailability += 1;
-      } catch (error) {
-        seedErrors.push({
-          step: "create_availability",
-          date,
-          message: String(error?.message || error),
-        });
+    // Only seed defaults on a truly empty clinic calendar.
+    // Never recreate individual days the admin deleted — that made deletes "come back".
+    if (availabilityList.length === 0) {
+      for (let offset = 1; offset <= DEFAULT_AVAILABILITY_DAYS; offset += 1) {
+        const date = formatDate(addDays(new Date(), offset));
+        try {
+          await base44.entities.Availability.create(availabilityPayload(site, date));
+          restoredAvailability += 1;
+        } catch (error) {
+          seedErrors.push({
+            step: "create_availability",
+            date,
+            message: String(error?.message || error),
+          });
+        }
       }
     }
   }

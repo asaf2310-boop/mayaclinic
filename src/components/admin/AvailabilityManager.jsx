@@ -164,13 +164,25 @@ export default function AvailabilityManager() {
   };
 
   const handleDelete = async () => {
-    if (!selectedRecord?.id) return;
+    if (!selectedRecord?.id || !selectedDate) return;
     setSaving(true);
     try {
-      await base44.entities.Availability.delete(selectedRecord.id);
+      // Soft-clear the day (keep the row) so bootstrap / unique constraints
+      // cannot recreate default slots for a day the admin intentionally removed.
+      await base44.entities.Availability.update(selectedRecord.id, {
+        date: selectedDate,
+        slots: [],
+        is_active: false,
+      });
       await queryClient.invalidateQueries({ queryKey: ["availability"] });
-      setSelectedDate(null);
-      toast({ title: "התאריך נמחק" });
+      setEditSlots([]);
+      toast({ title: "התאריך נוקה", description: "היום יישאר ללא שעות פנויות גם אחרי רענון." });
+    } catch (error) {
+      toast({
+        title: "מחיקה נכשלה",
+        description: error?.message || "לא הצלחנו לנקות את היום",
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
