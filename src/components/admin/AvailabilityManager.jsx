@@ -35,7 +35,13 @@ export default function AvailabilityManager() {
   const [saving, setSaving] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
 
-  const { data: availabilityRecords = [], isLoading } = useQuery({
+  const {
+    data: availabilityRecords = [],
+    isLoading,
+    isError,
+    error: availabilityError,
+    refetch,
+  } = useQuery({
     queryKey: ["availability"],
     queryFn: () => base44.entities.Availability.list(),
   });
@@ -191,6 +197,20 @@ export default function AvailabilityManager() {
 
   if (isLoading) {
     return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
+  }
+
+  if (isError) {
+    return (
+      <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-8 text-center" dir="rtl">
+        <p className="mb-2 font-semibold text-red-800">לא הצלחנו לטעון את הזמינות</p>
+        <p className="mb-4 text-sm text-red-700">
+          {availabilityError?.message || "שגיאת טעינה מהשרת. ייתכן שהנתונים עדיין במסד הנתונים."}
+        </p>
+        <Button type="button" variant="outline" onClick={() => refetch()}>
+          נסה שוב
+        </Button>
+      </div>
+    );
   }
 
   return (

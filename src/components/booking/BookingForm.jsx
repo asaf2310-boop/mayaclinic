@@ -41,7 +41,10 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
     marketing_consent: false,
   });
 
-  const { data: availabilityRecords = [] } = useQuery({
+  const {
+    data: availabilityRecords = [],
+    isError: availabilityLoadError,
+  } = useQuery({
     queryKey: ["availability"],
     queryFn: () => base44.entities.Availability.list(),
   });
@@ -205,6 +208,11 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
 
       <div className="space-y-2">
         <Label className={labelClass}>בחרו תאריך *</Label>
+        {availabilityLoadError ? (
+          <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            לא הצלחנו לטעון תורים פנויים כרגע. רעננו את העמוד או נסו שוב בעוד רגע.
+          </p>
+        ) : null}
         <BookingCalendar
           viewMonth={viewMonth}
           onViewMonthChange={setViewMonth}
