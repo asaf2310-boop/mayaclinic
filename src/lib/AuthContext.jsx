@@ -38,8 +38,19 @@ export const AuthProvider = ({ children }) => {
         const response = await fetch('/api/admin?action=session');
         const data = await response.json().catch(() => ({}));
         setIsAuthenticated(Boolean(data?.ok));
+        setUser(
+          data?.ok
+            ? {
+                id: data.email || 'admin',
+                email: data.email || null,
+                role: 'admin',
+                full_name: data.email || 'מנהל',
+              }
+            : null
+        );
       } catch {
         setIsAuthenticated(false);
+        setUser(null);
       }
       setIsLoadingPublicSettings(false);
       setIsLoadingAuth(false);
@@ -145,6 +156,15 @@ export const AuthProvider = ({ children }) => {
   const logout = (shouldRedirect = true) => {
     setUser(null);
     setIsAuthenticated(false);
+
+    if (useSupabaseBackend()) {
+      void fetch('/api/admin?action=session', { method: 'DELETE' }).finally(() => {
+        if (shouldRedirect) {
+          window.location.href = '/admin';
+        }
+      });
+      return;
+    }
     
     if (shouldRedirect) {
       // Use the SDK's logout method which handles token cleanup and redirect

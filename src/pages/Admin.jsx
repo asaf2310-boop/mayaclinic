@@ -9,8 +9,10 @@ import RevenueReport from "../components/admin/RevenueReport";
 import CustomerManagement from "../components/admin/CustomerManagement";
 import TreatmentManagement from "../components/admin/TreatmentManagement";
 import { Card } from "@/components/ui/card";
-import { BarChart3, CalendarCheck, CalendarDays, CheckCircle2, Clock, Settings2, Sparkles, Users } from "lucide-react";
+import { BarChart3, CalendarCheck, CalendarDays, CheckCircle2, Clock, LogOut, Settings2, Sparkles, Users } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/AuthContext";
 import {
   filterAppointmentsForClinic,
   filterTreatmentsForClinic,
@@ -26,6 +28,7 @@ import {
 
 export default function Admin() {
   const clinicSite = getClinicSite();
+  const { logout, user } = useAuth();
   const [activeAdminTab, setActiveAdminTab] = useState("appointments");
   const [statusFilter, setStatusFilter] = useState("all");
   const queryClient = useQueryClient();
@@ -116,9 +119,27 @@ export default function Admin() {
       <Navbar />
       <main className="relative pt-24 pb-16 px-6" dir="rtl">
         <div className="relative max-w-6xl mx-auto">
-          <h1 className={`mb-8 text-3xl font-bold ${clinicSite ? clinicTextHeading : "text-foreground"}`}>
-            ניהול
-          </h1>
+          <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h1 className={`text-3xl font-bold ${clinicSite ? clinicTextHeading : "text-foreground"}`}>
+                ניהול
+              </h1>
+              {user?.email ? (
+                <p className="mt-1 text-sm text-muted-foreground" dir="ltr">
+                  {user.email}
+                </p>
+              ) : null}
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="gap-2"
+              onClick={() => logout(true)}
+            >
+              <LogOut className="h-4 w-4" />
+              התנתקות
+            </Button>
+          </div>
 
           <Tabs value={activeAdminTab} onValueChange={setActiveAdminTab} dir="rtl">
             <div
