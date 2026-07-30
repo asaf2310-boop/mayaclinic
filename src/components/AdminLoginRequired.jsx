@@ -105,6 +105,16 @@ export default function AdminLoginRequired() {
 
         {error ? <p className="mb-4 text-sm text-red-600">{error}</p> : null}
 
+        {!authOptions.passwordConfigured && !authOptions.googleConfigured ? (
+          <p className="mb-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            כניסת אדמין ממתינה להגדרה ב־Vercel: הוסיפו את המשתנה
+            {" "}
+            <span dir="ltr" className="font-mono">ADMIN_ACCESS_PASSWORD</span>
+            {" "}
+            ואז Redeploy. האתר הציבורי וקביעת התורים ממשיכים לעבוד כרגיל.
+          </p>
+        ) : null}
+
         {authOptions.passwordConfigured ? (
           <form onSubmit={onSubmit} className="space-y-4 text-right">
             <Input
