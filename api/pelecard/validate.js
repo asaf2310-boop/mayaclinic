@@ -1,4 +1,5 @@
 import { getPelecardConfig, validatePelecardPayment } from "../../server/pelecard.js";
+import { verifyPaymentSessionToken } from "../../server/paymentSessionToken.js";
 
 function readBody(req) {
   if (!req.body) return {};
@@ -26,6 +27,15 @@ export default async function handler(req, res) {
 
   try {
     const body = readBody(req);
+    const bookingRef = String(body.bookingRef || body.uniqueKey || body.userKey || "").trim();
+    const sessionToken = String(body.token || body.sessionToken || "").trim();
+
+    // Prevent unauthenticated probing of ValidateByUniqueKey.
+    if (!bookingRef || !verifyPaymentSessionToken(bookingRef, sessionToken)) {
+      res.status(403).json({ valid: false, error: "invalid session token" });
+      return;
+    }
+
     const confirmationKey = String(body.confirmationKey || "").trim();
     const uniqueKey = String(
       body.uniqueKey || body.userKey || body.pelecardTransactionId || body.bookingRef || ""
@@ -50,7 +60,7 @@ export default async function handler(req, res) {
 
     res.status(200).json({
       valid,
-      bookingRef: String(body.bookingRef || uniqueKey || ""),
+      bookingRef,
       totalAgorot,
       pelecardTransactionId: String(
         body.pelecardTransactionId || body.PelecardTransactionId || ""

@@ -30,7 +30,7 @@ create index if not exists idx_patient_profiles_customer_key on patient_profiles
 alter table patient_profiles enable row level security;
 
 drop policy if exists "anon_all_patient_profiles" on patient_profiles;
-create policy "anon_all_patient_profiles" on patient_profiles for all using (true) with check (true);
+-- No open anon policy — use /api/admin + service role.
 
 create table if not exists weekly_schedule (
   id uuid primary key default gen_random_uuid(),
@@ -45,7 +45,7 @@ create index if not exists idx_weekly_schedule_day on weekly_schedule(day_of_wee
 alter table weekly_schedule enable row level security;
 
 drop policy if exists "anon_all_weekly_schedule" on weekly_schedule;
-create policy "anon_all_weekly_schedule" on weekly_schedule for all using (true) with check (true);
+-- No open anon policy — use /api/admin + service role.
 
 insert into weekly_schedule (day_of_week, slots, is_active)
 select d, '{}', false

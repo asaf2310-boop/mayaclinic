@@ -1,13 +1,17 @@
-import { supabaseRequest } from "../server/supabaseServer.js";
-import { resolveClinicTenantFromHost } from "../server/clinicTenant.js";
 import {
   clearAdminSessionCookie,
   getAdminAuthOptions,
   getAdminSession,
   hasAdminSession,
+  isAdminPasswordConfigured,
   isAdminPasswordValid,
   setAdminSessionCookie,
 } from "../server/adminSession.js";
+import {
+  clearAdminLoginFailures,
+  getAdminLoginThrottle,
+  recordAdminLoginFailure,
+} from "../server/adminRateLimit.js";
 import {
   buildGoogleAuthUrl,
   exchangeGoogleCode,
@@ -16,6 +20,8 @@ import {
   isGoogleAdminAuthConfigured,
   verifyOAuthState,
 } from "../server/googleAdminAuth.js";
+import { resolveClinicTenantFromHost } from "../server/clinicTenant.js";
+import { supabaseRequest } from "../server/supabaseServer.js";
 
 const TENANT_ENTITIES = new Set([
   "appointments",
@@ -297,12 +303,30 @@ export default async function handler(req, res) {
   }
 
   if (req.method === "POST" && action === "login") {
+    const throttle = getAdminLoginThrottle(req);
+    if (!throttle.allowed) {
+      res.status(429).json({
+        error: "יותר מדי ניסיונות כושלים. נסו שוב מאוחר יותר.",
+        retryAfterSec: throttle.retryAfterSec,
+      });
+      return;
+    }
+
+    if (!isAdminPasswordConfigured()) {
+      res.status(503).json({
+        error: "כניסת סיסמה לא מוגדרת. יש להגדיר ADMIN_ACCESS_PASSWORD ב-Vercel.",
+      });
+      return;
+    }
+
     const body = readBody(req);
     if (!isAdminPasswordValid(body.password)) {
+      recordAdminLoginFailure(req);
       clearAdminSessionCookie(res);
       res.status(401).json({ error: "סיסמת אדמין שגויה" });
       return;
     }
+    clearAdminLoginFailures(req);
     setAdminSessionCookie(res, { method: "password" });
     res.status(200).json({ ok: true });
     return;
