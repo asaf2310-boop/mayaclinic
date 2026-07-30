@@ -96,8 +96,8 @@ export default async function handler(req, res) {
 
     if (entity === "availability") {
       const rows = await safeQuery(
-        `availability?tenant_id=eq.${encodeURIComponent(tenantId)}&select=${SAFE_SELECT.availability}&order=date.asc&limit=1000`,
-        `availability?select=${LEGACY_SELECT.availability}&order=date.asc&limit=1000`
+        `availability?tenant_id=eq.${encodeURIComponent(tenantId)}&select=${SAFE_SELECT.availability}&order=date.asc&limit=2000`,
+        `availability?select=${LEGACY_SELECT.availability}&order=date.asc&limit=2000`
       );
       res.status(200).json(rows);
       return;

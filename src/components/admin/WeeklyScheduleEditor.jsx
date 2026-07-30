@@ -120,6 +120,12 @@ export default function WeeklyScheduleEditor({ availabilityRecords = [] }) {
 
       await queryClient.invalidateQueries({ queryKey: ["weekly-schedule"] });
       toast({ title: "לוז שבועי נשמר" });
+    } catch (error) {
+      toast({
+        title: "שמירת לוז שבועי נכשלה",
+        description: error?.message || "נסו שוב",
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
@@ -158,6 +164,12 @@ export default function WeeklyScheduleEditor({ availabilityRecords = [] }) {
       toast({
         title: "לוז שבועי הוחל",
         description: `${toUpsert.length} ימים עודכנו ל-${applyDays} הימים הבאים.`,
+      });
+    } catch (error) {
+      toast({
+        title: "החלת לוז שבועי נכשלה",
+        description: error?.message || "נסו שוב",
+        variant: "destructive",
       });
     } finally {
       setApplying(false);

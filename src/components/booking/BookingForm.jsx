@@ -46,12 +46,12 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
     isError: availabilityLoadError,
   } = useQuery({
     queryKey: ["availability"],
-    queryFn: () => base44.entities.Availability.list(),
+    queryFn: () => base44.entities.Availability.listAll("date"),
   });
 
   const { data: allAppointments = [] } = useQuery({
     queryKey: ["appointments-for-booking"],
-    queryFn: () => base44.entities.Appointment.list(),
+    queryFn: () => base44.entities.Appointment.list("date", 1000),
   });
 
   const { data: existingAppointments = [], isFetching: isFetchingAppointments } = useQuery({

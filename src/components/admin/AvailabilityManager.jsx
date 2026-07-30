@@ -43,7 +43,7 @@ export default function AvailabilityManager() {
     refetch,
   } = useQuery({
     queryKey: ["availability"],
-    queryFn: () => base44.entities.Availability.list(),
+    queryFn: () => base44.entities.Availability.listAll("date"),
   });
 
   const clinicAvailabilityRecords = useMemo(
@@ -93,6 +93,12 @@ export default function AvailabilityManager() {
       clearAvailabilityClearedMark();
       await queryClient.invalidateQueries({ queryKey: ["availability"] });
       toast({ title: `נשמר ל-${selectedDate}` });
+    } catch (error) {
+      toast({
+        title: "השמירה נכשלה",
+        description: error?.message || "לא הצלחנו לשמור את הזמינות",
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
@@ -145,6 +151,12 @@ export default function AvailabilityManager() {
       toast({
         title: `הוחל על ${targetDates.length} ${selectedWeekdayShort ? `ימי ${selectedWeekdayShort}` : "תאריכים"}`,
         description: `אותן ${slots.length} שעות נשמרו לכל ימי ${selectedWeekdayShort || "השבוע"} הקרובים (עד ${APPLY_WEEKDAY_HORIZON_WEEKS} שבועות קדימה): ${slots.join(", ")}`,
+      });
+    } catch (error) {
+      toast({
+        title: "החלה על ימים נכשלה",
+        description: error?.message || "חלק מהתאריכים לא נשמרו",
+        variant: "destructive",
       });
     } finally {
       setSaving(false);

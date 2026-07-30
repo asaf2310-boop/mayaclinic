@@ -272,7 +272,19 @@ function createSupabasePublicEntity(tableName) {
     },
 
     async listAll(order = "date", pageSize = 200) {
-      return this.list(order, pageSize, 0);
+      const rows = [];
+      let offset = 0;
+
+      while (true) {
+        const page = await this.list(order, pageSize, offset);
+        if (!Array.isArray(page) || page.length === 0) break;
+        rows.push(...page);
+        if (page.length < pageSize) break;
+        offset += pageSize;
+        if (offset > 5000) break;
+      }
+
+      return rows;
     },
 
     async create(row) {
