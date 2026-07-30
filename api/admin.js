@@ -143,18 +143,84 @@ async function listEntity(entity, query = {}, tenantId) {
   );
 }
 
+async function findTenantRow(entity, tenantId, filters = {}) {
+  const parts = [`tenant_id=eq.${encodeURIComponent(tenantId)}`];
+  for (const [key, value] of Object.entries(filters)) {
+    if (value === undefined || value === null || value === "") continue;
+    parts.push(`${key}=eq.${encodeURIComponent(value)}`);
+  }
+  const rows =
+    (await supabaseRequest(`${entity}?${parts.join("&")}&select=*&limit=1`)) || [];
+  return Array.isArray(rows) ? rows[0] || null : null;
+}
+
 async function createEntity(entity, row, tenantId) {
   const payload = { ...(row || {}) };
   if (TENANT_ENTITIES.has(entity)) {
     payload.tenant_id = tenantId;
   }
 
-  const created = await supabaseRequest(entity, {
-    method: "POST",
-    headers: { Prefer: "return=representation" },
-    body: JSON.stringify(payload),
-  });
-  return Array.isArray(created) ? created[0] : created;
+  // Availability/weekly unique keys make "create" fail when UI missed an existing row
+  // (e.g. truncated lists). Upsert by natural key so Save always persists.
+  if (entity === "availability" && payload.date) {
+    const existing = await findTenantRow("availability", tenantId, { date: payload.date });
+    if (existing?.id) {
+      return updateEntity(entity, existing.id, payload, tenantId);
+    }
+  }
+
+  if (entity === "weekly_schedule" && payload.day_of_week !== undefined && payload.day_of_week !== null) {
+    const existing = await findTenantRow("weekly_schedule", tenantId, {
+      day_of_week: payload.day_of_week,
+    });
+    if (existing?.id) {
+      return updateEntity(entity, existing.id, payload, tenantId);
+    }
+  }
+
+  try {
+    const created = await supabaseRequest(entity, {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(payload),
+    });
+    return Array.isArray(created) ? created[0] : created;
+  } catch (error) {
+    const message = String(error?.message || "");
+    if (!message.includes("23505")) throw error;
+
+    if (entity === "availability" && payload.date) {
+      const existing = await findTenantRow("availability", tenantId, { date: payload.date });
+      if (existing?.id) return updateEntity(entity, existing.id, payload, tenantId);
+
+      // Legacy unique index is (date, location_id) without tenant — recover same-location row.
+      const locationId = payload.location_id || "pardes_hanna";
+      const legacyRows =
+        (await supabaseRequest(
+          `availability?date=eq.${encodeURIComponent(payload.date)}&location_id=eq.${encodeURIComponent(
+            locationId
+          )}&select=*&limit=5`
+        )) || [];
+      const ownLegacy = (Array.isArray(legacyRows) ? legacyRows : []).find(
+        (row) => String(row?.tenant_id || "") === tenantId || !row?.tenant_id
+      );
+      if (ownLegacy?.id) {
+        return updateEntity(
+          entity,
+          ownLegacy.id,
+          { ...payload, tenant_id: tenantId },
+          tenantId
+        );
+      }
+    }
+    if (entity === "weekly_schedule" && payload.day_of_week !== undefined) {
+      const existing = await findTenantRow("weekly_schedule", tenantId, {
+        day_of_week: payload.day_of_week,
+      });
+      if (existing?.id) return updateEntity(entity, existing.id, payload, tenantId);
+    }
+    throw error;
+  }
 }
 
 async function updateEntity(entity, id, row, tenantId) {
