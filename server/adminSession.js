@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { getAllowedAdminEmails, isGoogleAdminAuthConfigured } from "./googleAdminAuth.js";
 
 const ADMIN_COOKIE = "admin_session";
 
@@ -7,6 +8,7 @@ function getSecret() {
   if (explicit) return explicit;
 
   const fallback = [
+    process.env.GOOGLE_CLIENT_SECRET,
     process.env.ADMIN_ACCESS_PASSWORD,
     process.env.PELECARD_PASSWORD,
     process.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -39,6 +41,15 @@ function parseCookies(req) {
   );
 }
 
+export function isAdminPasswordConfigured() {
+  return [
+    process.env.ADMIN_ACCESS_PASSWORD,
+    process.env.ADMIN_ACCESS_PASSWORD_2,
+  ]
+    .map((part) => String(part || "").trim())
+    .some(Boolean);
+}
+
 export function isAdminPasswordValid(password) {
   const candidates = [
     process.env.ADMIN_ACCESS_PASSWORD,
@@ -49,36 +60,54 @@ export function isAdminPasswordValid(password) {
   return candidates.includes(String(password || "").trim());
 }
 
-function createCookieValue() {
+function createCookieValue({ email = null, method = "password" } = {}) {
   const payload = JSON.stringify({
     exp: Math.floor(Date.now() / 1000) + 60 * 60 * 12,
+    email: email ? String(email).trim().toLowerCase() : null,
+    method,
   });
   const encoded = Buffer.from(payload).toString("base64url");
   return `${encoded}.${sign(encoded)}`;
 }
 
-export function hasAdminSession(req) {
+export function getAdminSession(req) {
   const value = parseCookies(req)[ADMIN_COOKIE];
-  if (!value || !value.includes(".")) return false;
+  if (!value || !value.includes(".")) return null;
 
   const [encoded, signature] = value.split(".", 2);
   const expected = sign(encoded);
   const a = Buffer.from(signature);
   const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
-  if (!crypto.timingSafeEqual(a, b)) return false;
+  if (a.length !== b.length) return null;
+  if (!crypto.timingSafeEqual(a, b)) return null;
 
   try {
     const payload = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8"));
-    return Number(payload?.exp || 0) > Math.floor(Date.now() / 1000);
+    if (Number(payload?.exp || 0) <= Math.floor(Date.now() / 1000)) return null;
+    return {
+      email: payload?.email ? String(payload.email).toLowerCase() : null,
+      method: payload?.method || "password",
+    };
   } catch {
-    return false;
+    return null;
   }
 }
 
-export function setAdminSessionCookie(res) {
+export function hasAdminSession(req) {
+  return Boolean(getAdminSession(req));
+}
+
+export function getAdminAuthOptions() {
+  return {
+    googleConfigured: isGoogleAdminAuthConfigured(),
+    passwordConfigured: isAdminPasswordConfigured(),
+    allowedEmails: getAllowedAdminEmails(),
+  };
+}
+
+export function setAdminSessionCookie(res, { email = null, method = "password" } = {}) {
   const cookie = [
-    `${ADMIN_COOKIE}=${createCookieValue()}`,
+    `${ADMIN_COOKIE}=${createCookieValue({ email, method })}`,
     "Path=/",
     "HttpOnly",
     "SameSite=Lax",

@@ -54,6 +54,30 @@ VITE_CLINIC_TENANT_ID=maya
 
 אחרי הוספת משתנים: **Redeploy** (Build לא קורא env חדש בלי פריסה מחדש).
 
+## כניסת אדמין עם Gmail (Google OAuth)
+
+`/admin` מוגן. ההתחברות המומלצת היא עם חשבון Gmail מורשה (אתם / מאיה).
+
+ב־Google Cloud Console צרו **OAuth 2.0 Client ID** (Web application) והוסיפו:
+
+**Authorized redirect URI:**
+
+```text
+https://ofirbaby.vercel.app/api/admin-google-callback
+```
+
+ב־Vercel הגדירו:
+
+```env
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+ADMIN_EMAILS=ofirbabyinfo@gmail.com,asaf2310@gmail.com,maya@gmail.com
+ADMIN_SESSION_SECRET=long_random_secret
+PUBLIC_ORIGIN=https://ofirbaby.vercel.app
+```
+
+רק המיילים ב־`ADMIN_EMAILS` יוכלו להיכנס. סיסמה משותפת (`ADMIN_ACCESS_PASSWORD`) היא גיבוי אופציונלי בלבד.
+
 ## סליקת אשראי — Pelecard (ManualIframe)
 
 בשלב התשלום בקביעת תור מוצג iframe של Pelecard (`PaymentGW/init` לפי [מדריך ManualIframe](https://gateway20.pelecard.biz/ManualIframe)).

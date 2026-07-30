@@ -1,10 +1,17 @@
 import { supabaseRequest } from "../server/supabaseServer.js";
 import {
   clearAdminSessionCookie,
+  getAdminAuthOptions,
+  getAdminSession,
   hasAdminSession,
   isAdminPasswordValid,
   setAdminSessionCookie,
 } from "../server/adminSession.js";
+import {
+  buildGoogleAuthUrl,
+  getPublicOrigin,
+  isGoogleAdminAuthConfigured,
+} from "../server/googleAdminAuth.js";
 
 function readBody(req) {
   if (!req.body) return {};
@@ -16,6 +23,12 @@ function readBody(req) {
     }
   }
   return req.body;
+}
+
+function redirect(res, location) {
+  res.statusCode = 302;
+  res.setHeader("Location", location);
+  res.end();
 }
 
 async function listEntity(entity, query = {}) {
@@ -78,7 +91,33 @@ export default async function handler(req, res) {
   const action = String(req.query?.action || "").trim().toLowerCase();
 
   if (req.method === "GET" && action === "session") {
-    res.status(200).json({ ok: hasAdminSession(req) });
+    const session = getAdminSession(req);
+    res.status(200).json({
+      ok: Boolean(session),
+      email: session?.email || null,
+      method: session?.method || null,
+      ...getAdminAuthOptions(),
+    });
+    return;
+  }
+
+  if (req.method === "GET" && action === "google-start") {
+    const origin = getPublicOrigin(req);
+    if (!isGoogleAdminAuthConfigured()) {
+      redirect(
+        res,
+        `${origin}/admin?admin_error=${encodeURIComponent("התחברות Google עדיין לא הוגדרה בשרת")}`
+      );
+      return;
+    }
+    try {
+      redirect(res, buildGoogleAuthUrl(req));
+    } catch (error) {
+      redirect(
+        res,
+        `${origin}/admin?admin_error=${encodeURIComponent(error?.message || "לא ניתן להתחיל התחברות Google")}`
+      );
+    }
     return;
   }
 
@@ -89,7 +128,7 @@ export default async function handler(req, res) {
       res.status(401).json({ error: "סיסמת אדמין שגויה" });
       return;
     }
-    setAdminSessionCookie(res);
+    setAdminSessionCookie(res, { method: "password" });
     res.status(200).json({ ok: true });
     return;
   }
