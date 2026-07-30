@@ -334,7 +334,7 @@ values
   ('holistic', 'four_hands_60', 'עיסוי 4 ידיים', 'עיסוי משולב עם שני המטפלים', 60, 620, '🤲'),
   ('holistic', 'couples_70', 'עיסוי זוגי', 'עיסוי זוגי — 70 דקות', 70, 800, '💑'),
   ('holistic', 'couples_90', 'עיסוי זוגי', 'עיסוי זוגי — 90 דקות', 90, 1000, '💑')
-on conflict (tenant_id, external_id) where (external_id is not null) do nothing;
+on conflict do nothing;
 
 -- Seed holistic availability if missing
 insert into availability (tenant_id, date, slots, is_active)
