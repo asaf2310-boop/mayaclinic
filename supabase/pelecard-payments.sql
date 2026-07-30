@@ -24,17 +24,12 @@ create index if not exists idx_pelecard_payments_created_at on pelecard_payments
 
 alter table pelecard_payments enable row level security;
 
--- Public booking app may read its own session by booking_ref via anon key.
--- Writes happen from server (service role / anon with policies below).
+-- IMPORTANT SECURITY NOTE:
+-- Do NOT expose this table to anon/authenticated browser clients.
+-- booking_payload contains patient_name / phone / email / notes.
+-- The booking app now reads session status through /api/pelecard/session
+-- using a signed token verified on the server, so no direct RLS policy is needed here.
+-- Supabase service-role requests bypass RLS and continue to work for server code.
 drop policy if exists "pelecard_payments_select" on pelecard_payments;
 drop policy if exists "pelecard_payments_insert" on pelecard_payments;
 drop policy if exists "pelecard_payments_update" on pelecard_payments;
-
-create policy "pelecard_payments_select" on pelecard_payments
-  for select using (true);
-
-create policy "pelecard_payments_insert" on pelecard_payments
-  for insert with check (true);
-
-create policy "pelecard_payments_update" on pelecard_payments
-  for update using (true) with check (true);

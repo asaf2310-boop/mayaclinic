@@ -1,5 +1,5 @@
 import { cleanEnvValue, supabaseAnonKey, supabaseConfigured, supabaseUrl } from "./supabase";
-import { CLINIC_TENANT_HEADER, getClinicTenantId } from "@/lib/tenant";
+import { getClinicTenantId } from "@/lib/tenant";
 import {
   firstRepresentationRow,
   missingColumnFromPostgrestError,
@@ -197,11 +197,72 @@ const ENTITY_TABLES = {
   WeeklySchedule: "weekly_schedule",
 };
 
+const PUBLIC_SERVER_TABLES = new Set(["treatments", "appointments", "availability"]);
+
+async function fetchPublicEntity(tableName, filters = {}, order = "", limit = 100, offset = 0) {
+  const params = new URLSearchParams({
+    entity: tableName,
+    limit: String(limit),
+    offset: String(offset),
+  });
+  if (filters?.date) {
+    params.set("date", String(filters.date));
+  }
+  if (order) {
+    params.set("order", String(order));
+  }
+
+  const response = await fetch(`/api/public-data?${params.toString()}`);
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data?.error || "Failed to load public clinic data");
+  }
+  return Array.isArray(data) ? data : [];
+}
+
+function createSupabasePublicEntity(tableName) {
+  return {
+    async filter(filters = {}) {
+      if (!PUBLIC_SERVER_TABLES.has(tableName)) {
+        throw new Error(`${tableName} filter is disabled in Supabase browser mode`);
+      }
+      return fetchPublicEntity(tableName, filters);
+    },
+
+    async list(order = "-created_at", limit = 100, offset = 0) {
+      if (!PUBLIC_SERVER_TABLES.has(tableName)) {
+        throw new Error(`${tableName} list is disabled in Supabase browser mode`);
+      }
+      return fetchPublicEntity(tableName, {}, order, limit, offset);
+    },
+
+    async listAll(order = "date", pageSize = 200) {
+      return this.list(order, pageSize, 0);
+    },
+
+    async create() {
+      throw new Error("Direct browser writes are disabled in Supabase mode");
+    },
+
+    async bulkCreate() {
+      throw new Error("Direct browser writes are disabled in Supabase mode");
+    },
+
+    async update() {
+      throw new Error("Admin writes are disabled until secure server auth is added");
+    },
+
+    async delete() {
+      throw new Error("Admin deletes are disabled until secure server auth is added");
+    },
+  };
+}
+
 export function createSupabaseDataClient() {
   const entities = {};
 
   for (const [name, tableName] of Object.entries(ENTITY_TABLES)) {
-    entities[name] = createEntity(tableName);
+    entities[name] = createSupabasePublicEntity(tableName);
   }
 
   return {

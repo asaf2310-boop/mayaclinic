@@ -9,6 +9,7 @@ import {
   isBookingPayloadValid,
   normalizeBookingPayload,
 } from "../../server/pelecardPayments.js";
+import { createPaymentSessionToken } from "../../server/paymentSessionToken.js";
 
 const CLINIC_PAYMENT_TOP =
   process.env.PELECARD_TOP_TEXT || "אופיר - מרכז טיפול הוליסטי";
@@ -68,9 +69,10 @@ export default async function handler(req, res) {
       return;
     }
 
+    const sessionToken = createPaymentSessionToken(bookingRef);
     // Browser lands here (FeedbackOnTop) → redirects to SPA success/failure.
-    const goodUrl = `${origin}/api/pelecard/return?outcome=good&ref=${encodeURIComponent(bookingRef)}`;
-    const errorUrl = `${origin}/api/pelecard/return?outcome=error&ref=${encodeURIComponent(bookingRef)}`;
+    const goodUrl = `${origin}/api/pelecard/return?outcome=good&ref=${encodeURIComponent(bookingRef)}&token=${encodeURIComponent(sessionToken)}`;
+    const errorUrl = `${origin}/api/pelecard/return?outcome=error&ref=${encodeURIComponent(bookingRef)}&token=${encodeURIComponent(sessionToken)}`;
     // Pelecard server notifies our backend (authoritative).
     const serverSideGoodFeedbackUrl = `${origin}/api/pelecard/feedback?outcome=good&ref=${encodeURIComponent(bookingRef)}`;
     const serverSideErrorFeedbackUrl = `${origin}/api/pelecard/feedback?outcome=error&ref=${encodeURIComponent(bookingRef)}`;
@@ -113,12 +115,13 @@ export default async function handler(req, res) {
       url: session.url,
       confirmationKey: session.confirmationKey,
       bookingRef,
+      sessionToken,
       totalAgorot: session.totalAgorot,
       amount: amountShekels,
       cssUrl: session.cssUrl || "",
       logoUrl: session.logoUrl || "",
-      successPath: `/payment/success?ref=${encodeURIComponent(bookingRef)}`,
-      failurePath: `/payment/failure?ref=${encodeURIComponent(bookingRef)}`,
+      successPath: `/payment/success?ref=${encodeURIComponent(bookingRef)}&token=${encodeURIComponent(sessionToken)}`,
+      failurePath: `/payment/failure?ref=${encodeURIComponent(bookingRef)}&token=${encodeURIComponent(sessionToken)}`,
     });
   } catch (error) {
     const status = error?.status && Number.isInteger(error.status) ? error.status : 500;

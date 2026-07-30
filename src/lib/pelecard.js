@@ -1,4 +1,5 @@
 export const PELECARD_MESSAGE_SOURCE = "pelecard-return";
+const PELECARD_SESSION_TOKEN_KEY = "pelecard-session-token";
 
 export function createBookingRef() {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -31,6 +32,9 @@ export async function initPelecardSession({ amount, bookingRef, treatmentName, b
     error.data = data;
     throw error;
   }
+  if (typeof sessionStorage !== "undefined" && data?.bookingRef && data?.sessionToken) {
+    sessionStorage.setItem(`${PELECARD_SESSION_TOKEN_KEY}:${data.bookingRef}`, data.sessionToken);
+  }
   return data;
 }
 
@@ -51,8 +55,16 @@ export async function validatePelecardSession(payload) {
   return data;
 }
 
-export async function fetchPelecardSession(bookingRef) {
-  const response = await fetch(`/api/pelecard/session?ref=${encodeURIComponent(bookingRef)}`);
+export function getStoredPelecardSessionToken(bookingRef) {
+  if (typeof sessionStorage === "undefined") return "";
+  return sessionStorage.getItem(`${PELECARD_SESSION_TOKEN_KEY}:${bookingRef}`) || "";
+}
+
+export async function fetchPelecardSession(bookingRef, sessionToken = "") {
+  const token = String(sessionToken || getStoredPelecardSessionToken(bookingRef) || "").trim();
+  const response = await fetch(
+    `/api/pelecard/session?ref=${encodeURIComponent(bookingRef)}&token=${encodeURIComponent(token)}`
+  );
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     const error = new Error(data.error || "Failed to load payment session");

@@ -30,11 +30,12 @@ export default async function handler(req, res) {
   const statusCode = String(params.PelecardStatusCode || "").trim();
   const isSuccess = outcome === "good" && (!statusCode || statusCode === "000");
   const bookingRef = String(params.ref || params.ParamX || params.UserKey || "").trim();
+  const sessionToken = String(params.token || "").trim();
   const origin = resolvePublicOrigin(req);
 
   const redirectPath = isSuccess
-    ? `/payment/success?ref=${encodeURIComponent(bookingRef)}`
-    : `/payment/failure?ref=${encodeURIComponent(bookingRef)}&code=${encodeURIComponent(statusCode || "error")}`;
+    ? `/payment/success?ref=${encodeURIComponent(bookingRef)}&token=${encodeURIComponent(sessionToken)}`
+    : `/payment/failure?ref=${encodeURIComponent(bookingRef)}&token=${encodeURIComponent(sessionToken)}&code=${encodeURIComponent(statusCode || "error")}`;
   const redirectUrl = origin ? `${origin}${redirectPath}` : redirectPath;
 
   const payload = {
@@ -42,6 +43,7 @@ export default async function handler(req, res) {
     ok: isSuccess,
     outcome: isSuccess ? "good" : "error",
     bookingRef,
+    sessionToken,
     redirectUrl,
     pelecardStatusCode: statusCode,
     pelecardTransactionId: String(params.PelecardTransactionId || ""),

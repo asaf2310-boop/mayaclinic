@@ -150,7 +150,19 @@ as $$
 $$;
 
 -- ---------------------------------------------------------------------------
--- RLS — replace open anon policies with tenant isolation
+-- RLS — SECURITY HARDENING
+-- ---------------------------------------------------------------------------
+-- The old browser-driven tenant isolation used request_clinic_tenant_id() sourced
+-- from X-Clinic-Tenant-Id. That header is caller-controlled in a public browser app,
+-- so it must NOT be trusted for admin or patient data access.
+--
+-- Current app hardening routes public reads through server endpoints using the
+-- service-role key, and disables browser-side admin writes until proper auth/JWT
+-- claims are added. Therefore, leave tenant tables closed to anon/authenticated
+-- browser roles by default.
+--
+-- If you later add authenticated Supabase JWT claims, create new policies based on
+-- auth.jwt() / auth.uid() rather than request headers.
 -- ---------------------------------------------------------------------------
 
 alter table clinic_tenants enable row level security;
@@ -165,31 +177,11 @@ drop policy if exists "tenant_treatments_insert" on treatments;
 drop policy if exists "tenant_treatments_update" on treatments;
 drop policy if exists "tenant_treatments_delete" on treatments;
 
-create policy "tenant_treatments_select" on treatments
-  for select using (tenant_id = public.request_clinic_tenant_id());
-create policy "tenant_treatments_insert" on treatments
-  for insert with check (tenant_id = public.request_clinic_tenant_id());
-create policy "tenant_treatments_update" on treatments
-  for update using (tenant_id = public.request_clinic_tenant_id())
-  with check (tenant_id = public.request_clinic_tenant_id());
-create policy "tenant_treatments_delete" on treatments
-  for delete using (tenant_id = public.request_clinic_tenant_id());
-
 drop policy if exists "anon_all_availability" on availability;
 drop policy if exists "tenant_availability_select" on availability;
 drop policy if exists "tenant_availability_insert" on availability;
 drop policy if exists "tenant_availability_update" on availability;
 drop policy if exists "tenant_availability_delete" on availability;
-
-create policy "tenant_availability_select" on availability
-  for select using (tenant_id = public.request_clinic_tenant_id());
-create policy "tenant_availability_insert" on availability
-  for insert with check (tenant_id = public.request_clinic_tenant_id());
-create policy "tenant_availability_update" on availability
-  for update using (tenant_id = public.request_clinic_tenant_id())
-  with check (tenant_id = public.request_clinic_tenant_id());
-create policy "tenant_availability_delete" on availability
-  for delete using (tenant_id = public.request_clinic_tenant_id());
 
 drop policy if exists "anon_all_appointments" on appointments;
 drop policy if exists "tenant_appointments_select" on appointments;
@@ -197,47 +189,17 @@ drop policy if exists "tenant_appointments_insert" on appointments;
 drop policy if exists "tenant_appointments_update" on appointments;
 drop policy if exists "tenant_appointments_delete" on appointments;
 
-create policy "tenant_appointments_select" on appointments
-  for select using (tenant_id = public.request_clinic_tenant_id());
-create policy "tenant_appointments_insert" on appointments
-  for insert with check (tenant_id = public.request_clinic_tenant_id());
-create policy "tenant_appointments_update" on appointments
-  for update using (tenant_id = public.request_clinic_tenant_id())
-  with check (tenant_id = public.request_clinic_tenant_id());
-create policy "tenant_appointments_delete" on appointments
-  for delete using (tenant_id = public.request_clinic_tenant_id());
-
 drop policy if exists "anon_all_patient_profiles" on patient_profiles;
 drop policy if exists "tenant_patient_profiles_select" on patient_profiles;
 drop policy if exists "tenant_patient_profiles_insert" on patient_profiles;
 drop policy if exists "tenant_patient_profiles_update" on patient_profiles;
 drop policy if exists "tenant_patient_profiles_delete" on patient_profiles;
 
-create policy "tenant_patient_profiles_select" on patient_profiles
-  for select using (tenant_id = public.request_clinic_tenant_id());
-create policy "tenant_patient_profiles_insert" on patient_profiles
-  for insert with check (tenant_id = public.request_clinic_tenant_id());
-create policy "tenant_patient_profiles_update" on patient_profiles
-  for update using (tenant_id = public.request_clinic_tenant_id())
-  with check (tenant_id = public.request_clinic_tenant_id());
-create policy "tenant_patient_profiles_delete" on patient_profiles
-  for delete using (tenant_id = public.request_clinic_tenant_id());
-
 drop policy if exists "anon_all_weekly_schedule" on weekly_schedule;
 drop policy if exists "tenant_weekly_schedule_select" on weekly_schedule;
 drop policy if exists "tenant_weekly_schedule_insert" on weekly_schedule;
 drop policy if exists "tenant_weekly_schedule_update" on weekly_schedule;
 drop policy if exists "tenant_weekly_schedule_delete" on weekly_schedule;
-
-create policy "tenant_weekly_schedule_select" on weekly_schedule
-  for select using (tenant_id = public.request_clinic_tenant_id());
-create policy "tenant_weekly_schedule_insert" on weekly_schedule
-  for insert with check (tenant_id = public.request_clinic_tenant_id());
-create policy "tenant_weekly_schedule_update" on weekly_schedule
-  for update using (tenant_id = public.request_clinic_tenant_id())
-  with check (tenant_id = public.request_clinic_tenant_id());
-create policy "tenant_weekly_schedule_delete" on weekly_schedule
-  for delete using (tenant_id = public.request_clinic_tenant_id());
 
 -- ---------------------------------------------------------------------------
 -- Appointment conflict prevention (tenant-scoped)

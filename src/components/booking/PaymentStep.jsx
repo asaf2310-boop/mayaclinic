@@ -132,10 +132,16 @@ export default function PaymentStep({ formData, treatment, onBack }) {
       }
 
       if (data.ok) {
-        navigate(`/payment/success?ref=${encodeURIComponent(ref || "")}`, { replace: true });
+        const redirect = data.sessionToken
+          ? `/payment/success?ref=${encodeURIComponent(ref || "")}&token=${encodeURIComponent(data.sessionToken)}`
+          : `/payment/success?ref=${encodeURIComponent(ref || "")}`;
+        navigate(redirect, { replace: true });
       } else {
+        const tokenQuery = data.sessionToken
+          ? `&token=${encodeURIComponent(data.sessionToken)}`
+          : "";
         navigate(
-          `/payment/failure?ref=${encodeURIComponent(ref || "")}&code=${encodeURIComponent(data.pelecardStatusCode || "error")}`,
+          `/payment/failure?ref=${encodeURIComponent(ref || "")}${tokenQuery}&code=${encodeURIComponent(data.pelecardStatusCode || "error")}`,
           { replace: true }
         );
       }

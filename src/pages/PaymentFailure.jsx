@@ -18,16 +18,17 @@ import {
 export default function PaymentFailure() {
   const [params] = useSearchParams();
   const bookingRef = String(params.get("ref") || "").trim();
+  const sessionToken = String(params.get("token") || "").trim();
   const code = String(params.get("code") || "").trim();
   const clinicSite = getClinicSite();
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    if (!bookingRef) return;
+    if (!bookingRef || !sessionToken) return;
     let cancelled = false;
     (async () => {
       try {
-        const session = await fetchPelecardSession(bookingRef);
+        const session = await fetchPelecardSession(bookingRef, sessionToken);
         if (cancelled) return;
         if (session?.errorMessage) setMessage(session.errorMessage);
       } catch {
@@ -37,7 +38,7 @@ export default function PaymentFailure() {
     return () => {
       cancelled = true;
     };
-  }, [bookingRef]);
+  }, [bookingRef, sessionToken]);
 
   return (
     <div

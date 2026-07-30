@@ -1,5 +1,6 @@
 import { getPaymentSessionByRef } from "../../server/pelecardPayments.js";
 import { supabaseRequest } from "../../server/supabaseServer.js";
+import { verifyPaymentSessionToken } from "../../server/paymentSessionToken.js";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
@@ -9,8 +10,14 @@ export default async function handler(req, res) {
 
   try {
     const bookingRef = String(req.query?.ref || "").trim();
-    if (!bookingRef) {
-      res.status(400).json({ error: "ref required" });
+    const sessionToken = String(req.query?.token || "").trim();
+    if (!bookingRef || !sessionToken) {
+      res.status(400).json({ error: "ref and token required" });
+      return;
+    }
+
+    if (!verifyPaymentSessionToken(bookingRef, sessionToken)) {
+      res.status(403).json({ error: "invalid session token" });
       return;
     }
 
@@ -26,7 +33,7 @@ export default async function handler(req, res) {
       const idList = ids.map((id) => encodeURIComponent(id)).join(",");
       appointments =
         (await supabaseRequest(
-          `appointments?id=in.(${idList})&select=id,patient_name,patient_email,patient_phone,treatment_name,treatment_price,date,time,status,paid,created_at`
+          `appointments?id=in.(${idList})&select=id,treatment_name,treatment_price,date,time,status,paid,created_at`
         )) || [];
     }
 

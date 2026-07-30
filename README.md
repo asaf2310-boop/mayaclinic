@@ -97,9 +97,11 @@ supabase/pelecard-payments.sql
 ב-Supabase SQL Editor, ודאו שרצו לפחות:
 
 1. `supabase/schema.sql`
-2. `supabase/multi-tenant.sql` (כולל `paybox_link` ו-`tenant_id`)
+2. `supabase/multi-tenant.sql` (הגרסה המעודכנת בלבד — סוגרת גישה ישירה מהדפדפן לטבלאות tenant)
 3. `supabase/treatments-paybox.sql` — רק אם ה-DB נוצר לפני שהעמודה נוספה ל-schema
-4. `supabase/pelecard-payments.sql` — לסליקת Pelecard (משוב שרת + דפי הצלחה/כישלון)
+4. `supabase/pelecard-payments.sql` — לסליקת Pelecard (משוב שרת + דפי הצלחה/כישלון, ללא anon select)
+
+> אם הרצתם בעבר גרסה ישנה של `multi-tenant.sql` / `pelecard-payments.sql`, הריצו שוב את הקבצים המעודכנים כדי להחליף policies פתוחים.
 
 ## Demo deployment
 

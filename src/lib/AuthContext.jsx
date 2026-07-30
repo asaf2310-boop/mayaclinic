@@ -24,7 +24,7 @@ export const AuthProvider = ({ children }) => {
     if (demoModeEnabled || useSupabaseBackend()) {
       setAuthError(null);
       setAppPublicSettings({ id: demoModeEnabled ? 'demo' : 'supabase', public_settings: {} });
-      setIsAuthenticated(true);
+      setIsAuthenticated(false);
       setIsLoadingPublicSettings(false);
       setIsLoadingAuth(false);
       setAuthChecked(true);

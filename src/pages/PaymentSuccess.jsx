@@ -20,6 +20,7 @@ const MAX_WAIT_MS = 45000;
 export default function PaymentSuccess() {
   const [params] = useSearchParams();
   const bookingRef = String(params.get("ref") || "").trim();
+  const sessionToken = String(params.get("token") || "").trim();
   const navigate = useNavigate();
   const clinicSite = getClinicSite();
   const [session, setSession] = useState(null);
@@ -27,8 +28,8 @@ export default function PaymentSuccess() {
   const [timedOut, setTimedOut] = useState(false);
 
   useEffect(() => {
-    if (!bookingRef) {
-      setError("חסר מזהה תשלום");
+    if (!bookingRef || !sessionToken) {
+      setError("קישור התשלום אינו תקין או שפג תוקפו");
       return;
     }
 
@@ -37,12 +38,15 @@ export default function PaymentSuccess() {
 
     async function poll() {
       try {
-        const data = await fetchPelecardSession(bookingRef);
+        const data = await fetchPelecardSession(bookingRef, sessionToken);
         if (cancelled) return;
         setSession(data);
 
         if (data.status === "failed") {
-          navigate(`/payment/failure?ref=${encodeURIComponent(bookingRef)}`, { replace: true });
+          navigate(
+            `/payment/failure?ref=${encodeURIComponent(bookingRef)}&token=${encodeURIComponent(sessionToken)}`,
+            { replace: true }
+          );
           return;
         }
 
@@ -68,7 +72,7 @@ export default function PaymentSuccess() {
     return () => {
       cancelled = true;
     };
-  }, [bookingRef, navigate]);
+  }, [bookingRef, navigate, sessionToken]);
 
   const appointment =
     session?.status === "paid"

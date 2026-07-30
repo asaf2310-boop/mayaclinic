@@ -14,6 +14,8 @@ import PaymentFailure from './pages/PaymentFailure';
 import DemoDocumentTitle from './components/DemoDocumentTitle';
 import ClinicBootstrap from './components/ClinicBootstrap';
 import AdminPwaManifest from './components/AdminPwaManifest';
+import ProtectedRoute from './components/ProtectedRoute';
+import AdminAccessRequired from './components/AdminAccessRequired';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -41,8 +43,10 @@ const AuthenticatedApp = () => {
       <Route path="/book" element={<Book />} />
       <Route path="/payment/success" element={<PaymentSuccess />} />
       <Route path="/payment/failure" element={<PaymentFailure />} />
-      <Route path="/admin" element={<Admin />} />
-      <Route path="/admin/patient/:patientKey" element={<AdminPatient />} />
+      <Route element={<ProtectedRoute unauthenticatedElement={<AdminAccessRequired />} />}>
+        <Route path="/admin" element={<Admin />} />
+        <Route path="/admin/patient/:patientKey" element={<AdminPatient />} />
+      </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
