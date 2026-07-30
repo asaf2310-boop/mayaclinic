@@ -35,7 +35,7 @@ export default function Admin() {
 
   const { data: appointments = [], isLoading } = useQuery({
     queryKey: ["appointments"],
-    queryFn: () => base44.entities.Appointment.list("date"),
+    queryFn: () => base44.entities.Appointment.list("date", 1000),
   });
 
   const { data: treatments = [] } = useQuery({
