@@ -1,4 +1,5 @@
 import { supabaseRequest } from "../server/supabaseServer.js";
+import { resolveClinicTenantFromHost } from "../server/clinicTenant.js";
 import {
   clearAdminSessionCookie,
   getAdminAuthOptions,
@@ -16,6 +17,14 @@ import {
   verifyOAuthState,
 } from "../server/googleAdminAuth.js";
 
+const TENANT_ENTITIES = new Set([
+  "appointments",
+  "treatments",
+  "availability",
+  "patient_profiles",
+  "weekly_schedule",
+]);
+
 function readBody(req) {
   if (!req.body) return {};
   if (typeof req.body === "string") {
@@ -32,6 +41,25 @@ function redirect(res, location) {
   res.statusCode = 302;
   res.setHeader("Location", location);
   res.end();
+}
+
+function requireTenant(req, res) {
+  const tenantId = resolveClinicTenantFromHost(req);
+  if (!tenantId) {
+    res.status(400).json({ error: "Unknown clinic tenant for this host" });
+    return null;
+  }
+  return tenantId;
+}
+
+function withTenantFilter(basePath, entity, tenantId, extra = "") {
+  const parts = [];
+  if (TENANT_ENTITIES.has(entity)) {
+    parts.push(`tenant_id=eq.${encodeURIComponent(tenantId)}`);
+  }
+  if (extra) parts.push(extra);
+  const query = parts.join("&");
+  return query ? `${basePath}?${query}` : basePath;
 }
 
 async function handleGoogleCallback(req, res) {
@@ -82,17 +110,20 @@ async function handleGoogleCallback(req, res) {
   }
 }
 
-async function listEntity(entity, query = {}) {
+async function listEntity(entity, query = {}, tenantId) {
   const order = String(query.order || "-created_at");
-  const limit = Math.max(1, Number(query.limit) || 100);
+  const limit = Math.max(1, Number(query.limit) || 500);
   const offset = Math.max(0, Number(query.offset) || 0);
   const desc = order.startsWith("-");
   const column = desc ? order.slice(1) : order;
+  const tenantClause = TENANT_ENTITIES.has(entity)
+    ? `tenant_id=eq.${encodeURIComponent(tenantId)}&`
+    : "";
 
   if (entity === "appointments" && query.date) {
     return (
       (await supabaseRequest(
-        `appointments?date=eq.${encodeURIComponent(query.date)}&select=*&order=time.asc&limit=${limit}&offset=${offset}`
+        `appointments?${tenantClause}date=eq.${encodeURIComponent(query.date)}&select=*&order=time.asc&limit=${limit}&offset=${offset}`
       )) || []
     );
   }
@@ -100,38 +131,59 @@ async function listEntity(entity, query = {}) {
   if (entity === "patient_profiles" && query.customer_key) {
     return (
       (await supabaseRequest(
-        `patient_profiles?customer_key=eq.${encodeURIComponent(query.customer_key)}&select=*&limit=5`
+        `patient_profiles?${tenantClause}customer_key=eq.${encodeURIComponent(query.customer_key)}&select=*&limit=5`
       )) || []
     );
   }
 
   return (
     (await supabaseRequest(
-      `${entity}?select=*&order=${column}.${desc ? "desc" : "asc"}&limit=${limit}&offset=${offset}`
+      `${entity}?${tenantClause}select=*&order=${column}.${desc ? "desc" : "asc"}&limit=${limit}&offset=${offset}`
     )) || []
   );
 }
 
-async function createEntity(entity, row) {
+async function createEntity(entity, row, tenantId) {
+  const payload = { ...(row || {}) };
+  if (TENANT_ENTITIES.has(entity)) {
+    payload.tenant_id = tenantId;
+  }
+
   const created = await supabaseRequest(entity, {
     method: "POST",
     headers: { Prefer: "return=representation" },
-    body: JSON.stringify(row || {}),
+    body: JSON.stringify(payload),
   });
   return Array.isArray(created) ? created[0] : created;
 }
 
-async function updateEntity(entity, id, row) {
-  const updated = await supabaseRequest(`${entity}?id=eq.${encodeURIComponent(id)}&select=*`, {
+async function updateEntity(entity, id, row, tenantId) {
+  const payload = { ...(row || {}) };
+  delete payload.tenant_id;
+  delete payload.id;
+
+  const path = withTenantFilter(
+    `${entity}`,
+    entity,
+    tenantId,
+    `id=eq.${encodeURIComponent(id)}&select=*`
+  );
+
+  const updated = await supabaseRequest(path, {
     method: "PATCH",
     headers: { Prefer: "return=representation" },
-    body: JSON.stringify(row || {}),
+    body: JSON.stringify(payload),
   });
-  return Array.isArray(updated) ? updated[0] : updated;
+  const rowOut = Array.isArray(updated) ? updated[0] : updated;
+  if (!rowOut) {
+    throw new Error("Record not found for this clinic tenant");
+  }
+  return rowOut;
 }
 
-async function deleteEntity(entity, id) {
-  await supabaseRequest(`${entity}?id=eq.${encodeURIComponent(id)}`, {
+async function deleteEntity(entity, id, tenantId) {
+  const path = withTenantFilter(entity, entity, tenantId, `id=eq.${encodeURIComponent(id)}`);
+  await supabaseRequest(path, {
     method: "DELETE",
     headers: { Prefer: "return=minimal" },
   });
@@ -147,6 +199,7 @@ export default async function handler(req, res) {
       ok: Boolean(session),
       email: session?.email || null,
       method: session?.method || null,
+      tenantId: resolveClinicTenantFromHost(req) || null,
       ...getAdminAuthOptions(),
     });
     return;
@@ -200,6 +253,9 @@ export default async function handler(req, res) {
     return;
   }
 
+  const tenantId = requireTenant(req, res);
+  if (!tenantId) return;
+
   try {
     const entity = String(req.query?.entity || "").trim();
     if (!entity) {
@@ -208,12 +264,12 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "GET" && (action === "list" || action === "filter")) {
-      res.status(200).json(await listEntity(entity, req.query || {}));
+      res.status(200).json(await listEntity(entity, req.query || {}, tenantId));
       return;
     }
 
     if (req.method === "POST" && action === "create") {
-      res.status(200).json(await createEntity(entity, readBody(req).row));
+      res.status(200).json(await createEntity(entity, readBody(req).row, tenantId));
       return;
     }
 
@@ -223,7 +279,7 @@ export default async function handler(req, res) {
         res.status(400).json({ error: "id required" });
         return;
       }
-      res.status(200).json(await updateEntity(entity, id, readBody(req).row));
+      res.status(200).json(await updateEntity(entity, id, readBody(req).row, tenantId));
       return;
     }
 
@@ -233,7 +289,7 @@ export default async function handler(req, res) {
         res.status(400).json({ error: "id required" });
         return;
       }
-      res.status(200).json(await deleteEntity(entity, id));
+      res.status(200).json(await deleteEntity(entity, id, tenantId));
       return;
     }
 

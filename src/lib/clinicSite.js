@@ -117,9 +117,14 @@ const HOLISTIC_TREATMENT_NAME_MARKERS = [
   "עיסוי זוגי",
 ];
 
+const HOLISTIC_NAME_HINT =
+  /הוליסט|איגנט|עומר שלגי|עיסוי תאילנד|4 ידיים|ארבע ידיים|עיסוי זוגי|four hands|thai massage/i;
+
 export function isHolisticTreatmentName(name) {
   const normalized = String(name || "").trim();
   if (!normalized) return false;
+
+  if (HOLISTIC_NAME_HINT.test(normalized)) return true;
 
   return HOLISTIC_TREATMENT_NAME_MARKERS.some(
     (marker) => normalized === marker || normalized.startsWith(marker)
@@ -193,28 +198,25 @@ export function filterByClinicTenant(rows = [], site = getClinicSite()) {
   if (!site) return rows;
 
   const tenantId = site.id;
-  const hasTenantColumn = rowsHaveTenantColumn(rows);
-  const hasAnyTenant = hasTenantColumn && rowsHaveAnyTenant(rows);
 
-  if (hasAnyTenant) {
-    return rows.filter((row) => {
-      const tenant = rowTenantId(row);
-      if (tenant) return tenant === tenantId;
-      if (isMayaTenant(site)) return rowBelongsToMaya(row, site);
-      if (isHolisticTenant(site)) return rowBelongsToHolistic(row);
+  return rows.filter((row) => {
+    const tenant = rowTenantId(row);
+    if (tenant && tenant !== tenantId) return false;
+
+    if (isMayaTenant(site)) {
+      if (tenant === "holistic") return false;
+      if (isHolisticTreatmentName(row?.treatment_name || row?.name)) return false;
       return true;
-    });
-  }
+    }
 
-  if (isMayaTenant(site)) {
-    return rows.filter((row) => rowBelongsToMaya(row, site));
-  }
+    if (isHolisticTenant(site)) {
+      if (tenant === "maya") return false;
+      if (tenant === "holistic") return true;
+      return isHolisticTreatmentName(row?.treatment_name || row?.name);
+    }
 
-  if (isHolisticTenant(site)) {
-    return rows.filter((row) => rowBelongsToHolistic(row));
-  }
-
-  return rows;
+    return tenant ? tenant === tenantId : true;
+  });
 }
 
 export function filterAppointmentsForClinic(appointments = [], site = getClinicSite()) {
@@ -225,20 +227,25 @@ export function filterAppointmentsForClinic(appointments = [], site = getClinicS
 
   return appointments.filter((appointment) => {
     const tenant = rowTenantId(appointment);
-    if (tenant) return tenant === tenantId;
-
     const treatmentName = String(appointment?.treatment_name || "").trim();
+
+    // Hard separation: never show the other clinic's tagged rows.
+    if (tenant && tenant !== tenantId) return false;
+
     if (isMayaTenant(site)) {
+      // Defense in depth for mis-tagged holistic rows still marked tenant=maya.
       if (isHolisticTreatmentName(treatmentName)) return false;
+      if (tenant === "maya") return true;
       if (allowedNames.size > 0) return allowedNames.has(treatmentName);
-      return true;
+      return !isHolisticTreatmentName(treatmentName);
     }
 
     if (isHolisticTenant(site)) {
+      if (tenant === "holistic") return true;
       return isHolisticTreatmentName(treatmentName);
     }
 
-    return true;
+    return tenant ? tenant === tenantId : true;
   });
 }
 
