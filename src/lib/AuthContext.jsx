@@ -21,10 +21,26 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const checkAppState = async () => {
-    if (demoModeEnabled || useSupabaseBackend()) {
+    if (demoModeEnabled) {
       setAuthError(null);
-      setAppPublicSettings({ id: demoModeEnabled ? 'demo' : 'supabase', public_settings: {} });
+      setAppPublicSettings({ id: 'demo', public_settings: {} });
       setIsAuthenticated(false);
+      setIsLoadingPublicSettings(false);
+      setIsLoadingAuth(false);
+      setAuthChecked(true);
+      return;
+    }
+
+    if (useSupabaseBackend()) {
+      setAuthError(null);
+      setAppPublicSettings({ id: 'supabase', public_settings: {} });
+      try {
+        const response = await fetch('/api/admin?action=session');
+        const data = await response.json().catch(() => ({}));
+        setIsAuthenticated(Boolean(data?.ok));
+      } catch {
+        setIsAuthenticated(false);
+      }
       setIsLoadingPublicSettings(false);
       setIsLoadingAuth(false);
       setAuthChecked(true);

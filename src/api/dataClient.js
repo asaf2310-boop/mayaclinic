@@ -220,18 +220,53 @@ async function fetchPublicEntity(tableName, filters = {}, order = "", limit = 10
   return Array.isArray(data) ? data : [];
 }
 
+async function requestAdminEntity(action, entity, { id = "", row, filters = {}, order = "", limit = 100, offset = 0 } = {}) {
+  const params = new URLSearchParams({
+    action,
+    entity,
+  });
+  if (id) params.set("id", id);
+  if (filters?.date) params.set("date", String(filters.date));
+  if (filters?.customer_key) params.set("customer_key", String(filters.customer_key));
+  if (order) params.set("order", String(order));
+  params.set("limit", String(limit));
+  params.set("offset", String(offset));
+
+  const response = await fetch(`/api/admin?${params.toString()}`, {
+    method:
+      action === "create" ? "POST" : action === "update" ? "PATCH" : action === "delete" ? "DELETE" : "GET",
+    headers: row ? { "Content-Type": "application/json" } : undefined,
+    body: row ? JSON.stringify({ row }) : undefined,
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(data?.error || "Admin request failed");
+    error.status = response.status;
+    throw error;
+  }
+  return data;
+}
+
 function createSupabasePublicEntity(tableName) {
   return {
     async filter(filters = {}) {
-      if (!PUBLIC_SERVER_TABLES.has(tableName)) {
-        throw new Error(`${tableName} filter is disabled in Supabase browser mode`);
+      try {
+        return await requestAdminEntity("filter", tableName, { filters });
+      } catch (error) {
+        if (!PUBLIC_SERVER_TABLES.has(tableName) || ![401, 403].includes(error.status)) {
+          throw error;
+        }
       }
       return fetchPublicEntity(tableName, filters);
     },
 
     async list(order = "-created_at", limit = 100, offset = 0) {
-      if (!PUBLIC_SERVER_TABLES.has(tableName)) {
-        throw new Error(`${tableName} list is disabled in Supabase browser mode`);
+      try {
+        return await requestAdminEntity("list", tableName, { order, limit, offset });
+      } catch (error) {
+        if (!PUBLIC_SERVER_TABLES.has(tableName) || ![401, 403].includes(error.status)) {
+          throw error;
+        }
       }
       return fetchPublicEntity(tableName, {}, order, limit, offset);
     },
@@ -240,20 +275,25 @@ function createSupabasePublicEntity(tableName) {
       return this.list(order, pageSize, 0);
     },
 
-    async create() {
-      throw new Error("Direct browser writes are disabled in Supabase mode");
+    async create(row) {
+      return requestAdminEntity("create", tableName, { row });
     },
 
-    async bulkCreate() {
-      throw new Error("Direct browser writes are disabled in Supabase mode");
+    async bulkCreate(rows) {
+      if (!rows?.length) return [];
+      const created = [];
+      for (const row of rows) {
+        created.push(await requestAdminEntity("create", tableName, { row }));
+      }
+      return created;
     },
 
-    async update() {
-      throw new Error("Admin writes are disabled until secure server auth is added");
+    async update(id, row) {
+      return requestAdminEntity("update", tableName, { id, row });
     },
 
-    async delete() {
-      throw new Error("Admin deletes are disabled until secure server auth is added");
+    async delete(id) {
+      return requestAdminEntity("delete", tableName, { id });
     },
   };
 }
