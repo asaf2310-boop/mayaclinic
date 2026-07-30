@@ -3,6 +3,10 @@ import { getAllowedAdminEmails, isGoogleAdminAuthConfigured } from "./googleAdmi
 
 const ADMIN_COOKIE = "admin_session";
 
+// Temporary clinic password until Google OAuth env is configured in Vercel.
+// Prefer ADMIN_ACCESS_PASSWORD / ADMIN_ACCESS_PASSWORD_2 in production env.
+const TEMP_ADMIN_PASSWORD = "06031976";
+
 function getSecret() {
   const explicit = String(process.env.ADMIN_SESSION_SECRET || "").trim();
   if (explicit) return explicit;
@@ -12,6 +16,7 @@ function getSecret() {
     process.env.ADMIN_ACCESS_PASSWORD,
     process.env.PELECARD_PASSWORD,
     process.env.SUPABASE_SERVICE_ROLE_KEY,
+    TEMP_ADMIN_PASSWORD,
   ]
     .map((part) => String(part || "").trim())
     .filter(Boolean)
@@ -41,23 +46,22 @@ function parseCookies(req) {
   );
 }
 
-export function isAdminPasswordConfigured() {
+function getAdminPasswordCandidates() {
   return [
     process.env.ADMIN_ACCESS_PASSWORD,
     process.env.ADMIN_ACCESS_PASSWORD_2,
-  ]
-    .map((part) => String(part || "").trim())
-    .some(Boolean);
-}
-
-export function isAdminPasswordValid(password) {
-  const candidates = [
-    process.env.ADMIN_ACCESS_PASSWORD,
-    process.env.ADMIN_ACCESS_PASSWORD_2,
+    TEMP_ADMIN_PASSWORD,
   ]
     .map((part) => String(part || "").trim())
     .filter(Boolean);
-  return candidates.includes(String(password || "").trim());
+}
+
+export function isAdminPasswordConfigured() {
+  return getAdminPasswordCandidates().length > 0;
+}
+
+export function isAdminPasswordValid(password) {
+  return getAdminPasswordCandidates().includes(String(password || "").trim());
 }
 
 function createCookieValue({ email = null, method = "password" } = {}) {

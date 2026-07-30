@@ -9,8 +9,11 @@ import {
 } from "../server/adminSession.js";
 import {
   buildGoogleAuthUrl,
+  exchangeGoogleCode,
   getPublicOrigin,
+  isAllowedAdminEmail,
   isGoogleAdminAuthConfigured,
+  verifyOAuthState,
 } from "../server/googleAdminAuth.js";
 
 function readBody(req) {
@@ -29,6 +32,54 @@ function redirect(res, location) {
   res.statusCode = 302;
   res.setHeader("Location", location);
   res.end();
+}
+
+async function handleGoogleCallback(req, res) {
+  const origin = getPublicOrigin(req);
+  const errorParam = String(req.query?.error || "").trim();
+  if (errorParam) {
+    clearAdminSessionCookie(res);
+    redirect(res, `${origin}/admin?admin_error=${encodeURIComponent("ההתחברות עם Google בוטלה")}`);
+    return;
+  }
+
+  const code = String(req.query?.code || "").trim();
+  const state = String(req.query?.state || "").trim();
+  if (!code || !verifyOAuthState(state)) {
+    clearAdminSessionCookie(res);
+    redirect(res, `${origin}/admin?admin_error=${encodeURIComponent("בקשת התחברות לא תקינה")}`);
+    return;
+  }
+
+  try {
+    const profile = await exchangeGoogleCode(req, code);
+    if (!profile.emailVerified) {
+      clearAdminSessionCookie(res);
+      redirect(
+        res,
+        `${origin}/admin?admin_error=${encodeURIComponent("יש לאמת את כתובת ה-Gmail לפני כניסה")}`
+      );
+      return;
+    }
+
+    if (!isAllowedAdminEmail(profile.email)) {
+      clearAdminSessionCookie(res);
+      redirect(
+        res,
+        `${origin}/admin?admin_error=${encodeURIComponent("החשבון לא מורשה לניהול הקליניקה")}`
+      );
+      return;
+    }
+
+    setAdminSessionCookie(res, { email: profile.email, method: "google" });
+    redirect(res, `${origin}/admin`);
+  } catch (error) {
+    clearAdminSessionCookie(res);
+    redirect(
+      res,
+      `${origin}/admin?admin_error=${encodeURIComponent(error?.message || "התחברות Google נכשלה")}`
+    );
+  }
 }
 
 async function listEntity(entity, query = {}) {
@@ -118,6 +169,11 @@ export default async function handler(req, res) {
         `${origin}/admin?admin_error=${encodeURIComponent(error?.message || "לא ניתן להתחיל התחברות Google")}`
       );
     }
+    return;
+  }
+
+  if (req.method === "GET" && action === "google-callback") {
+    await handleGoogleCallback(req, res);
     return;
   }
 

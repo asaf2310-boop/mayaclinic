@@ -33,8 +33,8 @@ export default function AdminLoginRequired() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [authOptions, setAuthOptions] = useState({
-    googleConfigured: true,
-    passwordConfigured: false,
+    googleConfigured: false,
+    passwordConfigured: true,
   });
   const [searchParams, setSearchParams] = useSearchParams();
   const { checkAppState } = useAuth();
@@ -47,13 +47,13 @@ export default function AdminLoginRequired() {
         const data = await response.json().catch(() => ({}));
         if (!cancelled) {
           setAuthOptions({
-            googleConfigured: data?.googleConfigured !== false,
-            passwordConfigured: Boolean(data?.passwordConfigured),
+            googleConfigured: Boolean(data?.googleConfigured),
+            passwordConfigured: data?.passwordConfigured !== false,
           });
         }
       } catch {
         if (!cancelled) {
-          setAuthOptions({ googleConfigured: true, passwordConfigured: false });
+          setAuthOptions({ googleConfigured: false, passwordConfigured: true });
         }
       }
     })();
@@ -101,28 +101,12 @@ export default function AdminLoginRequired() {
           <LockKeyhole className="h-8 w-8 text-slate-700" />
         </div>
         <h1 className="mb-3 text-2xl font-bold text-slate-900">כניסה לאזור הניהול</h1>
-        <p className="mb-6 text-slate-600">
-          התחברו עם חשבון Gmail מורשה (שלכם או של מאיה) כדי להיכנס ללוח הניהול.
-        </p>
+        <p className="mb-6 text-slate-600">הזינו סיסמת אדמין כדי להיכנס ללוח הניהול.</p>
 
         {error ? <p className="mb-4 text-sm text-red-600">{error}</p> : null}
 
-        {authOptions.googleConfigured ? (
-          <Button asChild className="w-full gap-2 bg-white text-slate-800 hover:bg-slate-50 border border-slate-200">
-            <a href="/api/admin?action=google-start">
-              <GoogleGlyph />
-              התחברות עם Gmail
-            </a>
-          </Button>
-        ) : (
-          <p className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            התחברות Gmail עדיין לא הוגדרה בשרת. הוסיפו `GOOGLE_CLIENT_ID` ו-`GOOGLE_CLIENT_SECRET` ב-Vercel.
-          </p>
-        )}
-
         {authOptions.passwordConfigured ? (
-          <form onSubmit={onSubmit} className="mt-6 space-y-4 border-t border-slate-100 pt-6 text-right">
-            <p className="text-sm text-slate-500">גיבוי: כניסה עם סיסמה</p>
+          <form onSubmit={onSubmit} className="space-y-4 text-right">
             <Input
               type="password"
               value={password}
@@ -132,9 +116,20 @@ export default function AdminLoginRequired() {
               dir="ltr"
             />
             <Button className="w-full" disabled={loading || !password.trim()} type="submit">
-              {loading ? "בודק..." : "כניסה עם סיסמה"}
+              {loading ? "בודק..." : "כניסה"}
             </Button>
           </form>
+        ) : null}
+
+        {authOptions.googleConfigured ? (
+          <div className="mt-6 border-t border-slate-100 pt-6">
+            <Button asChild className="w-full gap-2 border border-slate-200 bg-white text-slate-800 hover:bg-slate-50">
+              <a href="/api/admin?action=google-start">
+                <GoogleGlyph />
+                התחברות עם Gmail
+              </a>
+            </Button>
+          </div>
         ) : null}
 
         <div className="mt-4">

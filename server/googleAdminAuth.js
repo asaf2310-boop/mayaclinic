@@ -61,7 +61,8 @@ export function getPublicOrigin(req) {
 }
 
 export function getGoogleCallbackUrl(req) {
-  return `${getPublicOrigin(req)}/api/admin-google-callback`;
+  // Kept inside /api/admin to stay within Vercel Hobby's 12-function limit.
+  return `${getPublicOrigin(req)}/api/admin?action=google-callback`;
 }
 
 export function createOAuthState() {

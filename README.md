@@ -63,7 +63,7 @@ VITE_CLINIC_TENANT_ID=maya
 **Authorized redirect URI:**
 
 ```text
-https://ofirbaby.vercel.app/api/admin-google-callback
+https://ofirbaby.vercel.app/api/admin?action=google-callback
 ```
 
 ב־Vercel הגדירו:
