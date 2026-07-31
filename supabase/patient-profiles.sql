@@ -18,4 +18,4 @@ create index if not exists idx_patient_profiles_customer_key on patient_profiles
 alter table patient_profiles enable row level security;
 
 drop policy if exists "anon_all_patient_profiles" on patient_profiles;
-create policy "anon_all_patient_profiles" on patient_profiles for all using (true) with check (true);
+-- No open anon policy — use /api/admin + service role.

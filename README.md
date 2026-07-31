@@ -76,7 +76,18 @@ ADMIN_SESSION_SECRET=long_random_secret
 PUBLIC_ORIGIN=https://ofirbaby.vercel.app
 ```
 
-רק המיילים ב־`ADMIN_EMAILS` יוכלו להיכנס. סיסמה משותפת (`ADMIN_ACCESS_PASSWORD`) היא גיבוי אופציונלי בלבד.
+רק המיילים ב־`ADMIN_EMAILS` יוכלו להיכנס עם Google.
+לכניסת סיסמה חובה להגדיר `ADMIN_ACCESS_PASSWORD` ב־Vercel (אין סיסמת ברירת מחדל בקוד).
+
+## אבטחה (חובה בפרודקשן)
+
+הריצו ב־Supabase SQL Editor:
+
+```text
+supabase/security-lockdown-anon.sql
+```
+
+זה סוגר גישת anon לכל טבלאות הקליניקה. קריאה ציבורית נשארת רק דרך `/api/public-data`, וניהול רק דרך `/api/admin` עם session.
 
 ## סליקת אשראי — Pelecard (ManualIframe)
 

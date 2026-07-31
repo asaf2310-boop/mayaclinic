@@ -3,7 +3,11 @@
  * Usage: node scripts/qa-availability-persist.mjs
  */
 const BASE = process.env.QA_BASE_URL || "https://ofirbaby.vercel.app";
-const PASSWORD = process.env.ADMIN_ACCESS_PASSWORD || "06031976";
+const PASSWORD = String(process.env.ADMIN_ACCESS_PASSWORD || "").trim();
+if (!PASSWORD) {
+  console.error("Set ADMIN_ACCESS_PASSWORD env before running QA.");
+  process.exit(1);
+}
 
 function assert( cond, message) {
   if (!cond) throw new Error(message);

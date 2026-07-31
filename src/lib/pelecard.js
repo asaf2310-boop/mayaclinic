@@ -38,11 +38,16 @@ export async function initPelecardSession({ amount, bookingRef, treatmentName, b
   return data;
 }
 
-export async function validatePelecardSession(payload) {
+export async function validatePelecardSession(payload = {}) {
+  const bookingRef = String(payload.bookingRef || payload.uniqueKey || "").trim();
+  const token =
+    String(payload.token || payload.sessionToken || "").trim() ||
+    getStoredPelecardSessionToken(bookingRef);
+
   const response = await fetch("/api/pelecard/validate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ ...payload, bookingRef, token }),
   });
 
   const data = await response.json().catch(() => ({}));

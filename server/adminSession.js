@@ -1,11 +1,7 @@
 import crypto from "node:crypto";
-import { getAllowedAdminEmails, isGoogleAdminAuthConfigured } from "./googleAdminAuth.js";
+import { isGoogleAdminAuthConfigured } from "./googleAdminAuth.js";
 
 const ADMIN_COOKIE = "admin_session";
-
-// Temporary clinic password until Google OAuth env is configured in Vercel.
-// Prefer ADMIN_ACCESS_PASSWORD / ADMIN_ACCESS_PASSWORD_2 in production env.
-const TEMP_ADMIN_PASSWORD = "06031976";
 
 function getSecret() {
   const explicit = String(process.env.ADMIN_SESSION_SECRET || "").trim();
@@ -16,7 +12,6 @@ function getSecret() {
     process.env.ADMIN_ACCESS_PASSWORD,
     process.env.PELECARD_PASSWORD,
     process.env.SUPABASE_SERVICE_ROLE_KEY,
-    TEMP_ADMIN_PASSWORD,
   ]
     .map((part) => String(part || "").trim())
     .filter(Boolean)
@@ -47,13 +42,17 @@ function parseCookies(req) {
 }
 
 function getAdminPasswordCandidates() {
-  return [
-    process.env.ADMIN_ACCESS_PASSWORD,
-    process.env.ADMIN_ACCESS_PASSWORD_2,
-    TEMP_ADMIN_PASSWORD,
-  ]
+  // Never hardcode production passwords in the repo (repo may be public).
+  return [process.env.ADMIN_ACCESS_PASSWORD, process.env.ADMIN_ACCESS_PASSWORD_2]
     .map((part) => String(part || "").trim())
     .filter(Boolean);
+}
+
+function safeEqualString(a, b) {
+  const left = Buffer.from(String(a));
+  const right = Buffer.from(String(b));
+  if (left.length !== right.length) return false;
+  return crypto.timingSafeEqual(left, right);
 }
 
 export function isAdminPasswordConfigured() {
@@ -61,7 +60,9 @@ export function isAdminPasswordConfigured() {
 }
 
 export function isAdminPasswordValid(password) {
-  return getAdminPasswordCandidates().includes(String(password || "").trim());
+  const input = String(password || "").trim();
+  if (!input) return false;
+  return getAdminPasswordCandidates().some((candidate) => safeEqualString(candidate, input));
 }
 
 function createCookieValue({ email = null, method = "password" } = {}) {
@@ -102,10 +103,10 @@ export function hasAdminSession(req) {
 }
 
 export function getAdminAuthOptions() {
+  // Do not leak allowlisted emails to anonymous callers.
   return {
     googleConfigured: isGoogleAdminAuthConfigured(),
     passwordConfigured: isAdminPasswordConfigured(),
-    allowedEmails: getAllowedAdminEmails(),
   };
 }
 

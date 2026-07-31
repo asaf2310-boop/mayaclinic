@@ -57,15 +57,12 @@ alter table treatments enable row level security;
 alter table availability enable row level security;
 alter table appointments enable row level security;
 
--- Public booking app policy.
--- This matches the current no-login app behavior. Tighten this later when admin login is added.
+-- SECURITY: do NOT create open anon policies here.
+-- Browser clients must use /api/public-data and /api/admin (service role).
+-- Run supabase/security-lockdown-anon.sql on every environment.
 drop policy if exists "anon_all_treatments" on treatments;
 drop policy if exists "anon_all_availability" on availability;
 drop policy if exists "anon_all_appointments" on appointments;
-
-create policy "anon_all_treatments" on treatments for all using (true) with check (true);
-create policy "anon_all_availability" on availability for all using (true) with check (true);
-create policy "anon_all_appointments" on appointments for all using (true) with check (true);
 
 create or replace function prevent_close_appointments()
 returns trigger as $$
