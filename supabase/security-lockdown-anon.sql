@@ -1,11 +1,19 @@
 -- =============================================================================
--- CRITICAL: Run this NOW in Supabase SQL Editor (production project).
--- Closes ALL anon/authenticated browser access to clinic tables.
--- Public reads must go through /api/public-data (service role).
--- Admin writes must go through /api/admin (service role + session cookie).
+-- SAFE production lockdown — does NOT break the live website.
+--
+-- Why it's safe:
+-- - The site already reads via /api/public-data (server)
+-- - Admin already writes via /api/admin (server)
+-- - Payments already write pelecard_payments via server
+-- - Those server routes use SUPABASE_SERVICE_ROLE_KEY, which bypasses RLS
+--
+-- What visitors keep:
+-- - Booking calendar, treatments, payment iframe, emails, admin (with login)
+--
+-- What attackers lose:
+-- - Direct anon read/write to Supabase tables with the public anon key
 -- =============================================================================
 
--- Enable RLS on every clinic table
 alter table if exists public.treatments enable row level security;
 alter table if exists public.availability enable row level security;
 alter table if exists public.appointments enable row level security;
@@ -14,7 +22,7 @@ alter table if exists public.weekly_schedule enable row level security;
 alter table if exists public.pelecard_payments enable row level security;
 alter table if exists public.clinic_tenants enable row level security;
 
--- Drop every known open / legacy policy name
+-- Remove every policy on clinic tables (including open "anon_all_*")
 do $$
 declare
   r record;
@@ -37,13 +45,13 @@ begin
   end loop;
 end $$;
 
--- Optional: allow reading active clinic tenant directory only (no PII)
+-- Harmless public directory of clinic ids (no patient data)
 drop policy if exists "anon_read_clinic_tenants" on public.clinic_tenants;
 create policy "anon_read_clinic_tenants" on public.clinic_tenants
   for select
   using (is_active = true);
 
--- Stronger than RLS alone: remove table privileges from browser roles.
+-- Extra hardening (safe while SUPABASE_SERVICE_ROLE_KEY is set in Vercel — already required for payments)
 revoke all on table public.treatments from anon, authenticated;
 revoke all on table public.availability from anon, authenticated;
 revoke all on table public.appointments from anon, authenticated;
@@ -51,4 +59,8 @@ revoke all on table public.patient_profiles from anon, authenticated;
 revoke all on table public.weekly_schedule from anon, authenticated;
 revoke all on table public.pelecard_payments from anon, authenticated;
 
--- service_role continues to bypass RLS and retains access for server routes.
+-- Quick self-check after running:
+-- select tablename, policyname from pg_policies
+-- where schemaname='public'
+--   and tablename in ('treatments','availability','appointments','patient_profiles','weekly_schedule','pelecard_payments');
+-- Expect: no rows (or only none of the data tables above).
