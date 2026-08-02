@@ -261,7 +261,7 @@ export default function PaymentStep({
       });
     } catch (error) {
       setMeridianVerifyError(
-        error?.message || "מזהה הטיפול לא נמצא במייל. נסו שוב בעוד רגע."
+        error?.message || "לא ניתן לאשר את המזהה. בדקו את המספר ונסו שוב."
       );
     } finally {
       setIsMeridianVerifying(false);
@@ -328,7 +328,7 @@ export default function PaymentStep({
           </h2>
           <p className={`mx-auto max-w-sm text-sm leading-relaxed sm:text-base ${mutedClass}`}>
             {isMeridian
-              ? "הזינו את מזהה הטיפול ממרידיאן — נאמת מול מייל הקליניקה ונאשר את התור"
+              ? "הזינו את מזהה הטיפול מאתר מרידיאן לאישור התור"
               : "לפני אישור התור, יש לשלם את עלות הטיפול בכרטיס אשראי"}
           </p>
         </div>
@@ -429,7 +429,7 @@ export default function PaymentStep({
                   String(meridianTreatmentId).replace(/\D/g, "").length < 6
                 }
                 className={`flex w-full items-center justify-center gap-2.5 px-4 py-3.5 text-[15px] font-semibold transition-transform active:scale-[0.99] disabled:opacity-60 sm:gap-3 sm:px-6 sm:py-4 sm:text-base ${ctaClass}`}
-                aria-label="אימות מזהה ואישור התור"
+                aria-label="אישור התור"
               >
                 {isMeridianVerifying ? (
                   <Loader2 className="h-5 w-5 shrink-0 animate-spin" />
@@ -437,12 +437,9 @@ export default function PaymentStep({
                   <ShieldCheck className="h-5 w-5 shrink-0" />
                 )}
                 <span className="leading-none">
-                  {isMeridianVerifying ? "סורקים במייל ומאשרים…" : "אימות מזהה ואישור התור"}
+                  {isMeridianVerifying ? "מאשרים…" : "אישור התור"}
                 </span>
               </button>
-              <p className={`px-1 text-center text-xs leading-relaxed sm:text-[13px] ${mutedClass}`}>
-                המערכת סורקת את מייל הקליניקה לאישור ממרידיאן עם אותו מזהה — בלי מעבר לאתר שלהם
-              </p>
             </form>
           ) : (
             <>
