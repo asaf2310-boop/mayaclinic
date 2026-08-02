@@ -93,6 +93,14 @@ supabase/security-lockdown-anon.sql
 
 בשלב התשלום בקביעת תור מוצג iframe של Pelecard (`PaymentGW/init` לפי [מדריך ManualIframe](https://gateway20.pelecard.biz/ManualIframe)).
 
+ב־`index.html` מוטמע גם סקריפט Pelecard ClientSecure (Apple Pay / handshake מול ה־iframe):
+
+```html
+<script src="https://gateway21.pelecard.biz/Scripts/Payment/ClientSecureV2.js" defer></script>
+```
+
+הסקריפט נטען מ־HTTPS הרשמי של Pelecard בלבד, עם `defer` כדי לא לחסום את ממשק האתר.
+
 ב־Vercel (או `.env.local` מקומי ל־API) הגדירו:
 
 ```env
