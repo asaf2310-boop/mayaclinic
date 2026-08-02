@@ -170,7 +170,8 @@ export async function initPelecardPayment({
     HiddenPelecardLogo: resolvedLogoUrl ? "False" : "True",
     HiddenPciLogo: "True",
     HiddenSslSeal: "True",
-    AccessibilityMode: "True",
+    // AccessibilityMode enlarges controls and clips the pay button in iframe on phones.
+    AccessibilityMode: "False",
     TakeIshurPopUp: "False",
     SetFocus: "CC",
     DisableZoom: "True",

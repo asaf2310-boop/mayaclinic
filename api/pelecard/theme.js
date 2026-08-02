@@ -1230,18 +1230,41 @@ input[type="submit"]:active {
   border-top: 0 !important;
 }
 
+/* Sticky green pay button — always reachable while scrolling the form */
+.form-group-submit,
+.form-group-submit-in {
+  position: sticky !important;
+  bottom: 0 !important;
+  background: linear-gradient(180deg, rgba(255,255,255,0) 0%, #ffffff 28%, #ffffff 100%) !important;
+  margin: 10px 0 0 !important;
+  padding: 18px 8px calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+  z-index: 50 !important;
+}
+
 /* Mobile: compact wallet tabs + keep submit visible */
 @media (max-width: 750px) {
   html, body {
     min-height: auto !important;
     height: auto !important;
+    max-height: none !important;
     overflow-x: hidden !important;
     overflow-y: auto !important;
+    padding-bottom: 24px !important;
+  }
+
+  .body-content,
+  .container,
+  .main,
+  .main-content,
+  form {
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
   }
 
   .container {
     max-width: 100% !important;
-    padding: 0 6px 32px !important;
+    padding: 0 8px 80px !important;
   }
 
   .main {
@@ -1249,21 +1272,19 @@ input[type="submit"]:active {
     box-shadow: none !important;
     border: 0 !important;
     background: #fff !important;
-    overflow: visible !important;
   }
 
   .main-content {
-    padding: 8px 0 36px !important;
-    overflow: visible !important;
+    padding: 6px 0 24px !important;
   }
 
   .credit-title {
-    padding: 6px 0 !important;
+    padding: 4px 0 !important;
   }
 
   .credit-title .title,
   .main-title {
-    font-size: 15px !important;
+    font-size: 14px !important;
     margin: 2px 0 !important;
   }
 
@@ -1279,13 +1300,13 @@ input[type="submit"]:active {
   }
 
   .form-group {
-    margin-bottom: 8px !important;
+    margin-bottom: 6px !important;
   }
 
   .control-label {
-    margin: 0 0 3px !important;
-    font-size: 13px !important;
-    line-height: 1.25 !important;
+    margin: 0 0 2px !important;
+    font-size: 12px !important;
+    line-height: 1.2 !important;
   }
 
   .form-control,
@@ -1296,7 +1317,7 @@ input[type="submit"]:active {
   input[type="number"],
   input[type="password"],
   select {
-    height: 40px !important;
+    height: 38px !important;
     border-radius: 10px !important;
   }
 
@@ -1321,23 +1342,27 @@ input[type="submit"]:active {
   [class*="payment-method"] button,
   [class*="PaymentMethod"] button,
   .body-content button.tab-button {
-    min-height: 42px !important;
-    height: 42px !important;
-    max-height: 48px !important;
-    margin: 3px 0 !important;
-    padding: 6px 10px !important;
+    min-height: 40px !important;
+    height: 40px !important;
+    max-height: 44px !important;
+    margin: 2px 0 !important;
+    padding: 4px 8px !important;
     box-sizing: border-box !important;
   }
 
   .apple-pay-button {
-    --apple-pay-button-height: 42px;
+    --apple-pay-button-height: 40px;
     --apple-pay-button-border-radius: 8px;
   }
 
   .form-group-submit,
   .form-group-submit-in {
-    margin: 14px 0 40px !important;
-    padding: 0 2px 28px !important;
+    position: sticky !important;
+    bottom: 0 !important;
+    margin: 8px 0 0 !important;
+    padding: 14px 4px calc(20px + env(safe-area-inset-bottom, 0px)) !important;
+    background: #ffffff !important;
+    box-shadow: 0 -8px 20px rgba(47, 59, 52, 0.08) !important;
   }
 
   .btn,
@@ -1348,11 +1373,11 @@ input[type="submit"]:active {
   #submitBtn,
   button[type="submit"],
   input[type="submit"] {
-    min-height: 48px !important;
-    padding: 12px 16px !important;
-    font-size: 1rem !important;
+    min-height: 52px !important;
+    padding: 14px 16px !important;
+    font-size: 1.05rem !important;
     border-radius: 14px !important;
-    margin-bottom: 24px !important;
+    margin: 0 !important;
   }
 }
 `;
