@@ -58,13 +58,13 @@ function baseLayout({ title, bodyHtml, clinicName }) {
 export function buildConfirmationEmail({ patientName, appointments, clinicName }) {
   const bodyHtml = `
     <p style="font-size:16px;line-height:1.6;">שלום ${escapeHtml(patientName || "יקיר/ה")},</p>
-    <p style="font-size:16px;line-height:1.6;">התור שלך נקבע בהצלחה. להלן הפרטים:</p>
+    <p style="font-size:16px;line-height:1.6;">התור שלך נקבע בהצלחה. להלן פרטי הזמנת התור:</p>
     ${formatAppointmentsTable(appointments)}
     <p style="font-size:15px;line-height:1.6;margin-top:16px;">נשמח לראותך בזמן. לשינוי או ביטול, צרו קשר עם הקליניקה.</p>`;
 
   return {
-    subject: `אישור תור — ${clinicName}`,
-    html: baseLayout({ title: "אישור קביעת תור", bodyHtml, clinicName }),
+    subject: `אישור הזמנת תור — ${clinicName}`,
+    html: baseLayout({ title: "אישור הזמנת תור", bodyHtml, clinicName }),
   };
 }
 

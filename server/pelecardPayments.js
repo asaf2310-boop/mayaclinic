@@ -160,8 +160,7 @@ export async function createMeridianBooking(rawBooking = {}) {
     status: "confirmed",
   });
 
-  await maybeSendConfirmationEmail(createdRows);
-
+  // Confirmation email is sent after Meridian treatment-ID verification succeeds.
   return { createdIds, appointments: createdRows };
 }
 
@@ -279,6 +278,8 @@ export async function verifyMeridianTreatmentId({
     const record = Array.isArray(patched) ? patched[0] : patched;
     updated.push(record || { ...row, paid: true, notes });
   }
+
+  await maybeSendConfirmationEmail(updated);
 
   return {
     ok: true,
