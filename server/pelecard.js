@@ -1,17 +1,19 @@
 const DEFAULT_GATEWAY = "https://gateway20.pelecard.biz";
 
 /**
- * Whitelisted clinic CssURL (Pelecard terminal allowlist).
- * Keep this exact path — Pelecard support whitelisted it.
+ * Pelecard built-in Hebrew theme with native payment-method buttons
+ * (`.tab-button.pay-btn` for credit / Apple Pay / Google Pay).
+ * Custom ofirbaby CssURL overrides broke wallet logo sizing.
  */
 export const DEFAULT_PELECARD_CSS_CDN =
-  "https://ofirbaby.vercel.app/payment/clinic-v4.css";
+  "https://gateway20.pelecard.biz/Content/Css/variant-he-4.css";
 
 export const DEFAULT_PELECARD_LOGO_CDN =
   "https://ofirbaby.vercel.app/maya-hero.png";
 
-/** Fallback if the site origin differs (still same file on production). */
-export const CLINIC_PELECARD_CSS_CDN = DEFAULT_PELECARD_CSS_CDN;
+/** Optional merchant CssURL (only when allowlisted / PELECARD_CSS_CDN set). */
+export const CLINIC_PELECARD_CSS_CDN =
+  "https://ofirbaby.vercel.app/payment/clinic-v4.css";
 
 export const CLINIC_PELECARD_LOGO_CDN = DEFAULT_PELECARD_LOGO_CDN;
 
@@ -25,7 +27,8 @@ export function getPelecardConfig() {
 
   const maxPayments = Math.max(1, Number(process.env.PELECARD_MAX_PAYMENTS) || 1);
   const minPayments = Math.max(1, Number(process.env.PELECARD_MIN_PAYMENTS) || 1);
-  const cssPath = String(process.env.PELECARD_CSS_PATH || "/payment/clinic-v4.css").trim();
+  // Empty by default — use Pelecard built-in CssURL (variant-he-4).
+  const cssPath = String(process.env.PELECARD_CSS_PATH || "").trim();
   // Default logo off unless explicitly configured — Pelecard logo is not clinic branding.
   const logoPath = String(process.env.PELECARD_LOGO_PATH || process.env.PELECARD_LOGO_URL || "").trim();
 
@@ -36,7 +39,7 @@ export function getPelecardConfig() {
     gatewayBase,
     maxPayments,
     minPayments: Math.min(minPayments, maxPayments),
-    cssPath: cssPath || "/payment/clinic-v4.css",
+    cssPath,
     logoPath,
     configured: Boolean(terminal && user && password),
   };
@@ -164,7 +167,7 @@ export async function initPelecardPayment({
     ParamX: String(paramX || "").slice(0, 120),
     ShowXParam: "False",
     AddHolderNameToXParam: "False",
-    // Always send CssURL — whitelisted clinic theme on ofirbaby.vercel.app.
+    // Pelecard built-in theme — keeps native Apple Pay / Google Pay buttons.
     CssURL: resolvedCssUrl || DEFAULT_PELECARD_CSS_CDN,
     ShowConfirmationCheckbox: "False",
     HiddenPelecardLogo: resolvedLogoUrl ? "False" : "True",
@@ -298,17 +301,27 @@ export function resolvePublicOrigin(req) {
 }
 
 export function resolvePelecardCssUrl(origin) {
+  // Explicit override only (e.g. allowlisted clinic theme).
   const explicit = String(process.env.PELECARD_CSS_URL || "").trim().split("?")[0];
   if (explicit) return explicit.replace(/\/$/, "");
 
-  // Prefer explicit CDN/env, otherwise the whitelisted clinic CssURL.
-  const cdn = String(process.env.PELECARD_CSS_CDN || DEFAULT_PELECARD_CSS_CDN).trim().split("?")[0];
-  if (cdn) return cdn.replace(/\/$/, "");
+  // Ignore legacy PELECARD_CSS_CDN=clinic-v4 — it overrides native wallet buttons.
+  const cdn = String(process.env.PELECARD_CSS_CDN || "").trim().split("?")[0];
+  if (
+    cdn &&
+    !/clinic-v4\.css|\/api\/pelecard\/theme|ofirbaby\.vercel\.app\/payment\//i.test(cdn)
+  ) {
+    return cdn.replace(/\/$/, "");
+  }
 
   const config = getPelecardConfig();
   if (config.cssPath) {
-    const base = String(origin || "https://ofirbaby.vercel.app").replace(/\/$/, "");
-    if (base) return absolutePublicUrl(base, config.cssPath);
+    const path = String(config.cssPath);
+    if (!/clinic-v4\.css/i.test(path)) {
+      const base = String(origin || "https://ofirbaby.vercel.app").replace(/\/$/, "");
+      if (base) return absolutePublicUrl(base, path);
+    }
   }
+
   return DEFAULT_PELECARD_CSS_CDN;
 }
