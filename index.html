@@ -18,6 +18,12 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Pelecard ClientSecure (Apple Pay / iframe handshake). Official CDN only; defer so React UI is unaffected. -->
+    <script
+      src="https://gateway21.pelecard.biz/Scripts/Payment/ClientSecureV2.js"
+      defer
+      referrerpolicy="strict-origin-when-cross-origin"
+    ></script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
