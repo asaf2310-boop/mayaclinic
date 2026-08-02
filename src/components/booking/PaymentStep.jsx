@@ -14,7 +14,10 @@ import {
   initPelecardSession,
   isPelecardReturnMessage,
 } from "@/lib/pelecard";
-import { createMeridianBooking } from "@/lib/meridianBooking";
+import {
+  createMeridianBooking,
+  verifyMeridianTreatmentId,
+} from "@/lib/meridianBooking";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { getClinicTenantId } from "@/lib/tenant";
@@ -68,16 +71,21 @@ export default function PaymentStep({
   const [initError, setInitError] = useState("");
   const [isInitLoading, setIsInitLoading] = useState(false);
   const [paymentDone, setPaymentDone] = useState(false);
-  const [isMeridianSubmitting, setIsMeridianSubmitting] = useState(false);
+  const [meridianTreatmentId, setMeridianTreatmentId] = useState("");
+  const [isMeridianVerifying, setIsMeridianVerifying] = useState(false);
+  const [meridianVerifyError, setMeridianVerifyError] = useState("");
+  const [meridianAppointmentIds, setMeridianAppointmentIds] = useState([]);
   const [meridianSuccess, setMeridianSuccess] = useState(null);
   const clinicSite = getClinicSite();
-  const meridianUrl = clinicSite?.heroMeridianLink?.url || "";
   const { toast } = useToast();
   const navigate = useNavigate();
 
   const mutedClass = clinicSite ? clinicTextMuted : "text-muted-foreground";
   const valueClass = clinicSite ? clinicTextHeading : "text-foreground";
   const primaryClass = clinicSite ? clinicTextPrimary : "text-foreground";
+  const ctaClass = clinicSite
+    ? "rounded-2xl bg-[#5D7F6D] text-white shadow-[0_8px_24px_rgba(93,127,109,0.22)] hover:bg-[#4F6F5F]"
+    : "rounded-xl bg-primary text-primary-foreground";
 
   useEffect(() => {
     if (isMeridian) {
@@ -204,46 +212,59 @@ export default function PaymentStep({
     setShowCheckout(true);
   };
 
-  const handleMeridianPayment = async () => {
-    if (!meridianUrl) {
-      toast({
-        title: "קישור מרידיאן חסר",
-        description: "נא ליצור קשר עם הקליניקה להשלמת התשלום.",
-        variant: "destructive",
-      });
+  const handleVerifyMeridianTreatmentId = async (event) => {
+    event?.preventDefault?.();
+
+    const digits = String(meridianTreatmentId || "").replace(/\D/g, "");
+    if (digits.length < 6) {
+      setMeridianVerifyError("נא להזין מזהה טיפול תקין ממרידיאן");
       return;
     }
 
-    setIsMeridianSubmitting(true);
+    setIsMeridianVerifying(true);
+    setMeridianVerifyError("");
     try {
-      const result = await createMeridianBooking({
-        patient_name: formData.patient_name,
-        patient_phone: formData.patient_phone,
-        patient_email: formData.patient_email,
-        notes: formData.notes,
-        marketing_consent: formData.marketing_consent,
-        treatment_id: formData.treatment_id || treatment?.id,
-        treatment_name: formData.treatment_name || treatment?.name,
-        treatment_price: treatment?.price ?? formData.treatment_price ?? null,
-        tenant_id: getClinicTenantId() || clinicSite?.id || "maya",
-        appointments: formData.appointments || [],
+      let appointmentIds = meridianAppointmentIds;
+      let createdAppointments = [];
+
+      if (!appointmentIds.length) {
+        const created = await createMeridianBooking({
+          patient_name: formData.patient_name,
+          patient_phone: formData.patient_phone,
+          patient_email: formData.patient_email,
+          notes: formData.notes,
+          marketing_consent: formData.marketing_consent,
+          treatment_id: formData.treatment_id || treatment?.id,
+          treatment_name: formData.treatment_name || treatment?.name,
+          treatment_price: treatment?.price ?? formData.treatment_price ?? null,
+          tenant_id: getClinicTenantId() || clinicSite?.id || "maya",
+          appointments: formData.appointments || [],
+        });
+        appointmentIds = created.appointmentIds || [];
+        createdAppointments = created.appointments || [];
+        setMeridianAppointmentIds(appointmentIds);
+      }
+
+      if (!appointmentIds.length) {
+        throw new Error("לא ניתן לשמור את התור לאימות");
+      }
+
+      const result = await verifyMeridianTreatmentId({
+        appointmentIds,
+        treatmentId: digits,
       });
 
-      window.open(meridianUrl, "_blank", "noopener,noreferrer");
-
       setMeridianSuccess({
-        appointments: result.appointments || [],
+        appointments: result.appointments || createdAppointments,
         treatment_name: treatment?.name || formData.treatment_name,
         treatment_price: treatment?.price ?? formData.treatment_price ?? null,
       });
     } catch (error) {
-      toast({
-        title: "לא ניתן לשמור את התור",
-        description: error?.message || "נסו שוב בעוד רגע או צרו קשר עם הקליניקה.",
-        variant: "destructive",
-      });
+      setMeridianVerifyError(
+        error?.message || "מזהה הטיפול לא נמצא במייל. נסו שוב בעוד רגע."
+      );
     } finally {
-      setIsMeridianSubmitting(false);
+      setIsMeridianVerifying(false);
     }
   };
 
@@ -256,10 +277,6 @@ export default function PaymentStep({
       />
     );
   }
-
-  const ctaClass = clinicSite
-    ? "rounded-2xl bg-[#5D7F6D] text-white shadow-[0_8px_24px_rgba(93,127,109,0.22)] hover:bg-[#4F6F5F]"
-    : "rounded-xl bg-primary text-primary-foreground";
 
   return (
     <motion.div
@@ -307,11 +324,11 @@ export default function PaymentStep({
               clinicSite ? clinicTextHeading : "text-foreground"
             }`}
           >
-            {isMeridian ? "תשלום דרך מרידיאן" : "תשלום על התור"}
+            {isMeridian ? "אימות מזהה מרידיאן" : "תשלום על התור"}
           </h2>
           <p className={`mx-auto max-w-sm text-sm leading-relaxed sm:text-base ${mutedClass}`}>
             {isMeridian
-              ? "השלימו את התשלום בהטבה דרך מרידיאן לאישור התור"
+              ? "הזינו את מזהה הטיפול ממרידיאן — נאמת מול מייל הקליניקה ונאשר את התור"
               : "לפני אישור התור, יש לשלם את עלות הטיפול בכרטיס אשראי"}
           </p>
         </div>
@@ -378,32 +395,55 @@ export default function PaymentStep({
       {!showCheckout ? (
         <div className="mb-4 sm:mb-6">
           {isMeridian ? (
-            <>
+            <form onSubmit={handleVerifyMeridianTreatmentId} className="space-y-4">
+              <label className="block space-y-2 text-right">
+                <span className={`text-sm font-medium ${valueClass}`}>מזהה טיפול מאתר מרידיאן</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  value={meridianTreatmentId}
+                  onChange={(event) => {
+                    setMeridianTreatmentId(event.target.value.replace(/[^\d]/g, ""));
+                    if (meridianVerifyError) setMeridianVerifyError("");
+                  }}
+                  placeholder="לדוגמה: 750445114"
+                  className={`w-full rounded-2xl border px-4 py-3 text-base tabular-nums outline-none transition focus:ring-2 ${
+                    clinicSite
+                      ? "border-[#D5E0D8] bg-white/90 text-[#2F3E35] placeholder:text-[#8A9A90] focus:border-[#5D7F6D] focus:ring-[#5D7F6D]/25"
+                      : "border-border bg-background focus:ring-primary/30"
+                  }`}
+                  disabled={isMeridianVerifying}
+                  aria-label="מזהה טיפול מאתר מרידיאן"
+                />
+              </label>
+
+              {meridianVerifyError && (
+                <p className="text-center text-sm text-[#9B2C2C]">{meridianVerifyError}</p>
+              )}
+
               <button
-                type="button"
-                onClick={handleMeridianPayment}
-                disabled={isMeridianSubmitting || !meridianUrl}
-                className={`mb-2.5 flex w-full items-center justify-center gap-2.5 px-4 py-3.5 text-[15px] font-semibold transition-transform active:scale-[0.99] disabled:opacity-60 sm:gap-3 sm:px-6 sm:py-4 sm:text-base ${ctaClass}`}
-                aria-label="תשלום דרך מרידיאן"
+                type="submit"
+                disabled={
+                  isMeridianVerifying ||
+                  String(meridianTreatmentId).replace(/\D/g, "").length < 6
+                }
+                className={`flex w-full items-center justify-center gap-2.5 px-4 py-3.5 text-[15px] font-semibold transition-transform active:scale-[0.99] disabled:opacity-60 sm:gap-3 sm:px-6 sm:py-4 sm:text-base ${ctaClass}`}
+                aria-label="אימות מזהה ואישור התור"
               >
-                {isMeridianSubmitting ? (
+                {isMeridianVerifying ? (
                   <Loader2 className="h-5 w-5 shrink-0 animate-spin" />
                 ) : (
                   <ShieldCheck className="h-5 w-5 shrink-0" />
                 )}
                 <span className="leading-none">
-                  {isMeridianSubmitting ? "שומרים את התור…" : "תשלום דרך מרידיאן"}
+                  {isMeridianVerifying ? "סורקים במייל ומאשרים…" : "אימות מזהה ואישור התור"}
                 </span>
               </button>
               <p className={`px-1 text-center text-xs leading-relaxed sm:text-[13px] ${mutedClass}`}>
-                התור יישמר ואז ייפתח אתר מרידיאן להשלמת התשלום בהטבה
+                המערכת סורקת את מייל הקליניקה לאישור ממרידיאן עם אותו מזהה — בלי מעבר לאתר שלהם
               </p>
-              {!meridianUrl && (
-                <p className="mt-2 text-center text-sm text-[#9B2C2C]">
-                  קישור מרידיאן לא הוגדר. נא ליצור קשר עם הקליניקה.
-                </p>
-              )}
-            </>
+            </form>
           ) : (
             <>
               <button

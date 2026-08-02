@@ -2,6 +2,11 @@ import { supabaseRequest } from "./supabaseServer.js";
 import { validatePelecardPayment } from "./pelecard.js";
 import { buildConfirmationEmail } from "./emailTemplates.js";
 import { getClinicName, isEmailConfigured, sendEmail } from "./gmail.js";
+import {
+  findMeridianTreatmentEmail,
+  isValidMeridianTreatmentId,
+  normalizeMeridianTreatmentId,
+} from "./meridianEmail.js";
 
 function nowIso() {
   return new Date().toISOString();
@@ -138,8 +143,8 @@ export async function createAppointmentsFromBooking(
 }
 
 /**
- * Create appointments for Meridian benefit flow (external payment link).
- * Reserves the slot; payment happens on Meridian's site.
+ * Create appointments for Meridian benefit flow.
+ * Reserves the slot; client then submits Meridian treatment ID for email verification.
  */
 export async function createMeridianBooking(rawBooking = {}) {
   const booking = normalizeBookingPayload(rawBooking);
@@ -150,7 +155,7 @@ export async function createMeridianBooking(rawBooking = {}) {
   }
 
   const { createdIds, createdRows } = await createAppointmentsFromBooking(booking, {
-    paymentNote: "תשלום דרך מרידיאן (קישור חיצוני)",
+    paymentNote: "תשלום דרך מרידיאן — ממתין לאימות מזהה טיפול",
     paid: false,
     status: "confirmed",
   });
@@ -158,6 +163,135 @@ export async function createMeridianBooking(rawBooking = {}) {
   await maybeSendConfirmationEmail(createdRows);
 
   return { createdIds, appointments: createdRows };
+}
+
+function normalizeAppointmentIds(rawIds = []) {
+  return [...new Set(
+    (Array.isArray(rawIds) ? rawIds : [])
+      .map((id) => String(id || "").trim())
+      .filter(Boolean)
+  )].slice(0, 10);
+}
+
+async function fetchAppointmentsByIds(ids = []) {
+  if (!ids.length) return [];
+  const idList = ids.map((id) => encodeURIComponent(id)).join(",");
+  return (
+    (await supabaseRequest(
+      `appointments?id=in.(${idList})&select=id,patient_name,patient_email,patient_phone,treatment_name,treatment_price,date,time,status,paid,notes,tenant_id,created_at`
+    )) || []
+  );
+}
+
+/**
+ * Verify a Meridian treatment ID against Maya's inbox, then mark appointments paid.
+ */
+export async function verifyMeridianTreatmentId({
+  appointmentIds = [],
+  treatmentId = "",
+  tenantId = "",
+} = {}) {
+  const ids = normalizeAppointmentIds(appointmentIds);
+  const meridianId = normalizeMeridianTreatmentId(treatmentId);
+
+  if (!ids.length) {
+    const error = new Error("חסרים מזהי תורים לאימות");
+    error.status = 400;
+    throw error;
+  }
+  if (!isValidMeridianTreatmentId(meridianId)) {
+    const error = new Error("מזהה טיפול לא תקין");
+    error.status = 400;
+    throw error;
+  }
+
+  const rows = await fetchAppointmentsByIds(ids);
+  if (!rows.length) {
+    const error = new Error("התורים לא נמצאו");
+    error.status = 404;
+    throw error;
+  }
+
+  const tenant = String(tenantId || "").trim();
+  const scoped = tenant
+    ? rows.filter((row) => !row.tenant_id || String(row.tenant_id) === tenant)
+    : rows;
+
+  if (!scoped.length) {
+    const error = new Error("התורים לא שייכים לקליניקה זו");
+    error.status = 403;
+    throw error;
+  }
+
+  const active = scoped.filter((row) => String(row.status || "") !== "cancelled");
+  if (!active.length) {
+    const error = new Error("התורים בוטלו ולא ניתן לאמת אותם");
+    error.status = 400;
+    throw error;
+  }
+
+  const alreadyVerified = active.every((row) => {
+    const notes = String(row.notes || "");
+    return (
+      Boolean(row.paid) &&
+      notes.includes(meridianId) &&
+      notes.includes("מזהה טיפול מרידיאן")
+    );
+  });
+  if (alreadyVerified) {
+    return {
+      ok: true,
+      found: true,
+      alreadyVerified: true,
+      treatmentId: meridianId,
+      appointments: active,
+    };
+  }
+
+  const match = await findMeridianTreatmentEmail(meridianId);
+  if (!match) {
+    return {
+      ok: false,
+      found: false,
+      treatmentId: meridianId,
+      message:
+        "לא נמצא מייל ממרידיאן עם מזהה הטיפול הזה. בדקו שההזמנה הושלמה במרידיאן ונסו שוב בעוד דקה.",
+    };
+  }
+
+  const verificationNote = `מזהה טיפול מרידיאן שאומת: ${meridianId}`;
+  const updated = [];
+
+  for (const row of active) {
+    const existingNotes = String(row.notes || "").trim();
+    const notes = existingNotes.includes(verificationNote)
+      ? existingNotes
+      : [existingNotes, verificationNote].filter(Boolean).join("\n");
+
+    const patched = await supabaseRequest(`appointments?id=eq.${encodeURIComponent(row.id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        paid: true,
+        notes: notes || null,
+      }),
+    });
+    const record = Array.isArray(patched) ? patched[0] : patched;
+    updated.push(record || { ...row, paid: true, notes });
+  }
+
+  return {
+    ok: true,
+    found: true,
+    alreadyVerified: false,
+    treatmentId: meridianId,
+    email: {
+      from: match.from,
+      subject: match.subject,
+      date: match.date,
+    },
+    appointments: updated,
+  };
 }
 
 async function maybeSendConfirmationEmail(appointments) {
