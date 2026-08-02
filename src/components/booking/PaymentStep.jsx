@@ -397,7 +397,7 @@ export default function PaymentStep({
           {isMeridian ? (
             <form onSubmit={handleVerifyMeridianTreatmentId} className="space-y-4">
               <label className="block space-y-2 text-right">
-                <span className={`text-sm font-medium ${valueClass}`}>מזהה הטיפול שאושר במרידיאן</span>
+                <span className={`text-sm font-medium ${valueClass}`}>מזהה טיפול מאתר מרידיאן</span>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -414,7 +414,7 @@ export default function PaymentStep({
                       : "border-border bg-background focus:ring-primary/30"
                   }`}
                   disabled={isMeridianVerifying}
-                  aria-label="מזהה טיפול במרידיאן"
+                  aria-label="מזהה טיפול מאתר מרידיאן"
                 />
               </label>
 
