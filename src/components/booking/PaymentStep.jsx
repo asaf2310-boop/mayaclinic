@@ -569,6 +569,8 @@ export default function PaymentStep({
         type="button"
         onClick={() => {
           if (showCheckout && !paymentDone) {
+            fullPageRedirectStarted.current = false;
+            setIsFullPageRedirecting(false);
             setShowCheckout(false);
             setIframeUrl("");
             setInitError("");
