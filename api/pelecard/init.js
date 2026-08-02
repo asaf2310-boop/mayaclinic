@@ -95,10 +95,11 @@ export default async function handler(req, res) {
       topText,
       bottomText,
       publicOrigin: origin,
+      // Keep the mobile form short so CVV + green pay button stay on-screen.
       // Pelecard ManualIframe accepts: Must | Hide | optional (not "required")
-      customerIdField: "optional",
+      customerIdField: "Hide",
       cvv2Field: "Must",
-      cardHolderName: "optional",
+      cardHolderName: "Hide",
     });
 
     await createPaymentSession({

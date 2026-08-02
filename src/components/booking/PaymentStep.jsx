@@ -24,16 +24,25 @@ const VISA_LOGO = "/payment/visa-logo.svg";
 const MASTERCARD_LOGO = "/payment/mastercard-logo.svg";
 
 /**
- * Wallet rows (CC / Apple Pay / Google Pay) + card fields need a tall frame.
- * Allow overflow scroll so the Pelecard "לתשלום" button is never clipped.
+ * Desktop iframe: tall frame so wallet rows + fields + green pay fit.
+ * Mobile uses a full-page redirect (see effect below) — iframe scrolling is unreliable on iOS.
  */
 const PELECARD_IFRAME_HEIGHT_CLASS =
-  "min-h-[1500px] h-[1500px] sm:min-h-[1300px] sm:h-[max(1300px,calc(100dvh-6rem))]";
+  "min-h-[1600px] h-[1600px] md:min-h-[1400px] md:h-[max(1400px,calc(100dvh-5rem))]";
 const PELECARD_IFRAME_STYLE = {
   overflow: "auto",
   display: "block",
   width: "100%",
 };
+
+function preferFullPagePelecard() {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.matchMedia("(max-width: 900px), (pointer: coarse)").matches;
+  } catch {
+    return window.innerWidth <= 900;
+  }
+}
 
 function SummaryRow({ label, value, mutedClass, valueClass, emphasize = false }) {
   return (
@@ -69,6 +78,7 @@ export default function PaymentStep({
   const [paymentDone, setPaymentDone] = useState(false);
   const [isMeridianSubmitting, setIsMeridianSubmitting] = useState(false);
   const [meridianSuccess, setMeridianSuccess] = useState(null);
+  const [isFullPageRedirecting, setIsFullPageRedirecting] = useState(false);
   const clinicSite = getClinicSite();
   const meridianUrl = clinicSite?.heroMeridianLink?.url || "";
   const { toast } = useToast();
@@ -156,6 +166,21 @@ export default function PaymentStep({
     clinicSite?.id,
     toast,
   ]);
+
+  // On phones, Pelecard's wallet UI clips fields/pay button inside an iframe.
+  // Open the gateway as a full page — FeedbackOnTop returns to our success/failure URLs.
+  useEffect(() => {
+    if (isMeridian || !showCheckout || paymentDone || !iframeUrl || isFullPageRedirecting) {
+      return;
+    }
+    if (!preferFullPagePelecard()) return;
+
+    setIsFullPageRedirecting(true);
+    const timer = window.setTimeout(() => {
+      window.location.assign(iframeUrl);
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [isMeridian, showCheckout, paymentDone, iframeUrl, isFullPageRedirecting]);
 
   useEffect(() => {
     if (isMeridian || !showCheckout || paymentDone) return;
@@ -467,7 +492,7 @@ export default function PaymentStep({
         </div>
       ) : (
         <div className="mb-3 w-full max-w-full sm:mb-4">
-          {isInitLoading || paymentDone ? (
+          {isInitLoading || paymentDone || isFullPageRedirecting ? (
             <div
               className={`flex min-h-[220px] flex-col items-center justify-center gap-3 rounded-2xl border p-6 text-center ${
                 clinicSite
@@ -481,8 +506,22 @@ export default function PaymentStep({
                 }`}
               />
               <p className={`text-sm ${mutedClass}`}>
-                {paymentDone ? "מעבירים לדף האישור…" : "טוענים את דף הסליקה המאובטח…"}
+                {paymentDone
+                  ? "מעבירים לדף האישור…"
+                  : isFullPageRedirecting
+                    ? "פותחים את דף התשלום המאובטח…"
+                    : "טוענים את דף הסליקה המאובטח…"}
               </p>
+              {isFullPageRedirecting && iframeUrl && (
+                <a
+                  href={iframeUrl}
+                  className={`mt-2 text-sm font-semibold underline underline-offset-2 ${
+                    clinicSite ? clinicTextPrimary : "text-primary"
+                  }`}
+                >
+                  אם לא הועברתם אוטומטית — לחצו כאן לתשלום
+                </a>
+              )}
             </div>
           ) : iframeUrl ? (
             <div
