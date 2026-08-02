@@ -35,20 +35,20 @@ export default function BookingSuccess({ appointment, onReset }) {
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      className={`px-6 py-16 text-center ${clinicSite ? clinicGlassPanel : ""}`}
+      className={`px-3 py-10 text-center sm:px-6 sm:py-16 ${clinicSite ? clinicGlassPanel : ""}`}
     >
       <div
-        className={`mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl ${
+        className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl sm:mb-6 sm:h-20 sm:w-20 ${
           clinicSite ? clinicIconSurface : "bg-primary/10"
         }`}
       >
-        <CheckCircle2 className={`h-10 w-10 ${clinicSite ? clinicTextPrimary : "text-primary"}`} />
+        <CheckCircle2 className={`h-8 w-8 sm:h-10 sm:w-10 ${clinicSite ? clinicTextPrimary : "text-primary"}`} />
       </div>
 
-      <h2 className={`mb-3 text-3xl font-bold ${clinicSite ? clinicTextHeading : "text-foreground"}`}>
+      <h2 className={`mb-2 text-2xl font-bold sm:mb-3 sm:text-3xl ${clinicSite ? clinicTextHeading : "text-foreground"}`}>
         התורים נקבעו בהצלחה!
       </h2>
-      <p className={`mb-8 text-lg ${clinicSite ? clinicTextMuted : "text-muted-foreground"}`}>
+      <p className={`mb-6 text-base sm:mb-8 sm:text-lg ${clinicSite ? clinicTextMuted : "text-muted-foreground"}`}>
         נשלח אליכם אישור בקרוב
       </p>
 
@@ -97,11 +97,11 @@ export default function BookingSuccess({ appointment, onReset }) {
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3 justify-center">
-        <Link to="/">
+      <div className="flex w-full flex-col justify-center gap-3 sm:flex-row">
+        <Link to="/" className="w-full sm:w-auto">
           <Button
             variant="outline"
-            className={`gap-2 ${clinicSite ? clinicOutlineBtn : "rounded-xl"}`}
+            className={`w-full gap-2 ${clinicSite ? clinicOutlineBtn : "rounded-xl"}`}
           >
             <Home className="w-4 h-4" />
             חזרה לעמוד הבית
@@ -109,7 +109,7 @@ export default function BookingSuccess({ appointment, onReset }) {
         </Link>
         <Button
           onClick={onReset}
-          className={`gap-2 ${clinicSite ? clinicPrimaryBtn : "rounded-xl"}`}
+          className={`w-full gap-2 sm:w-auto ${clinicSite ? clinicPrimaryBtn : "rounded-xl"}`}
         >
           <CalendarPlus className="w-4 h-4" />
           קביעת תור נוסף

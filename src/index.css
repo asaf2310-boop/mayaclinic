@@ -5,6 +5,11 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
+  }
+
   :root {
     --font-heebo: 'Heebo', sans-serif;
     --background: 160 30% 98%;
@@ -91,6 +96,11 @@
     @apply bg-background;
   }
 
+  body {
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
+  }
+
   body.clinic-site {
     min-height: 100vh;
     background:
@@ -105,6 +115,7 @@
       radial-gradient(circle at 90% 55%, rgba(93, 127, 109, 0.18), transparent 30%),
       #f7f8f6;
     overflow-x: hidden;
+    overscroll-behavior-x: none;
   }
 
   .page-background {
@@ -145,8 +156,9 @@
 /* Mobile hero: tighter vertical rhythm without affecting desktop */
 @media (max-width: 767px) {
   body.clinic-site .clinic-hero-shell {
-    padding-top: 0.75rem;
-    padding-bottom: 1rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.75rem;
+    max-width: 100%;
   }
 
   body.clinic-site .clinic-hero-image {
@@ -155,5 +167,12 @@
     height: 100%;
     object-fit: cover;
     object-position: center;
+  }
+
+  /* Prevent bounce/pan sideways on iOS */
+  body.clinic-site,
+  body.clinic-site #root {
+    max-width: 100%;
+    overflow-x: hidden;
   }
 }

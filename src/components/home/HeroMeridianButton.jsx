@@ -17,11 +17,11 @@ export default function HeroMeridianButton({ link }) {
       dir="rtl"
     >
       <span className={clinicHeroMeridianIconRing} aria-hidden="true">
-        <ShieldCheck className="h-6 w-6 text-white/95 md:h-7 md:w-7" strokeWidth={1.5} />
+        <ShieldCheck className="h-5 w-5 text-white/95 sm:h-6 sm:w-6 md:h-7 md:w-7" strokeWidth={1.5} />
       </span>
-      <span className="flex min-w-0 flex-1 flex-col items-center gap-0.5 text-center sm:items-start sm:gap-1 sm:text-right">
+      <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5 text-right sm:gap-1">
         {title && (
-          <span className="text-sm font-semibold leading-snug text-white sm:text-base">
+          <span className="text-[13px] font-semibold leading-snug text-white sm:text-base">
             {title}
           </span>
         )}

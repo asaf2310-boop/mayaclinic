@@ -63,11 +63,11 @@ export default function Book() {
 
   return (
     <div
-      className={`min-h-screen ${clinicSite ? `page-background ${clinicPageGradient} clinic-page-enter font-sans` : "bg-background"}`}
+      className={`min-h-screen overflow-x-hidden ${clinicSite ? `page-background ${clinicPageGradient} clinic-page-enter font-sans` : "bg-background"}`}
     >
       <Navbar />
-      <main className="relative pt-24 pb-16 px-6" dir="rtl">
-        <div className={`relative mx-auto max-w-2xl ${clinicSite ? clinicFadeIn : ""}`}>
+      <main className="relative px-4 pb-12 pt-20 sm:px-6 sm:pb-16 sm:pt-24" dir="rtl">
+        <div className={`relative mx-auto w-full max-w-2xl overflow-x-hidden ${clinicSite ? clinicFadeIn : ""}`}>
           {pendingFormData ? (
             <PaymentStep
               formData={pendingFormData}
