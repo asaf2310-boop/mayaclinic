@@ -100,12 +100,12 @@ export default function Home() {
 
   if (clinicSite) {
     return (
-      <div className={`page-background min-h-screen font-sans ${clinicPageGradient} clinic-page-enter`}>
+      <div className={`page-background min-h-screen overflow-x-hidden font-sans ${clinicPageGradient} clinic-page-enter`}>
         <Navbar />
-        <main>
+        <main className="overflow-x-hidden">
           <section className={clinicHeroSection}>
             <div
-              className="clinic-hero-shell relative z-10 mx-auto flex min-h-0 max-w-4xl flex-col items-center justify-center px-4 py-5 md:min-h-[calc(100vh-6rem)] md:px-6 md:py-12"
+              className="clinic-hero-shell relative z-10 mx-auto flex w-full min-h-0 max-w-4xl flex-col items-center justify-center px-3 py-5 sm:px-4 md:min-h-[calc(100vh-6rem)] md:px-6 md:py-12"
               dir="rtl"
             >
               <div className={`${clinicHeroPanel} ${clinicFadeIn} flex flex-col items-center text-center`}>

@@ -1,5 +1,21 @@
 import { supabaseRequest } from "../server/supabaseServer.js";
 import { resolveClinicTenantFromHost } from "../server/clinicTenant.js";
+import {
+  createMeridianBooking,
+  normalizeBookingPayload,
+} from "../server/pelecardPayments.js";
+
+function readBody(req) {
+  if (!req.body) return {};
+  if (typeof req.body === "string") {
+    try {
+      return JSON.parse(req.body);
+    } catch {
+      return {};
+    }
+  }
+  return req.body;
+}
 
 const SAFE_SELECT = {
   treatments: "id,name,description,duration_minutes,price,icon,paybox_link,tenant_id,created_at",
@@ -67,18 +83,42 @@ async function safeQuery(primaryPath, legacyPath = "") {
 }
 
 export default async function handler(req, res) {
-  if (req.method !== "GET") {
+  if (req.method !== "GET" && req.method !== "POST") {
     res.status(405).json({ error: "Method not allowed" });
     return;
   }
 
   try {
-    const entity = String(req.query?.entity || "").trim();
     const tenantId = resolveClinicTenantFromHost(req);
     if (!tenantId) {
       res.status(400).json({ error: "Unknown clinic tenant" });
       return;
     }
+
+    if (req.method === "POST") {
+      const body = readBody(req);
+      const action = String(body.action || "").trim();
+
+      if (action !== "createMeridianBooking") {
+        res.status(400).json({ error: "Unsupported action" });
+        return;
+      }
+
+      const booking = normalizeBookingPayload({
+        ...(body.booking || {}),
+        tenant_id: tenantId,
+      });
+
+      const result = await createMeridianBooking(booking);
+      res.status(200).json({
+        ok: true,
+        appointmentIds: result.createdIds,
+        appointments: result.appointments,
+      });
+      return;
+    }
+
+    const entity = String(req.query?.entity || "").trim();
 
     if (!Object.prototype.hasOwnProperty.call(SAFE_SELECT, entity)) {
       res.status(400).json({ error: "Unsupported entity" });
@@ -122,6 +162,10 @@ export default async function handler(req, res) {
     );
     res.status(200).json(rows);
   } catch (error) {
-    res.status(500).json({ error: error?.message || "Failed to load public clinic data" });
+    const status =
+      error?.status && Number.isInteger(error.status) ? error.status : 500;
+    res.status(status).json({
+      error: error?.message || "Failed to load public clinic data",
+    });
   }
 }

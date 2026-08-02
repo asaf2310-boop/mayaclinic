@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import Navbar from "../components/layout/Navbar";
 import TreatmentSelector from "../components/booking/TreatmentSelector";
@@ -21,6 +22,11 @@ import {
 } from "@/lib/clinicUi";
 
 export default function Book() {
+  const [searchParams] = useSearchParams();
+  const paymentMethod =
+    String(searchParams.get("payment") || "").trim().toLowerCase() === "meridian"
+      ? "meridian"
+      : "credit";
   const [selectedTreatment, setSelectedTreatment] = useState(null);
   const [pendingFormData, setPendingFormData] = useState(null);
   const clinicSite = getClinicSite();
@@ -57,15 +63,16 @@ export default function Book() {
 
   return (
     <div
-      className={`min-h-screen ${clinicSite ? `page-background ${clinicPageGradient} clinic-page-enter font-sans` : "bg-background"}`}
+      className={`min-h-screen overflow-x-hidden ${clinicSite ? `page-background ${clinicPageGradient} clinic-page-enter font-sans` : "bg-background"}`}
     >
       <Navbar />
-      <main className="relative pt-24 pb-16 px-6" dir="rtl">
-        <div className={`relative mx-auto max-w-2xl ${clinicSite ? clinicFadeIn : ""}`}>
+      <main className="relative px-4 pb-12 pt-20 sm:px-6 sm:pb-16 sm:pt-24" dir="rtl">
+        <div className={`relative mx-auto w-full max-w-2xl overflow-x-hidden ${clinicSite ? clinicFadeIn : ""}`}>
           {pendingFormData ? (
             <PaymentStep
               formData={pendingFormData}
               treatment={selectedTreatment}
+              paymentMethod={paymentMethod}
               onBack={() => setPendingFormData(null)}
             />
           ) : (
@@ -75,7 +82,11 @@ export default function Book() {
                   קביעת תור
                 </h1>
                 <p className={clinicSite ? clinicBookPageSubtitle : "text-lg text-muted-foreground"}>
-                  {clinicSite ? "בחרו תאריך ושעה נוחים לטיפול" : "בחרו טיפול, תאריך ושעה נוחים"}
+                  {paymentMethod === "meridian"
+                    ? "בחרו תאריך ושעה · התשלום יושלם דרך מרידיאן"
+                    : clinicSite
+                      ? "בחרו תאריך ושעה נוחים לטיפול"
+                      : "בחרו טיפול, תאריך ושעה נוחים"}
                 </p>
               </div>
 

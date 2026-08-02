@@ -36,7 +36,7 @@ export default function Navbar() {
   <>
         <Link
           to="/"
-          className={`shrink-0 text-lg font-bold md:text-xl ${isClinic ? clinicTextHeading : "text-foreground"}`}
+          className={`min-w-0 truncate text-base font-bold sm:text-lg md:shrink-0 md:text-xl ${isClinic ? clinicTextHeading : "text-foreground"}`}
         >
           {clinicSite?.clinicTitle || (demoModeEnabled ? demoBrand.clinicTitle : "הקליניקה")}
         </Link>
