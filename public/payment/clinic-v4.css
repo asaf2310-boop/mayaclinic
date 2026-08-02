@@ -298,9 +298,10 @@ button#openFinanceTabBtn::before {
     }
 
 #AccountNumber .form-control {
-    padding: 0;
-    /*margin-bottom: 20px;*/
-    width: 210px;
+    padding: 4px 8px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 
@@ -1137,40 +1138,136 @@ input[readonly] {
   font-weight: 700 !important;
 }
 
+/* Stack label above field — never side-by-side table layout */
+.form-group,
+.control-group {
+  display: block !important;
+  width: 100% !important;
+  margin-bottom: 12px !important;
+}
+
+.control-label,
+.control-value {
+  display: block !important;
+  width: 100% !important;
+  float: none !important;
+  padding: 0 !important;
+  min-height: 0 !important;
+}
+
+.control-label {
+  margin: 0 0 6px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #2F3B34 !important;
+  text-align: right !important;
+}
+
+.control-value {
+  margin: 0 !important;
+}
+
+.control-group .form-control,
+.form-control,
+input.form-control,
+select.form-control,
+#AccountNumber .form-control,
+#credit_card_number_input,
+#id_number_input,
+#cvv_input,
+#totalAll {
+  float: none !important;
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+#dateContainer {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+
+#dateContainer select.form-control,
+#dateContainer select#date_month_input,
+#dateContainer select#date_year_input {
+  float: none !important;
+  flex: 1 1 0 !important;
+  width: auto !important;
+  max-width: none !important;
+}
+
+#dateContainer .delimiter {
+  float: none !important;
+  width: auto !important;
+  line-height: 44px !important;
+  padding: 0 2px !important;
+}
+
+.row {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+.col-sm-1, .col-sm-2, .col-sm-3, .col-sm-4, .col-sm-5, .col-sm-6,
+.col-sm-7, .col-sm-8, .col-sm-9, .col-sm-10, .col-sm-11, .col-sm-12 {
+  float: none !important;
+  width: 100% !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
 .form-group-submit,
 .form-group-submit-in {
   text-align: center !important;
-  margin: 16px 0 28px !important;
-  padding: 0 4px 20px !important;
   display: block !important;
   visibility: visible !important;
   position: relative !important;
   z-index: 6 !important;
   clear: both !important;
+  margin: 16px 0 8px !important;
+  padding: 8px 0 20px !important;
+  background: transparent !important;
 }
 
-.btn,
+/* Hide empty / secondary ghost buttons that became a second green bar */
+.form-group-submit-in .btn + .btn,
+.form-group-submit .btn:empty,
+.form-group-submit-in .btn:empty,
+.form-group-submit button:empty,
+.form-group-submit-in button:empty,
+.form-group-submit input.btn:not(.btn-submit):not([type="submit"]),
+.form-group-submit-in input.btn:not(.btn-submit):not([type="submit"]) {
+  display: none !important;
+}
+
+/* Only the real submit CTA — do NOT restyle every .btn (causes blank green button) */
 .btn-submit,
 button.btn-submit,
 input.btn-submit,
 #submit,
 #submitBtn,
-button[type="submit"],
-input[type="submit"] {
+.form-group-submit button[type="submit"],
+.form-group-submit input[type="submit"],
+.form-group-submit-in button[type="submit"],
+.form-group-submit-in input[type="submit"] {
   width: 100% !important;
   max-width: 100% !important;
-  min-height: 56px !important;
+  min-height: 52px !important;
   height: auto !important;
   display: block !important;
   margin: 0 auto !important;
-  padding: 16px 24px !important;
+  padding: 14px 20px !important;
   border: 0 !important;
-  border-radius: 18px !important;
+  border-radius: 16px !important;
   color: #FFFFFF !important;
   font-family: Heebo, "Segoe UI", Tahoma, Arial, sans-serif !important;
-  font-size: 1.125rem !important;
+  font-size: 1.1rem !important;
   font-weight: 700 !important;
-  letter-spacing: 0.04em !important;
+  letter-spacing: 0.03em !important;
   line-height: 1.2 !important;
   text-align: center !important;
   text-decoration: none !important;
@@ -1185,7 +1282,6 @@ input[type="submit"] {
     0 2px 6px rgba(47,59,52,0.12) !important;
   filter: none !important;
   cursor: pointer !important;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease !important;
   -webkit-appearance: none !important;
   appearance: none !important;
 }
@@ -1194,53 +1290,22 @@ input[type="submit"] {
 .btn-submit:focus,
 button.btn-submit:hover,
 button.btn-submit:focus,
-button[type="submit"]:hover,
-button[type="submit"]:focus,
-input[type="submit"]:hover,
-input[type="submit"]:focus,
 #submitBtn:hover,
-#submitBtn:focus {
+#submitBtn:focus,
+.form-group-submit button[type="submit"]:hover,
+.form-group-submit button[type="submit"]:focus {
   background: #4F6F5F !important;
-  background-image:
-    linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0) 40%),
-    linear-gradient(135deg, #7AA08C 0%, #5D7F6D 45%, #456355 100%) !important;
   color: #FFFFFF !important;
-  border: 0 !important;
-  filter: none !important;
-  box-shadow:
-    0 1px 0 rgba(255,255,255,0.34) inset,
-    0 14px 34px rgba(93,127,109,0.34),
-    0 3px 8px rgba(47,59,52,0.14) !important;
   outline: none !important;
-}
-
-.btn-submit:active,
-button.btn-submit:active,
-button[type="submit"]:active,
-input[type="submit"]:active {
-  transform: translateY(1px) scale(0.995) !important;
-  box-shadow:
-    0 1px 0 rgba(255,255,255,0.18) inset,
-    0 6px 16px rgba(93,127,109,0.22) !important;
 }
 
 .footer {
   background: transparent !important;
   border-top: 0 !important;
+  padding: 8px 0 16px !important;
 }
 
-/* Sticky green pay button — always reachable while scrolling the form */
-.form-group-submit,
-.form-group-submit-in {
-  position: sticky !important;
-  bottom: 0 !important;
-  background: linear-gradient(180deg, rgba(255,255,255,0) 0%, #ffffff 28%, #ffffff 100%) !important;
-  margin: 10px 0 0 !important;
-  padding: 18px 8px calc(16px + env(safe-area-inset-bottom, 0px)) !important;
-  z-index: 50 !important;
-}
-
-/* Mobile: compact wallet tabs + keep submit visible */
+/* Mobile polish */
 @media (max-width: 750px) {
   html, body {
     min-height: auto !important;
@@ -1248,7 +1313,7 @@ input[type="submit"]:active {
     max-height: none !important;
     overflow-x: hidden !important;
     overflow-y: auto !important;
-    padding-bottom: 24px !important;
+    padding-bottom: 16px !important;
   }
 
   .body-content,
@@ -1263,7 +1328,7 @@ input[type="submit"]:active {
 
   .container {
     max-width: 100% !important;
-    padding: 0 8px 80px !important;
+    padding: 0 12px 40px !important;
   }
 
   .main {
@@ -1274,16 +1339,16 @@ input[type="submit"]:active {
   }
 
   .main-content {
-    padding: 6px 0 24px !important;
+    padding: 8px 0 20px !important;
   }
 
   .credit-title {
-    padding: 4px 0 !important;
+    padding: 8px 0 !important;
   }
 
   .credit-title .title,
   .main-title {
-    font-size: 14px !important;
+    font-size: 15px !important;
     margin: 2px 0 !important;
   }
 
@@ -1291,21 +1356,20 @@ input[type="submit"]:active {
     display: none !important;
   }
 
-  /* Hide decorative card-brand strip to free vertical space */
   .form-group-sup,
   .form-group-sup-1,
   .form-group-sup-2 {
     display: none !important;
   }
 
-  .form-group {
-    margin-bottom: 6px !important;
+  .form-group,
+  .control-group {
+    margin-bottom: 10px !important;
   }
 
   .control-label {
-    margin: 0 0 2px !important;
+    margin: 0 0 4px !important;
     font-size: 12px !important;
-    line-height: 1.2 !important;
   }
 
   .form-control,
@@ -1316,11 +1380,11 @@ input[type="submit"]:active {
   input[type="number"],
   input[type="password"],
   select {
-    height: 38px !important;
-    border-radius: 10px !important;
+    height: 44px !important;
+    border-radius: 12px !important;
   }
 
-  /* Compact Apple Pay / Google Pay / CC method chooser */
+  /* Wallet chooser: compact horizontal-ish stack */
   .tab-button,
   .tab-button > button,
   .pay-logo-col,
@@ -1341,41 +1405,39 @@ input[type="submit"]:active {
   [class*="payment-method"] button,
   [class*="PaymentMethod"] button,
   .body-content button.tab-button {
-    min-height: 40px !important;
-    height: 40px !important;
-    max-height: 44px !important;
-    margin: 2px 0 !important;
-    padding: 4px 8px !important;
+    min-height: 44px !important;
+    height: 44px !important;
+    max-height: 48px !important;
+    margin: 4px 0 !important;
+    padding: 6px 10px !important;
     box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 100% !important;
   }
 
   .apple-pay-button {
-    --apple-pay-button-height: 40px;
-    --apple-pay-button-border-radius: 8px;
+    --apple-pay-button-height: 44px;
+    --apple-pay-button-border-radius: 10px;
   }
 
   .form-group-submit,
   .form-group-submit-in {
-    position: sticky !important;
-    bottom: 0 !important;
-    margin: 8px 0 0 !important;
-    padding: 14px 4px calc(20px + env(safe-area-inset-bottom, 0px)) !important;
-    background: #ffffff !important;
-    box-shadow: 0 -8px 20px rgba(47, 59, 52, 0.08) !important;
+    margin: 12px 0 0 !important;
+    padding: 8px 0 24px !important;
+    box-shadow: none !important;
+    background: transparent !important;
   }
 
-  .btn,
   .btn-submit,
   button.btn-submit,
   input.btn-submit,
   #submit,
   #submitBtn,
-  button[type="submit"],
-  input[type="submit"] {
+  .form-group-submit button[type="submit"],
+  .form-group-submit input[type="submit"] {
     min-height: 52px !important;
     padding: 14px 16px !important;
     font-size: 1.05rem !important;
     border-radius: 14px !important;
-    margin: 0 !important;
   }
 }
