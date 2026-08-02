@@ -3,7 +3,13 @@ import { resolveClinicTenantFromHost } from "../server/clinicTenant.js";
 import {
   createMeridianBooking,
   normalizeBookingPayload,
+  verifyMeridianTreatmentId,
 } from "../server/pelecardPayments.js";
+
+// IMAP inbox search for Meridian verification can exceed the default 10s.
+export const config = {
+  maxDuration: 30,
+};
 
 function readBody(req) {
   if (!req.body) return {};
@@ -99,22 +105,50 @@ export default async function handler(req, res) {
       const body = readBody(req);
       const action = String(body.action || "").trim();
 
-      if (action !== "createMeridianBooking") {
-        res.status(400).json({ error: "Unsupported action" });
+      if (action === "createMeridianBooking") {
+        const booking = normalizeBookingPayload({
+          ...(body.booking || {}),
+          tenant_id: tenantId,
+        });
+
+        const result = await createMeridianBooking(booking);
+        res.status(200).json({
+          ok: true,
+          appointmentIds: result.createdIds,
+          appointments: result.appointments,
+        });
         return;
       }
 
-      const booking = normalizeBookingPayload({
-        ...(body.booking || {}),
-        tenant_id: tenantId,
-      });
+      if (action === "verifyMeridianTreatmentId") {
+        const appointmentIds = Array.isArray(body.appointmentIds)
+          ? body.appointmentIds
+          : Array.isArray(body.appointment_ids)
+            ? body.appointment_ids
+            : [];
+        const treatmentId = body.treatmentId || body.treatment_id || "";
 
-      const result = await createMeridianBooking(booking);
-      res.status(200).json({
-        ok: true,
-        appointmentIds: result.createdIds,
-        appointments: result.appointments,
-      });
+        const result = await verifyMeridianTreatmentId({
+          appointmentIds,
+          treatmentId,
+          tenantId,
+        });
+
+        if (!result.ok) {
+          res.status(404).json({
+            ok: false,
+            found: false,
+            error: result.message || "מזהה הטיפול לא נמצא במייל",
+            treatmentId: result.treatmentId,
+          });
+          return;
+        }
+
+        res.status(200).json(result);
+        return;
+      }
+
+      res.status(400).json({ error: "Unsupported action" });
       return;
     }
 
