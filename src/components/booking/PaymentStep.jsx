@@ -407,7 +407,7 @@ export default function PaymentStep({
                     setMeridianTreatmentId(event.target.value.replace(/[^\d]/g, ""));
                     if (meridianVerifyError) setMeridianVerifyError("");
                   }}
-                  placeholder="לדוגמה: 750445114"
+                  placeholder=""
                   className={`w-full rounded-2xl border px-4 py-3 text-base tabular-nums outline-none transition focus:ring-2 ${
                     clinicSite
                       ? "border-[#D5E0D8] bg-white/90 text-[#2F3E35] placeholder:text-[#8A9A90] focus:border-[#5D7F6D] focus:ring-[#5D7F6D]/25"
