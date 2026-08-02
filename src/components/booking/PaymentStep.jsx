@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ArrowRight, CreditCard, Loader2, Lock } from "lucide-react";
+import { ArrowRight, CreditCard, Loader2, Lock, ShieldCheck } from "lucide-react";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
 import { getClinicSite } from "@/lib/clinicSite";
@@ -14,9 +14,11 @@ import {
   initPelecardSession,
   isPelecardReturnMessage,
 } from "@/lib/pelecard";
+import { createMeridianBooking } from "@/lib/meridianBooking";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { getClinicTenantId } from "@/lib/tenant";
+import BookingSuccess from "./BookingSuccess";
 
 const VISA_LOGO = "/payment/visa-logo.svg";
 const MASTERCARD_LOGO = "/payment/mastercard-logo.svg";
@@ -28,7 +30,13 @@ const PELECARD_IFRAME_STYLE = {
   display: "block",
 };
 
-export default function PaymentStep({ formData, treatment, onBack }) {
+export default function PaymentStep({
+  formData,
+  treatment,
+  onBack,
+  paymentMethod = "credit",
+}) {
+  const isMeridian = paymentMethod === "meridian";
   const appointments = formData.appointments || [];
   const unitPrice = treatment?.price ?? 250;
   const totalPrice = unitPrice * appointments.length;
@@ -39,11 +47,18 @@ export default function PaymentStep({ formData, treatment, onBack }) {
   const [initError, setInitError] = useState("");
   const [isInitLoading, setIsInitLoading] = useState(false);
   const [paymentDone, setPaymentDone] = useState(false);
+  const [isMeridianSubmitting, setIsMeridianSubmitting] = useState(false);
+  const [meridianSuccess, setMeridianSuccess] = useState(null);
   const clinicSite = getClinicSite();
+  const meridianUrl = clinicSite?.heroMeridianLink?.url || "";
   const { toast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (isMeridian) {
+      setPelecardConfigured(false);
+      return;
+    }
     let cancelled = false;
     (async () => {
       const status = await fetchPelecardStatus();
@@ -53,10 +68,10 @@ export default function PaymentStep({ formData, treatment, onBack }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isMeridian]);
 
   useEffect(() => {
-    if (!showCheckout || pelecardConfigured !== true || paymentDone) return;
+    if (isMeridian || !showCheckout || pelecardConfigured !== true || paymentDone) return;
 
     let cancelled = false;
     (async () => {
@@ -105,6 +120,7 @@ export default function PaymentStep({ formData, treatment, onBack }) {
       cancelled = true;
     };
   }, [
+    isMeridian,
     showCheckout,
     pelecardConfigured,
     paymentDone,
@@ -118,7 +134,7 @@ export default function PaymentStep({ formData, treatment, onBack }) {
   ]);
 
   useEffect(() => {
-    if (!showCheckout || paymentDone) return;
+    if (isMeridian || !showCheckout || paymentDone) return;
 
     function onMessage(event) {
       if (!isPelecardReturnMessage(event)) return;
@@ -149,7 +165,7 @@ export default function PaymentStep({ formData, treatment, onBack }) {
 
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [showCheckout, paymentDone, bookingRef, navigate]);
+  }, [isMeridian, showCheckout, paymentDone, bookingRef, navigate]);
 
   const handleStartCreditPayment = () => {
     if (pelecardConfigured === false) {
@@ -162,6 +178,58 @@ export default function PaymentStep({ formData, treatment, onBack }) {
     }
     setShowCheckout(true);
   };
+
+  const handleMeridianPayment = async () => {
+    if (!meridianUrl) {
+      toast({
+        title: "קישור מרידיאן חסר",
+        description: "נא ליצור קשר עם הקליניקה להשלמת התשלום.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsMeridianSubmitting(true);
+    try {
+      const result = await createMeridianBooking({
+        patient_name: formData.patient_name,
+        patient_phone: formData.patient_phone,
+        patient_email: formData.patient_email,
+        notes: formData.notes,
+        marketing_consent: formData.marketing_consent,
+        treatment_id: formData.treatment_id || treatment?.id,
+        treatment_name: formData.treatment_name || treatment?.name,
+        treatment_price: treatment?.price ?? formData.treatment_price ?? null,
+        tenant_id: getClinicTenantId() || clinicSite?.id || "maya",
+        appointments: formData.appointments || [],
+      });
+
+      window.open(meridianUrl, "_blank", "noopener,noreferrer");
+
+      setMeridianSuccess({
+        appointments: result.appointments || [],
+        treatment_name: treatment?.name || formData.treatment_name,
+        treatment_price: treatment?.price ?? formData.treatment_price ?? null,
+      });
+    } catch (error) {
+      toast({
+        title: "לא ניתן לשמור את התור",
+        description: error?.message || "נסו שוב בעוד רגע או צרו קשר עם הקליניקה.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsMeridianSubmitting(false);
+    }
+  };
+
+  if (meridianSuccess) {
+    return (
+      <BookingSuccess
+        appointment={meridianSuccess}
+        onReset={() => navigate("/book", { replace: true })}
+      />
+    );
+  }
 
   return (
     <motion.div
@@ -200,7 +268,11 @@ export default function PaymentStep({ formData, treatment, onBack }) {
                 : "bg-primary/10"
             }`}
           >
-            <CreditCard className={`h-8 w-8 ${clinicSite ? clinicTextPrimary : "text-primary"}`} />
+            {isMeridian ? (
+              <ShieldCheck className={`h-8 w-8 ${clinicSite ? clinicTextPrimary : "text-primary"}`} />
+            ) : (
+              <CreditCard className={`h-8 w-8 ${clinicSite ? clinicTextPrimary : "text-primary"}`} />
+            )}
           </div>
         )}
         <h2
@@ -208,11 +280,17 @@ export default function PaymentStep({ formData, treatment, onBack }) {
             showCheckout ? "mb-0 text-lg" : "mb-2 text-2xl"
           } ${clinicSite ? clinicTextHeading : "text-foreground"}`}
         >
-          {showCheckout ? "השלמת תשלום מאובטח" : "תשלום על התור"}
+          {showCheckout
+            ? "השלמת תשלום מאובטח"
+            : isMeridian
+              ? "תשלום דרך מרידיאן"
+              : "תשלום על התור"}
         </h2>
         {!showCheckout && (
           <p className={clinicSite ? clinicTextMuted : "text-muted-foreground"}>
-            לפני אישור התור, יש לשלם את עלות הטיפול בכרטיס אשראי
+            {isMeridian
+              ? "לפני אישור התור, יש להשלים את התשלום בהטבה דרך מרידיאן"
+              : "לפני אישור התור, יש לשלם את עלות הטיפול בכרטיס אשראי"}
           </p>
         )}
       </div>
@@ -289,49 +367,88 @@ export default function PaymentStep({ formData, treatment, onBack }) {
 
       {!showCheckout ? (
         <div className="mb-6">
-          <button
-            type="button"
-            onClick={handleStartCreditPayment}
-            disabled={pelecardConfigured === null}
-            className={`mb-3 flex w-full flex-col items-center justify-center gap-2.5 px-6 py-4 text-base font-medium transition-transform active:scale-[0.99] disabled:opacity-60 ${
-              clinicSite
-                ? "rounded-2xl bg-[#5D7F6D] text-white shadow-[0_8px_24px_rgba(93,127,109,0.22)] hover:bg-[#4F6F5F]"
-                : "rounded-xl bg-primary text-primary-foreground"
-            }`}
-            aria-label={`תשלום באשראי על סך ₪${totalPrice}`}
-          >
-            <span className="inline-flex items-center justify-center gap-2 leading-none">
-              <Lock className="h-4 w-4 shrink-0" />
-              <span>תשלום באשראי · ₪{totalPrice}</span>
-            </span>
-            <span className="inline-flex items-center justify-center gap-2 leading-none">
-              <img
-                src={VISA_LOGO}
-                alt="Visa"
-                className="h-6 w-auto rounded-[4px] bg-white shadow-sm"
-                width={42}
-                height={28}
-              />
-              <img
-                src={MASTERCARD_LOGO}
-                alt="Mastercard"
-                className="h-6 w-auto rounded-[4px] bg-white shadow-sm"
-                width={42}
-                height={28}
-              />
-            </span>
-          </button>
-          <p
-            className={`text-center text-xs ${
-              clinicSite ? clinicTextMuted : "text-muted-foreground"
-            }`}
-          >
-            תשלום מאובטח בדף סליקה · Visa ו־Mastercard
-          </p>
-          {pelecardConfigured === false && (
-            <p className="mt-3 text-center text-sm text-[#9B2C2C]">
-              סליקת אשראי עדיין לא הוגדרה בשרת.
-            </p>
+          {isMeridian ? (
+            <>
+              <button
+                type="button"
+                onClick={handleMeridianPayment}
+                disabled={isMeridianSubmitting || !meridianUrl}
+                className={`mb-3 flex w-full items-center justify-center gap-3 px-6 py-4 text-base font-medium transition-transform active:scale-[0.99] disabled:opacity-60 ${
+                  clinicSite
+                    ? "rounded-2xl bg-[#5D7F6D] text-white shadow-[0_8px_24px_rgba(93,127,109,0.22)] hover:bg-[#4F6F5F]"
+                    : "rounded-xl bg-primary text-primary-foreground"
+                }`}
+                aria-label="תשלום דרך מרידיאן"
+              >
+                {isMeridianSubmitting ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <ShieldCheck className="h-5 w-5 shrink-0" />
+                )}
+                <span>
+                  {isMeridianSubmitting ? "שומרים את התור…" : "תשלום דרך מרידיאן"}
+                </span>
+              </button>
+              <p
+                className={`text-center text-xs ${
+                  clinicSite ? clinicTextMuted : "text-muted-foreground"
+                }`}
+              >
+                התור יישמר ואז תועברו לאתר מרידיאן להשלמת התשלום בהטבה
+              </p>
+              {!meridianUrl && (
+                <p className="mt-3 text-center text-sm text-[#9B2C2C]">
+                  קישור מרידיאן לא הוגדר. נא ליצור קשר עם הקליניקה.
+                </p>
+              )}
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={handleStartCreditPayment}
+                disabled={pelecardConfigured === null}
+                className={`mb-3 flex w-full flex-col items-center justify-center gap-2.5 px-6 py-4 text-base font-medium transition-transform active:scale-[0.99] disabled:opacity-60 ${
+                  clinicSite
+                    ? "rounded-2xl bg-[#5D7F6D] text-white shadow-[0_8px_24px_rgba(93,127,109,0.22)] hover:bg-[#4F6F5F]"
+                    : "rounded-xl bg-primary text-primary-foreground"
+                }`}
+                aria-label={`תשלום באשראי על סך ₪${totalPrice}`}
+              >
+                <span className="inline-flex items-center justify-center gap-2 leading-none">
+                  <Lock className="h-4 w-4 shrink-0" />
+                  <span>תשלום באשראי · ₪{totalPrice}</span>
+                </span>
+                <span className="inline-flex items-center justify-center gap-2 leading-none">
+                  <img
+                    src={VISA_LOGO}
+                    alt="Visa"
+                    className="h-6 w-auto rounded-[4px] bg-white shadow-sm"
+                    width={42}
+                    height={28}
+                  />
+                  <img
+                    src={MASTERCARD_LOGO}
+                    alt="Mastercard"
+                    className="h-6 w-auto rounded-[4px] bg-white shadow-sm"
+                    width={42}
+                    height={28}
+                  />
+                </span>
+              </button>
+              <p
+                className={`text-center text-xs ${
+                  clinicSite ? clinicTextMuted : "text-muted-foreground"
+                }`}
+              >
+                תשלום מאובטח בדף סליקה · Visa ו־Mastercard
+              </p>
+              {pelecardConfigured === false && (
+                <p className="mt-3 text-center text-sm text-[#9B2C2C]">
+                  סליקת אשראי עדיין לא הוגדרה בשרת.
+                </p>
+              )}
+            </>
           )}
         </div>
       ) : (

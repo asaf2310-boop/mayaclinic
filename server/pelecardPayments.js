@@ -82,7 +82,10 @@ export async function updatePaymentSession(bookingRef, patch) {
   return Array.isArray(rows) ? rows[0] : rows;
 }
 
-async function createAppointmentsFromBooking(booking, paymentNote) {
+export async function createAppointmentsFromBooking(
+  booking,
+  { paymentNote = "", paid = true, status = "confirmed" } = {}
+) {
   const notes = [String(booking.notes || "").trim(), paymentNote].filter(Boolean).join("\n");
   const createdIds = [];
   const createdRows = [];
@@ -99,8 +102,8 @@ async function createAppointmentsFromBooking(booking, paymentNote) {
       treatment_price: booking.treatment_price,
       date: appointment.date,
       time: appointment.time,
-      paid: true,
-      status: "confirmed",
+      paid: Boolean(paid),
+      status: status || "confirmed",
       tenant_id: booking.tenant_id || "maya",
     };
 
@@ -132,6 +135,29 @@ async function createAppointmentsFromBooking(booking, paymentNote) {
   }
 
   return { createdIds, createdRows };
+}
+
+/**
+ * Create appointments for Meridian benefit flow (external payment link).
+ * Reserves the slot; payment happens on Meridian's site.
+ */
+export async function createMeridianBooking(rawBooking = {}) {
+  const booking = normalizeBookingPayload(rawBooking);
+  if (!isBookingPayloadValid(booking)) {
+    const error = new Error("booking payload is required (patient, treatment, appointments)");
+    error.status = 400;
+    throw error;
+  }
+
+  const { createdIds, createdRows } = await createAppointmentsFromBooking(booking, {
+    paymentNote: "תשלום דרך מרידיאן (קישור חיצוני)",
+    paid: false,
+    status: "confirmed",
+  });
+
+  await maybeSendConfirmationEmail(createdRows);
+
+  return { createdIds, appointments: createdRows };
 }
 
 async function maybeSendConfirmationEmail(appointments) {
@@ -223,7 +249,11 @@ export async function finalizePaymentFromPelecard({
     ? `Pelecard: ${pelecardTransactionId}`
     : `Pelecard: ${bookingRef}`;
 
-  const { createdIds, createdRows } = await createAppointmentsFromBooking(booking, paymentNote);
+  const { createdIds, createdRows } = await createAppointmentsFromBooking(booking, {
+    paymentNote,
+    paid: true,
+    status: "confirmed",
+  });
 
   const updated = await updatePaymentSession(bookingRef, {
     status: "paid",

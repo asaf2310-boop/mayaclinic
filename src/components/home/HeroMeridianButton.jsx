@@ -1,18 +1,18 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { ShieldCheck } from "lucide-react";
 import { clinicHeroMeridianBtn, clinicHeroMeridianIconRing } from "@/lib/clinicUi";
 
+/** Meridian hero CTA → regular booking with Meridian payment step. */
 export default function HeroMeridianButton({ link }) {
-  if (!link?.url) return null;
+  if (!link) return null;
 
   const title = link.title || link.label;
   const subtitle = link.subtitle;
 
   return (
-    <a
-      href={link.url}
-      target="_blank"
-      rel="noopener noreferrer"
+    <Link
+      to="/book?payment=meridian"
       className={clinicHeroMeridianBtn}
       dir="rtl"
     >
@@ -31,6 +31,6 @@ export default function HeroMeridianButton({ link }) {
           </span>
         )}
       </span>
-    </a>
+    </Link>
   );
 }
