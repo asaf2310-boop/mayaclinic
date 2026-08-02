@@ -1,30 +1,32 @@
 import nodemailer from "nodemailer";
+import {
+  getGmailCredentials,
+  isGmailCredentialsConfigured,
+} from "./gmailCredentials.js";
 
 export function getClinicName() {
   return process.env.MAYA_CLINIC_NAME || "הקליניקה של מאיה";
 }
 
 export function isEmailConfigured() {
-  return Boolean(process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD);
+  return isGmailCredentialsConfigured();
 }
 
 function createTransport() {
-  if (!isEmailConfigured()) {
+  const { user, pass } = getGmailCredentials();
+  if (!user || !pass) {
     throw new Error("Gmail is not configured");
   }
 
   return nodemailer.createTransport({
     service: "gmail",
-    auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_APP_PASSWORD,
-    },
+    auth: { user, pass },
   });
 }
 
 export async function sendEmail({ to, subject, html }) {
   const fromName = getClinicName();
-  const fromAddress = process.env.GMAIL_USER;
+  const { user: fromAddress } = getGmailCredentials();
 
   const transport = createTransport();
   await transport.sendMail({
