@@ -1098,9 +1098,9 @@ canvas {
   height: auto !important;
 }
 
-/* ==== Payment methods: credit row + full-width Apple/Google buttons ==== */
+/* ==== Payment methods: keep card fields; wallet logos without boxes/text ==== */
 
-/* Credit-card method row — full width, label + brands */
+/* Credit-card method row — full width, label + brands (unchanged form below) */
 .tab-button:has(img[src*="Visa" i], img[src*="visa" i], img[src*="Master" i], img[src*="master" i], img[src*="Mastercard" i], img[src*="mastercard" i], img[alt*="Visa" i], img[alt*="Master" i], img[alt*="אשראי" i]),
 .pay-logo-col:has(img[src*="Visa" i], img[src*="visa" i], img[src*="Master" i], img[src*="master" i], img[src*="Mastercard" i], img[src*="mastercard" i], img[alt*="Visa" i], img[alt*="Master" i]):not(:has([id*="ApplePay"], [id*="GooglePay"], img[src*="Apple" i], img[src*="Google" i])),
 .body-content button.tab-button:first-of-type:has(~ button.tab-button) {
@@ -1147,7 +1147,11 @@ canvas {
   flex-shrink: 0 !important;
 }
 
-/* Apple Pay / Google Pay — full-width payment method buttons */
+/*
+ * Apple Pay / Google Pay — logo only (no box, no label text).
+ * CssURL can restyle these inside the Pelecard iframe; the hit-target
+ * stays clickable even when border/background are removed.
+ */
 #GooglePayButton,
 #ApplePayButton,
 [id*="GooglePay"],
@@ -1173,47 +1177,50 @@ button.apple-pay-button,
   width: 100% !important;
   max-width: 100% !important;
   min-width: 0 !important;
-  min-height: 56px !important;
-  height: 56px !important;
+  min-height: 48px !important;
+  height: 48px !important;
   max-height: none !important;
-  margin: 8px 0 !important;
-  padding: 12px 16px !important;
-  overflow: hidden !important;
+  margin: 4px 0 !important;
+  padding: 8px 12px !important;
+  overflow: visible !important;
   line-height: 0 !important;
   text-align: center !important;
   font-size: 0 !important;
   color: transparent !important;
-  border-radius: 12px !important;
+  letter-spacing: 0 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  border-width: 0 !important;
+  border-style: none !important;
+  border-color: transparent !important;
+  border-radius: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  cursor: pointer !important;
   background-position: center center !important;
   background-repeat: no-repeat !important;
-  background-size: auto 34px !important;
-  --apple-pay-button-height: 56px;
-  --apple-pay-button-border-radius: 12px;
-  --apple-pay-button-padding: 12px 16px;
+  background-size: auto 36px !important;
+  --apple-pay-button-height: 48px;
+  --apple-pay-button-border-radius: 0px;
+  --apple-pay-button-padding: 0px;
   --apple-pay-button-box-sizing: border-box;
+  --apple-pay-button-style: white-outline;
 }
 
-@media (min-width: 750px) {
-  #GooglePayButton,
-  #ApplePayButton,
-  [id*="GooglePay"],
-  [id*="ApplePay"],
-  [id*="googlePay"],
-  [id*="applePay"],
-  [class*="google-pay"],
-  [class*="apple-pay"],
-  [class*="GooglePay"],
-  [class*="ApplePay"],
-  .apple-pay-button,
-  apple-pay-button,
-  button.apple-pay-button,
-  .tab-button:has(img[src*="Apple" i], img[src*="apple" i], img[src*="Google" i], img[src*="google" i], img[alt*="Apple" i], img[alt*="Google" i]):not(:has(img[src*="Visa" i], img[src*="Master" i], img[src*="mastercard" i], img[src*="visa" i])),
-  .pay-logo-col:has([id*="ApplePay"], [id*="GooglePay"], img[src*="Apple" i], img[src*="apple" i], img[src*="Google" i], img[src*="google" i], img[alt*="Apple" i], img[alt*="Google" i]),
-  .pay-logo-col button:has(img[src*="Apple" i], img[src*="apple" i], img[src*="Google" i], img[src*="google" i], img[alt*="Apple" i], img[alt*="Google" i]) {
-    min-height: 60px !important;
-    height: 60px !important;
-    --apple-pay-button-height: 60px;
-  }
+#GooglePayButton:focus,
+#ApplePayButton:focus,
+[id*="GooglePay"]:focus,
+[id*="ApplePay"]:focus,
+.tab-button:has(img[src*="Apple" i], img[src*="Google" i]):focus,
+.pay-logo-col button:has(img[src*="Apple" i], img[src*="Google" i]):focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border: 0 !important;
 }
 
 /* Hide Apple/Google text labels; keep logos */
@@ -1261,10 +1268,10 @@ button.apple-pay-button,
   flex: 0 0 auto !important;
   flex-shrink: 0 !important;
   width: auto !important;
-  max-width: 90% !important;
-  height: 34px !important;
+  max-width: 160px !important;
+  height: 36px !important;
   max-height: none !important;
-  min-height: 34px !important;
+  min-height: 36px !important;
   margin: 0 auto !important;
   object-fit: contain !important;
   object-position: center !important;
@@ -1626,7 +1633,7 @@ button.btn-submit:focus,
     border-radius: 12px !important;
   }
 
-  /* Full-width Apple / Google buttons on mobile */
+  /* Wallet logos only on mobile — no boxes */
   #GooglePayButton,
   #ApplePayButton,
   [id*="GooglePay"],
@@ -1645,15 +1652,16 @@ button.btn-submit:focus,
   .pay-logo-col:has([id*="ApplePay"], [id*="GooglePay"], img[src*="Apple" i], img[src*="Google" i]) {
     width: 100% !important;
     max-width: 100% !important;
-    min-width: 0 !important;
-    min-height: 56px !important;
-    height: 56px !important;
-    max-height: none !important;
-    margin: 8px 0 !important;
-    padding: 12px 16px !important;
+    min-height: 48px !important;
+    height: 48px !important;
+    margin: 4px 0 !important;
+    padding: 8px 12px !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
     justify-content: center !important;
     align-items: center !important;
-    background-size: auto 34px !important;
   }
 
   #GooglePayButton img,
@@ -1669,10 +1677,10 @@ button.btn-submit:focus,
     position: static !important;
     transform: none !important;
     width: auto !important;
-    max-width: 90% !important;
-    height: 34px !important;
+    max-width: 160px !important;
+    height: 36px !important;
     max-height: none !important;
-    min-height: 34px !important;
+    min-height: 36px !important;
     margin: 0 auto !important;
     object-fit: contain !important;
     flex-shrink: 0 !important;
