@@ -98,21 +98,27 @@ export default function BookingSuccess({ appointment, onReset }) {
       </div>
 
       <div className="flex w-full flex-col justify-center gap-3 sm:flex-row">
-        <Link to="/" className="w-full sm:w-auto">
-          <Button
-            variant="outline"
-            className={`w-full gap-2 ${clinicSite ? clinicOutlineBtn : "rounded-xl"}`}
-          >
+        <Button
+          asChild
+          variant="outline"
+          className={`w-full gap-2 sm:w-auto ${clinicSite ? clinicOutlineBtn : "rounded-xl"}`}
+        >
+          <Link to="/">
             <Home className="w-4 h-4" />
             חזרה לעמוד הבית
-          </Button>
-        </Link>
+          </Link>
+        </Button>
         <Button
-          onClick={onReset}
+          asChild
           className={`w-full gap-2 sm:w-auto ${clinicSite ? clinicPrimaryBtn : "rounded-xl"}`}
         >
-          <CalendarPlus className="w-4 h-4" />
-          קביעת תור נוסף
+          <Link
+            to="/"
+            onClick={() => onReset?.()}
+          >
+            <CalendarPlus className="w-4 h-4" />
+            קביעת תור נוסף
+          </Link>
         </Button>
       </div>
     </motion.div>
