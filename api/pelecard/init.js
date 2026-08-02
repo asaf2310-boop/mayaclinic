@@ -77,13 +77,6 @@ export default async function handler(req, res) {
     const serverSideGoodFeedbackUrl = `${origin}/api/pelecard/feedback?outcome=good&ref=${encodeURIComponent(bookingRef)}`;
     const serverSideErrorFeedbackUrl = `${origin}/api/pelecard/feedback?outcome=error&ref=${encodeURIComponent(bookingRef)}`;
 
-    const treatmentName =
-      String(body.treatmentName || booking.treatment_name || "").trim();
-    const topText = CLINIC_PAYMENT_TOP;
-    const bottomText = treatmentName
-      ? `תשלום מאובטח עבור: ${treatmentName}`
-      : "תשלום מאובטח עבור התור";
-
     const session = await initPelecardPayment({
       totalAgorot,
       goodUrl,
@@ -92,10 +85,10 @@ export default async function handler(req, res) {
       serverSideErrorFeedbackUrl,
       paramX: bookingRef,
       userKey: bookingRef,
-      topText,
-      bottomText,
+      // Shorter chrome inside the iframe so fields + pay button fit on phones.
+      topText: CLINIC_PAYMENT_TOP,
+      bottomText: "",
       publicOrigin: origin,
-      // Keep the mobile form short so CVV + green pay button stay on-screen.
       // Pelecard ManualIframe accepts: Must | Hide | optional (not "required")
       customerIdField: "Hide",
       cvv2Field: "Must",

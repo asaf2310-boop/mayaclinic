@@ -1060,40 +1060,76 @@ p.block_ui_cancel_gama {
 }
 
 
-/* ==== Maya Clinic brand overrides (v4) ==== */
-html, body {
+/* ==== Maya Clinic brand overrides (v5 — iframe mobile) ==== */
+html {
   font-family: Heebo, "Segoe UI", Tahoma, Arial, sans-serif !important;
   color: #2F3B34 !important;
-  background:
-    radial-gradient(circle at 12% 18%, rgba(168, 196, 180, 0.35), transparent 42%),
-    radial-gradient(circle at 88% 78%, rgba(93, 127, 109, 0.16), transparent 40%),
-    linear-gradient(180deg, #F3F7F4 0%, #EAF1EC 55%, #F7F8F6 100%) !important;
+  -webkit-text-size-adjust: 100% !important;
+  text-size-adjust: 100% !important;
+}
+
+html, body {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+  background: #ffffff !important;
+}
+
+body {
+  font-family: Heebo, "Segoe UI", Tahoma, Arial, sans-serif !important;
+  color: #2F3B34 !important;
+  /* Room to scroll focused fields above the iOS keyboard */
+  padding-bottom: 220px !important;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box !important;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100% !important;
+  height: auto !important;
 }
 
 .body-content {
-  background: transparent !important;
+  background: #ffffff !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 .container {
-  max-width: 520px !important;
+  max-width: 100% !important;
+  width: 100% !important;
   margin: 0 auto !important;
-  padding: 0 10px !important;
+  padding: 0 14px !important;
 }
 
 .main {
-  background: rgba(255, 255, 255, 0.92) !important;
-  border: 1px solid #D5E0D8 !important;
-  border-radius: 20px !important;
-  box-shadow: 0 12px 36px rgba(93, 127, 109, 0.12) !important;
-  /* Must not clip the pay button / wallet rows on mobile */
+  background: #ffffff !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
   overflow: visible !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
 }
 
 .credit-title,
 .topRef {
-  background: linear-gradient(90deg, #F0F4F1 0%, #FFFFFF 55%, #F7F8F6 100%) !important;
+  background: #F7FAF8 !important;
   border-bottom: 1px solid #E8ECE8 !important;
   box-shadow: none !important;
+  padding: 8px 0 !important;
 }
 
 .credit-title .title,
@@ -1102,6 +1138,11 @@ html, body {
   color: #5D7F6D !important;
   text-shadow: none !important;
   font-weight: 700 !important;
+  font-size: 15px !important;
+  margin: 0 !important;
+  float: none !important;
+  text-align: center !important;
+  width: 100% !important;
 }
 
 .credit-title .logo { display: none !important; }
@@ -1162,10 +1203,15 @@ input[readonly] {
   font-weight: 600 !important;
   color: #2F3B34 !important;
   text-align: right !important;
+  position: static !important;
+  left: auto !important;
+  right: auto !important;
 }
 
 .control-value {
   margin: 0 !important;
+  position: static !important;
+  width: 100% !important;
 }
 
 .control-group .form-control,
@@ -1176,12 +1222,33 @@ select.form-control,
 #credit_card_number_input,
 #id_number_input,
 #cvv_input,
-#totalAll {
+#totalAll,
+input[name*="credit"],
+input[name*="Credit"],
+input[id*="credit"],
+input[id*="Credit"],
+input[id*="card"],
+input[id*="Card"] {
   float: none !important;
+  clear: both !important;
+  position: static !important;
+  left: auto !important;
+  right: auto !important;
   display: block !important;
   width: 100% !important;
   max-width: 100% !important;
+  min-width: 0 !important;
   box-sizing: border-box !important;
+  margin: 0 0 4px !important;
+}
+
+/* Keep focused field scrollable above soft keyboard */
+input.form-control:focus,
+select.form-control:focus,
+#credit_card_number_input:focus,
+#cvv_input:focus {
+  scroll-margin-bottom: 240px !important;
+  scroll-margin-top: 80px !important;
 }
 
 #dateContainer {
@@ -1385,7 +1452,7 @@ button.btn-submit:focus,
     border-radius: 12px !important;
   }
 
-  /* Wallet chooser: compact horizontal-ish stack */
+  /* Wallet chooser — keep compact so card fields stay above the fold */
   .tab-button,
   .tab-button > button,
   .pay-logo-col,
@@ -1406,19 +1473,31 @@ button.btn-submit:focus,
   [class*="payment-method"] button,
   [class*="PaymentMethod"] button,
   .body-content button.tab-button {
-    min-height: 44px !important;
-    height: 44px !important;
-    max-height: 48px !important;
-    margin: 4px 0 !important;
-    padding: 6px 10px !important;
+    min-height: 40px !important;
+    height: 40px !important;
+    max-height: 44px !important;
+    margin: 3px 0 !important;
+    padding: 4px 8px !important;
     box-sizing: border-box !important;
     width: 100% !important;
     max-width: 100% !important;
   }
 
   .apple-pay-button {
-    --apple-pay-button-height: 44px;
+    --apple-pay-button-height: 40px;
     --apple-pay-button-border-radius: 10px;
+  }
+
+  /* Any absolute/float leftovers from Pelecard base CSS */
+  .form-group,
+  .control-group,
+  .control-label,
+  .control-value,
+  .form-control,
+  input,
+  select {
+    float: none !important;
+    position: static !important;
   }
 
   .form-group-submit,
