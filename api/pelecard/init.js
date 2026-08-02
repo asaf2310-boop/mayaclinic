@@ -13,6 +13,8 @@ import { createPaymentSessionToken } from "../../server/paymentSessionToken.js";
 
 const CLINIC_PAYMENT_TOP =
   process.env.PELECARD_TOP_TEXT || "אופיר - מרכז טיפול הוליסטי";
+const CLINIC_PAYMENT_BOTTOM =
+  process.env.PELECARD_BOTTOM_TEXT || "Apple Pay או Google Pay";
 
 function readBody(req) {
   if (!req.body) return {};
@@ -87,7 +89,7 @@ export default async function handler(req, res) {
       userKey: bookingRef,
       // Shorter chrome inside the iframe so fields + pay button fit on phones.
       topText: CLINIC_PAYMENT_TOP,
-      bottomText: "",
+      bottomText: CLINIC_PAYMENT_BOTTOM,
       publicOrigin: origin,
       // Pelecard ManualIframe accepts: Must | Hide | optional (not "required")
       customerIdField: "Hide",
