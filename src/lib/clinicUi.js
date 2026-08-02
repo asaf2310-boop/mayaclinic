@@ -33,7 +33,7 @@ export const clinicHeroPremiumIconRing =
   "flex h-12 w-12 items-center justify-center rounded-full border border-[#5D7F6D]/15 bg-[#F7FAF8] md:h-20 md:w-20";
 
 export const clinicHeroPremiumLabel =
-  "text-sm font-semibold leading-snug text-[#2F3B34] sm:text-base";
+  "text-[13px] font-semibold leading-snug text-[#2F3B34] sm:text-sm md:text-base";
 
 export const clinicHeroMeridianBtn =
   "group mx-auto flex w-full max-w-full items-center gap-3 rounded-full border border-white/25 bg-gradient-to-l from-[#4A6B5C] via-[#5D7F6D] to-[#6F9180] px-3.5 py-2.5 text-right shadow-[0_14px_36px_rgba(74,107,92,0.28),inset_0_1px_0_rgba(255,255,255,0.18)] transition-all duration-300 ease-in-out hover:shadow-[0_18px_44px_rgba(74,107,92,0.34),inset_0_1px_0_rgba(255,255,255,0.22)] active:scale-[0.99] sm:max-w-md sm:gap-5 sm:px-8 sm:py-5";
