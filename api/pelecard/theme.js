@@ -1154,7 +1154,7 @@ button#info,
   border: 0 !important;
 }
 
-/* Remaining method tiles (Apple / Google) — logo only, centered */
+/* Remaining method tiles (Apple / Google) — large centered logos */
 .pay-logo-col,
 .tab-button,
 .tab-button > button,
@@ -1175,6 +1175,7 @@ button#info,
 .apple-pay-button,
 apple-pay-button,
 button.apple-pay-button {
+  position: relative !important;
   display: flex !important;
   visibility: visible !important;
   flex-direction: row !important;
@@ -1185,11 +1186,11 @@ button.apple-pay-button {
   box-sizing: border-box !important;
   width: 100% !important;
   max-width: 100% !important;
-  min-height: 64px !important;
-  height: 64px !important;
-  max-height: 72px !important;
-  margin: 10px 0 !important;
-  padding: 0 20px !important;
+  min-height: 96px !important;
+  height: 96px !important;
+  max-height: 110px !important;
+  margin: 12px 0 !important;
+  padding: 0 !important;
   overflow: hidden !important;
   line-height: 0 !important;
   text-align: center !important;
@@ -1198,14 +1199,14 @@ button.apple-pay-button {
   letter-spacing: 0 !important;
   background-position: center center !important;
   background-repeat: no-repeat !important;
-  background-size: auto 36px !important;
-  --apple-pay-button-height: 64px;
-  --apple-pay-button-border-radius: 14px;
+  background-size: auto 58px !important;
+  --apple-pay-button-height: 96px;
+  --apple-pay-button-border-radius: 16px;
   --apple-pay-button-padding: 0px;
   --apple-pay-button-box-sizing: border-box;
 }
 
-/* Hide text labels inside wallet tiles; keep logo media */
+/* Hide text-only nodes; flatten wrappers that hold the logo */
 .pay-logo-col > span:not(:has(img)):not(:has(svg)),
 .tab-button > span:not(:has(img)):not(:has(svg)),
 .tab-button > button > span:not(:has(img)):not(:has(svg)),
@@ -1218,8 +1219,30 @@ button.apple-pay-button {
 [class*="google-pay"] > span:not(:has(img)):not(:has(svg)),
 [class*="apple-pay"] > span:not(:has(img)):not(:has(svg)),
 [class*="payment-method"] button > span:not(:has(img)):not(:has(svg)),
-[class*="PaymentMethod"] button > span:not(:has(img)):not(:has(svg)) {
+[class*="PaymentMethod"] button > span:not(:has(img)):not(:has(svg)),
+.pay-logo-col > div:not(:has(img)):not(:has(svg)),
+.tab-button > div:not(:has(img)):not(:has(svg)),
+.pay-logo-col button > div:not(:has(img)):not(:has(svg)) {
   display: none !important;
+}
+
+.pay-logo-col > span:has(img),
+.pay-logo-col > span:has(svg),
+.pay-logo-col > div:has(img),
+.pay-logo-col > div:has(svg),
+.tab-button > span:has(img),
+.tab-button > span:has(svg),
+.tab-button > div:has(img),
+.tab-button > div:has(svg),
+.pay-logo-col button > span:has(img),
+.pay-logo-col button > div:has(img),
+#GooglePayButton > span:has(img),
+#ApplePayButton > span:has(img),
+[id*="GooglePay"] > span:has(img),
+[id*="ApplePay"] > span:has(img),
+[class*="google-pay"] > span:has(img),
+[class*="apple-pay"] > span:has(img) {
+  display: contents !important;
 }
 
 .pay-logo-col img,
@@ -1250,18 +1273,27 @@ button.apple-pay-button {
 [class*="PaymentMethod"] button img {
   display: block !important;
   flex: 0 0 auto !important;
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: translate(-50%, -50%) !important;
   width: auto !important;
-  max-width: 160px !important;
-  height: 36px !important;
-  max-height: 36px !important;
-  margin: 0 auto !important;
+  max-width: 240px !important;
+  height: 58px !important;
+  max-height: 58px !important;
+  min-height: 58px !important;
+  margin: 0 !important;
   object-fit: contain !important;
   object-position: center !important;
-  position: static !important;
   float: none !important;
-  transform: none !important;
   font-size: 16px !important;
   color: initial !important;
+  opacity: 1 !important;
+  clip: auto !important;
+  pointer-events: none !important;
+  z-index: 2 !important;
 }
 
 /* Hide credit-card tile after wallet show-rules (must win cascade) */
@@ -1639,7 +1671,7 @@ button.btn-submit:focus,
     border-radius: 12px !important;
   }
 
-  /* Wallet-only — keep logo tiles large and centered on mobile */
+  /* Wallet-only — large centered logos on mobile */
   #GooglePayButton,
   #ApplePayButton,
   [id*="GooglePay"],
@@ -1653,18 +1685,17 @@ button.btn-submit:focus,
   .apple-pay-button,
   apple-pay-button,
   button.apple-pay-button,
-  .tab-button:has(img[src*="Apple" i], img[src*="apple" i], img[src*="Google" i], img[src*="google" i], img[alt*="Apple" i], img[alt*="Google" i]),
-  .pay-logo-col button:has(img[src*="Apple" i], img[src*="apple" i], img[src*="Google" i], img[src*="google" i], img[alt*="Apple" i], img[alt*="Google" i]) {
-    display: flex !important;
-    align-items: center !important;
+  .tab-button,
+  .pay-logo-col button,
+  .body-content button.tab-button {
+    min-height: 96px !important;
+    height: 96px !important;
+    max-height: 110px !important;
+    margin: 12px 0 !important;
+    padding: 0 !important;
     justify-content: center !important;
-    min-height: 64px !important;
-    height: 64px !important;
-    margin: 10px 0 !important;
-    padding: 0 20px !important;
-    font-size: 0 !important;
-    line-height: 0 !important;
-    width: 100% !important;
+    align-items: center !important;
+    background-size: auto 58px !important;
   }
 
   #GooglePayButton img,
@@ -1675,13 +1706,19 @@ button.btn-submit:focus,
   [class*="apple-pay"] img,
   [class*="GooglePay"] img,
   [class*="ApplePay"] img,
-  .tab-button:has(img[src*="Apple" i], img[src*="apple" i], img[src*="Google" i], img[src*="google" i], img[alt*="Apple" i], img[alt*="Google" i]) img,
-  .pay-logo-col button:has(img[src*="Apple" i], img[src*="apple" i], img[src*="Google" i], img[src*="google" i], img[alt*="Apple" i], img[alt*="Google" i]) img {
+  .tab-button img,
+  .pay-logo-col button img,
+  .body-content button.tab-button img {
+    position: absolute !important;
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) !important;
     width: auto !important;
-    max-width: 160px !important;
-    height: 36px !important;
-    max-height: 36px !important;
-    margin: 0 auto !important;
+    max-width: 240px !important;
+    height: 58px !important;
+    max-height: 58px !important;
+    min-height: 58px !important;
+    margin: 0 !important;
     object-fit: contain !important;
   }
 
