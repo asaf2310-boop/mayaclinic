@@ -29,8 +29,8 @@ export const CLINIC_SITES = {
 
     heroMeridianLink: {
       title: "תור למילואימניקים ונפגעי פעולות איבה",
-      subtitle: "בהטבה דרך מרידיאן",
-      url: "https://meridian-medicine.com/therapists/%d7%9e%d7%90%d7%99%d7%94-%d7%90%d7%a8%d7%99%d7%90%d7%9c%d7%99-%d7%91%d7%a8%d7%95%d7%9f/",
+      subtitle: "אימות מזהה טיפול במרידיאן",
+      url: "/book?payment=meridian",
     },
 
     heroFloatingTitle: "רעננות טבעית,",
