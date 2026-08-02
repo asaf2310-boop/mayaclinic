@@ -250,6 +250,7 @@ export default function PaymentStep({
     return (
       <BookingSuccess
         appointment={meridianSuccess}
+        hidePrices
         onReset={() => navigate("/book", { replace: true })}
       />
     );
@@ -364,16 +365,18 @@ export default function PaymentStep({
             />
           )}
 
-          <div
-            className={`flex items-center justify-between gap-3 border-t pt-3 ${
-              clinicSite ? "border-[#E8ECE8]" : "border-border"
-            }`}
-          >
-            <span className={mutedClass}>לתשלום</span>
-            <span className={`text-xl font-bold tabular-nums ${primaryClass}`}>
-              ₪{totalPrice}
-            </span>
-          </div>
+          {!isMeridian && (
+            <div
+              className={`flex items-center justify-between gap-3 border-t pt-3 ${
+                clinicSite ? "border-[#E8ECE8]" : "border-border"
+              }`}
+            >
+              <span className={mutedClass}>לתשלום</span>
+              <span className={`text-xl font-bold tabular-nums ${primaryClass}`}>
+                ₪{totalPrice}
+              </span>
+            </div>
+          )}
         </div>
       )}
 
@@ -386,7 +389,9 @@ export default function PaymentStep({
           }`}
         >
           <span className={`min-w-0 truncate ${mutedClass}`}>{treatment?.name}</span>
-          <span className={`shrink-0 font-bold tabular-nums ${primaryClass}`}>₪{totalPrice}</span>
+          {!isMeridian && (
+            <span className={`shrink-0 font-bold tabular-nums ${primaryClass}`}>₪{totalPrice}</span>
+          )}
         </div>
       )}
 

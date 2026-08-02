@@ -118,7 +118,9 @@ export default function Book() {
                         <p className={`text-sm ${clinicTextMuted}`}>הטיפול שלך</p>
                         <p className={`mt-1 text-xl font-bold ${clinicTextHeading}`}>{visibleTreatments[0].name}</p>
                         <p className={`mt-2 text-sm ${clinicTextMuted}`}>
-                          {visibleTreatments[0].duration_minutes} דקות · ₪{visibleTreatments[0].price}
+                          {paymentMethod === "meridian"
+                            ? `${visibleTreatments[0].duration_minutes} דקות`
+                            : `${visibleTreatments[0].duration_minutes} דקות · ₪${visibleTreatments[0].price}`}
                         </p>
                         {visibleTreatments[0].description ? (
                           <p className={`mt-3 text-sm leading-relaxed ${clinicTextMuted}`}>
@@ -131,6 +133,7 @@ export default function Book() {
                         treatments={visibleTreatments}
                         selectedId={selectedTreatment?.id}
                         onSelect={setSelectedTreatment}
+                        hidePrices={paymentMethod === "meridian"}
                       />
                     )}
 

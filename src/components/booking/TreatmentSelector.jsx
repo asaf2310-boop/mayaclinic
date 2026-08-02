@@ -12,7 +12,12 @@ import {
   clinicTreatmentCheck,
 } from "@/lib/clinicUi";
 
-export default function TreatmentSelector({ treatments, selectedId, onSelect }) {
+export default function TreatmentSelector({
+  treatments,
+  selectedId,
+  onSelect,
+  hidePrices = false,
+}) {
   const clinicSite = getClinicSite();
 
   return (
@@ -54,13 +59,15 @@ export default function TreatmentSelector({ treatments, selectedId, onSelect }) 
                       >
                         <Clock className="h-3 w-3" /> {t.duration_minutes} דקות
                       </span>
-                      <span
-                        className={`flex items-center gap-1 text-xs ${
-                          clinicSite ? clinicTextPrimary : "text-muted-foreground"
-                        }`}
-                      >
-                        <Banknote className="h-3 w-3" /> ₪{t.price}
-                      </span>
+                      {!hidePrices && (
+                        <span
+                          className={`flex items-center gap-1 text-xs ${
+                            clinicSite ? clinicTextPrimary : "text-muted-foreground"
+                          }`}
+                        >
+                          <Banknote className="h-3 w-3" /> ₪{t.price}
+                        </span>
+                      )}
                     </div>
                     {t.description ? (
                       <p
