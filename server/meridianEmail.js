@@ -1,4 +1,5 @@
 import { ImapFlow } from "imapflow";
+import { simpleParser } from "mailparser";
 import { isEmailConfigured } from "./gmail.js";
 
 const MERIDIAN_FROM_HINTS = ["meridian-medicine.com", "meridian"];
@@ -70,27 +71,99 @@ function extractEnvelopeAddress(envelope) {
     .join(", ");
 }
 
-async function searchMailboxForTreatmentId(client, mailbox, treatmentId, since) {
+function sourceToText(source) {
+  if (!source) return "";
+  if (Buffer.isBuffer(source)) return source.toString("utf8");
+  return String(source);
+}
+
+async function resolveMailboxPaths(client) {
+  const paths = new Set(["INBOX"]);
+  try {
+    const boxes = await client.list();
+    for (const box of boxes || []) {
+      const path = String(box?.path || "").trim();
+      if (!path) continue;
+      if (box.specialUse === "\\All" || /all mail|כל הדואר/i.test(path)) {
+        paths.add(path);
+      }
+    }
+  } catch (error) {
+    console.warn("[meridianEmail] list mailboxes failed:", error?.message || error);
+  }
+  return [...paths];
+}
+
+async function searchUids(client, treatmentId, since, lookbackDays) {
+  const queries = [];
+
+  if (client.capabilities?.has?.("X-GM-EXT-1")) {
+    queries.push({
+      gmraw: `from:meridian-medicine.com ${treatmentId} newer_than:${Math.max(1, lookbackDays)}d`,
+    });
+    queries.push({
+      gmraw: `from:info@meridian-medicine.com ${treatmentId}`,
+    });
+    queries.push({
+      gmraw: `"${treatmentId}" from:meridian`,
+    });
+  }
+
+  // Avoid BODY searches — Gmail often replies BAD / "Command failed".
+  queries.push({ since, from: "meridian-medicine.com" });
+  queries.push({ since, from: "meridian" });
+  queries.push({ since, subject: "מרידיאן" });
+
+  const seen = new Set();
+  const uids = [];
+
+  for (const query of queries) {
+    try {
+      const found = await client.search(query, { uid: true });
+      for (const uid of found || []) {
+        if (!seen.has(uid)) {
+          seen.add(uid);
+          uids.push(uid);
+        }
+      }
+      if (uids.length) break;
+    } catch (error) {
+      console.warn(
+        "[meridianEmail] search failed:",
+        JSON.stringify(query),
+        error?.message || error
+      );
+    }
+  }
+
+  return uids;
+}
+
+async function searchMailboxForTreatmentId(
+  client,
+  mailbox,
+  treatmentId,
+  since,
+  lookbackDays
+) {
   let lock;
   try {
     lock = await client.getMailboxLock(mailbox);
-  } catch {
+  } catch (error) {
+    console.warn(
+      "[meridianEmail] open mailbox failed:",
+      mailbox,
+      error?.message || error
+    );
     return null;
   }
 
   try {
-    const uids = await client.search(
-      {
-        since,
-        body: treatmentId,
-      },
-      { uid: true }
-    );
-
-    if (!uids?.length) return null;
+    const uids = await searchUids(client, treatmentId, since, lookbackDays);
+    if (!uids.length) return null;
 
     // Newest first — confirmation emails are typically recent.
-    const ordered = [...uids].sort((a, b) => b - a).slice(0, 25);
+    const ordered = [...uids].sort((a, b) => b - a).slice(0, 40);
 
     for await (const message of client.fetch(
       ordered,
@@ -101,17 +174,35 @@ async function searchMailboxForTreatmentId(client, mailbox, treatmentId, since) 
       },
       { uid: true }
     )) {
-      const from = extractEnvelopeAddress(message.envelope);
-      const subject = String(message.envelope?.subject || "");
-      const source = message.source
-        ? Buffer.isBuffer(message.source)
-          ? message.source.toString("utf8")
-          : String(message.source)
-        : "";
+      const envelopeFrom = extractEnvelopeAddress(message.envelope);
+      const envelopeSubject = String(message.envelope?.subject || "");
+      const source = sourceToText(message.source);
+
+      let from = envelopeFrom;
+      let subject = envelopeSubject;
+      let text = source;
+      let html = "";
+
+      try {
+        const parsed = await simpleParser(source);
+        from = parsed.from?.text || envelopeFrom;
+        subject = parsed.subject || envelopeSubject;
+        text = String(parsed.text || "");
+        html = String(parsed.html || "");
+        // Keep raw source as fallback for IDs that survive encoding oddly.
+        if (!text.includes(treatmentId) && !html.includes(treatmentId)) {
+          text = `${text}\n${source}`;
+        }
+      } catch (parseError) {
+        console.warn(
+          "[meridianEmail] mail parse failed:",
+          parseError?.message || parseError
+        );
+      }
 
       if (
         emailMatchesMeridianTreatment(
-          { from, subject, text: source, html: source },
+          { from, subject, text, html },
           treatmentId
         )
       ) {
@@ -124,11 +215,38 @@ async function searchMailboxForTreatmentId(client, mailbox, treatmentId, since) 
         };
       }
     }
+  } catch (error) {
+    console.warn(
+      "[meridianEmail] mailbox scan failed:",
+      mailbox,
+      error?.message || error
+    );
   } finally {
     lock.release();
   }
 
   return null;
+}
+
+function toUserFacingImapError(error) {
+  const message = String(error?.message || error || "");
+  const lower = message.toLowerCase();
+
+  if (
+    lower.includes("invalid credentials") ||
+    lower.includes("authentication") ||
+    (lower.includes("auth") && lower.includes("fail"))
+  ) {
+    return "לא ניתן להתחבר לתיבת המייל של הקליניקה (התחברות נכשלה)";
+  }
+  if (lower.includes("timeout") || lower.includes("timed out")) {
+    return "חיפוש במייל ארך יותר מדי. נסו שוב בעוד רגע";
+  }
+  if (lower.includes("command failed") || lower.includes("bad")) {
+    return "חיפוש במייל נכשל. בדקו שה־IMAP מופעל בחשבון Gmail של הקליניקה";
+  }
+
+  return "לא ניתן לסרוק כרגע את מייל הקליניקה לאימות מרידיאן";
 }
 
 /**
@@ -164,21 +282,49 @@ export async function findMeridianTreatmentEmail(treatmentId, options = {}) {
       pass: process.env.GMAIL_APP_PASSWORD,
     },
     logger: false,
+    connectionTimeout: 20_000,
+    greetingTimeout: 16_000,
+    socketTimeout: 30_000,
   });
 
-  await client.connect();
   try {
-    const mailboxes = ["INBOX", "[Gmail]/All Mail"];
+    await client.connect();
+  } catch (error) {
+    console.error("[meridianEmail] connect failed:", error?.message || error);
+    const wrapped = new Error(toUserFacingImapError(error));
+    wrapped.status = 503;
+    wrapped.cause = error;
+    throw wrapped;
+  }
+
+  try {
+    const mailboxes = await resolveMailboxPaths(client);
     for (const mailbox of mailboxes) {
-      const match = await searchMailboxForTreatmentId(client, mailbox, id, since);
+      const match = await searchMailboxForTreatmentId(
+        client,
+        mailbox,
+        id,
+        since,
+        lookbackDays
+      );
       if (match) return match;
     }
     return null;
+  } catch (error) {
+    console.error("[meridianEmail] scan failed:", error?.message || error);
+    const wrapped = new Error(toUserFacingImapError(error));
+    wrapped.status = 503;
+    wrapped.cause = error;
+    throw wrapped;
   } finally {
     try {
       await client.logout();
     } catch {
-      /* ignore logout errors */
+      try {
+        client.close();
+      } catch {
+        /* ignore */
+      }
     }
   }
 }

@@ -29,4 +29,18 @@ assert.equal(
   false
 );
 
+// Encoded/HTML bodies should still match via html field.
+assert.equal(
+  emailMatchesMeridianTreatment(
+    {
+      from: "Meridian <info@meridian-medicine.com>",
+      subject: "מטופל אישר את הטיפול בקליניקה - אתר מרידיאן",
+      text: "",
+      html: "<p>מזהה הטיפול שאושר: 750445114</p>",
+    },
+    "750445114"
+  ),
+  true
+);
+
 console.log("meridian email helpers: ok");
