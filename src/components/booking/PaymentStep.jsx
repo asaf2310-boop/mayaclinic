@@ -23,11 +23,16 @@ import BookingSuccess from "./BookingSuccess";
 const VISA_LOGO = "/payment/visa-logo.svg";
 const MASTERCARD_LOGO = "/payment/mastercard-logo.svg";
 
-/** Pelecard he-3 form needs ~890px on mobile; keep a stable tall frame (no inner scroll / layout jump). */
-const PELECARD_IFRAME_HEIGHT_CLASS = "h-[max(920px,calc(100dvh-8.5rem))]";
+/**
+ * Wallet rows (CC / Apple Pay / Google Pay) + card fields need a tall frame.
+ * Allow overflow scroll so the Pelecard "לתשלום" button is never clipped.
+ */
+const PELECARD_IFRAME_HEIGHT_CLASS =
+  "min-h-[1500px] h-[1500px] sm:min-h-[1300px] sm:h-[max(1300px,calc(100dvh-6rem))]";
 const PELECARD_IFRAME_STYLE = {
-  overflow: "hidden",
+  overflow: "auto",
   display: "block",
+  width: "100%",
 };
 
 function SummaryRow({ label, value, mutedClass, valueClass, emphasize = false }) {
@@ -258,14 +263,16 @@ export default function PaymentStep({
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`relative w-full max-w-full overflow-hidden ${
-        clinicSite
-          ? "rounded-2xl border border-[#D5E0D8]/80 bg-gradient-to-b from-[#F3F7F4]/95 via-[#EAF1EC]/90 to-[#F7F8F6]/95 p-4 shadow-[0_12px_36px_rgba(93,127,109,0.1)] backdrop-blur-[18px] sm:rounded-[28px] sm:p-6 md:p-8"
-          : "py-4"
+      className={`relative w-full max-w-full ${
+        showCheckout
+          ? "overflow-visible p-0"
+          : clinicSite
+            ? "overflow-hidden rounded-2xl border border-[#D5E0D8]/80 bg-gradient-to-b from-[#F3F7F4]/95 via-[#EAF1EC]/90 to-[#F7F8F6]/95 p-4 shadow-[0_12px_36px_rgba(93,127,109,0.1)] backdrop-blur-[18px] sm:rounded-[28px] sm:p-6 md:p-8"
+            : "overflow-hidden py-4"
       }`}
       dir="rtl"
     >
-      {clinicSite && (
+      {clinicSite && !showCheckout && (
         <>
           <div
             aria-hidden
@@ -454,10 +461,10 @@ export default function PaymentStep({
           )}
         </div>
       ) : (
-        <div className="mb-3 w-full max-w-full overflow-x-auto sm:mb-4">
+        <div className="mb-3 w-full max-w-full sm:mb-4">
           {isInitLoading || paymentDone ? (
             <div
-              className={`flex min-h-[220px] flex-col items-center justify-center gap-3 overflow-hidden rounded-2xl border p-6 text-center ${
+              className={`flex min-h-[220px] flex-col items-center justify-center gap-3 rounded-2xl border p-6 text-center ${
                 clinicSite
                   ? "border-[#D5E0D8] bg-gradient-to-b from-[#F3F7F4]/90 to-[#EAF1EC]/80"
                   : "border-border bg-muted/30"
@@ -474,9 +481,9 @@ export default function PaymentStep({
             </div>
           ) : iframeUrl ? (
             <div
-              className={`w-full max-w-full overflow-hidden rounded-2xl border shadow-[0_12px_36px_rgba(93,127,109,0.12)] sm:rounded-[20px] ${
+              className={`w-full max-w-full overflow-visible rounded-xl border sm:rounded-2xl ${
                 clinicSite
-                  ? "border-[#D5E0D8] bg-gradient-to-b from-[#F3F7F4] to-[#E8F0EA]"
+                  ? "border-[#D5E0D8] bg-[#F3F7F4]"
                   : "border-border bg-background"
               }`}
             >
@@ -496,9 +503,9 @@ export default function PaymentStep({
               <iframe
                 title="סליקת אשראי Pelecard"
                 src={iframeUrl}
-                scrolling="no"
+                scrolling="yes"
                 className={`w-full max-w-full border-0 ${PELECARD_IFRAME_HEIGHT_CLASS} ${
-                  clinicSite ? "bg-[#F3F7F4]" : "bg-background"
+                  clinicSite ? "bg-white" : "bg-background"
                 }`}
                 style={PELECARD_IFRAME_STYLE}
                 allow="payment *"
