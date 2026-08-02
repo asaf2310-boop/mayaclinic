@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ArrowRight, CreditCard, Loader2, Lock, ShieldCheck } from "lucide-react";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
@@ -23,24 +23,18 @@ import BookingSuccess from "./BookingSuccess";
 const VISA_LOGO = "/payment/visa-logo.svg";
 const MASTERCARD_LOGO = "/payment/mastercard-logo.svg";
 
-/** Desktop iframe height — wallet rows + card fields + green pay. */
+/**
+ * Always embed Pelecard in an iframe (not a top-level redirect).
+ * Mobile: viewport-tall scrollable frame. Desktop: taller fixed frame.
+ */
 const PELECARD_IFRAME_HEIGHT_CLASS =
-  "min-h-[1600px] h-[1600px] md:min-h-[1400px] md:h-[max(1400px,calc(100dvh-5rem))]";
+  "h-[min(920px,calc(100dvh-9rem))] min-h-[640px] sm:h-[min(1100px,calc(100dvh-8rem))] md:min-h-[1100px] md:h-[max(1100px,calc(100dvh-6rem))]";
 const PELECARD_IFRAME_STYLE = {
   overflow: "auto",
   display: "block",
   width: "100%",
+  WebkitOverflowScrolling: "touch",
 };
-
-/** Phones: open Pelecard top-level (iframe clips the pay button). */
-function preferFullPagePelecard() {
-  if (typeof window === "undefined") return false;
-  try {
-    return window.matchMedia("(max-width: 900px)").matches;
-  } catch {
-    return window.innerWidth <= 900;
-  }
-}
 
 function SummaryRow({ label, value, mutedClass, valueClass, emphasize = false }) {
   return (
@@ -76,8 +70,6 @@ export default function PaymentStep({
   const [paymentDone, setPaymentDone] = useState(false);
   const [isMeridianSubmitting, setIsMeridianSubmitting] = useState(false);
   const [meridianSuccess, setMeridianSuccess] = useState(null);
-  const [useFullPageCheckout, setUseFullPageCheckout] = useState(false);
-  const payLinkRef = useRef(null);
   const clinicSite = getClinicSite();
   const meridianUrl = clinicSite?.heroMeridianLink?.url || "";
   const { toast } = useToast();
@@ -131,22 +123,10 @@ export default function PaymentStep({
           },
         });
         if (cancelled) return;
-        const url = String(session.url || "").trim();
         setBookingRef(session.bookingRef || ref);
-        setIframeUrl(url);
-        const fullPage = preferFullPagePelecard();
-        setUseFullPageCheckout(fullPage);
+        setIframeUrl(String(session.url || "").trim());
         if (typeof console !== "undefined" && session?.cssUrl) {
           console.info("[pelecard] CssURL", session.cssUrl, "LogoURL", session.logoUrl || "");
-        }
-        // Best-effort auto-open on mobile. If the browser blocks it after async init,
-        // the explicit "המשך לתשלום" button (user tap) is the reliable path.
-        if (fullPage && url) {
-          try {
-            window.location.replace(url);
-          } catch {
-            /* CTA button remains */
-          }
         }
       } catch (error) {
         if (cancelled) return;
@@ -177,12 +157,6 @@ export default function PaymentStep({
     clinicSite?.id,
     toast,
   ]);
-
-  // Focus the pay CTA on mobile so it's obvious the page is ready.
-  useEffect(() => {
-    if (!useFullPageCheckout || !iframeUrl || isInitLoading || paymentDone) return;
-    payLinkRef.current?.focus?.();
-  }, [useFullPageCheckout, iframeUrl, isInitLoading, paymentDone]);
 
   useEffect(() => {
     if (isMeridian || !showCheckout || paymentDone) return;
@@ -313,8 +287,8 @@ export default function PaymentStep({
         </>
       )}
 
-      <div className={`relative text-center ${showCheckout ? "mb-3" : "mb-5 sm:mb-7"}`}>
-        {!showCheckout && (
+      {!showCheckout && (
+        <div className="relative mb-5 text-center sm:mb-7">
           <div
             className={`mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl sm:mb-4 sm:h-16 sm:w-16 ${
               clinicSite
@@ -328,26 +302,20 @@ export default function PaymentStep({
               <CreditCard className={`h-6 w-6 sm:h-8 sm:w-8 ${clinicSite ? clinicTextPrimary : "text-primary"}`} />
             )}
           </div>
-        )}
-        <h2
-          className={`font-bold tracking-tight ${
-            showCheckout ? "mb-0 text-base sm:text-lg" : "mb-1.5 text-xl sm:mb-2 sm:text-2xl"
-          } ${clinicSite ? clinicTextHeading : "text-foreground"}`}
-        >
-          {showCheckout
-            ? "השלמת תשלום מאובטח"
-            : isMeridian
-              ? "תשלום דרך מרידיאן"
-              : "תשלום על התור"}
-        </h2>
-        {!showCheckout && (
+          <h2
+            className={`mb-1.5 text-xl font-bold tracking-tight sm:mb-2 sm:text-2xl ${
+              clinicSite ? clinicTextHeading : "text-foreground"
+            }`}
+          >
+            {isMeridian ? "תשלום דרך מרידיאן" : "תשלום על התור"}
+          </h2>
           <p className={`mx-auto max-w-sm text-sm leading-relaxed sm:text-base ${mutedClass}`}>
             {isMeridian
               ? "השלימו את התשלום בהטבה דרך מרידיאן לאישור התור"
               : "לפני אישור התור, יש לשלם את עלות הטיפול בכרטיס אשראי"}
           </p>
-        )}
-      </div>
+        </div>
+      )}
 
       {!showCheckout && (
         <div
@@ -403,21 +371,6 @@ export default function PaymentStep({
                 ₪{totalPrice}
               </span>
             </div>
-          )}
-        </div>
-      )}
-
-      {showCheckout && (
-        <div
-          className={`relative mb-3 flex items-center justify-between gap-3 rounded-2xl px-3 py-2.5 text-sm sm:px-4 sm:py-3 ${
-            clinicSite
-              ? "border border-[#D5E0D8]/90 bg-[#F7FAF8]/80 text-[#2F3B34]"
-              : "bg-muted/50"
-          }`}
-        >
-          <span className={`min-w-0 truncate ${mutedClass}`}>{treatment?.name}</span>
-          {!isMeridian && (
-            <span className={`shrink-0 font-bold tabular-nums ${primaryClass}`}>₪{totalPrice}</span>
           )}
         </div>
       )}
@@ -511,66 +464,14 @@ export default function PaymentStep({
                 {paymentDone ? "מעבירים לדף האישור…" : "טוענים את דף הסליקה המאובטח…"}
               </p>
             </div>
-          ) : useFullPageCheckout && iframeUrl ? (
-            <div
-              className={`flex min-h-[240px] flex-col items-center justify-center gap-4 rounded-2xl border p-6 text-center ${
-                clinicSite
-                  ? "border-[#D5E0D8] bg-gradient-to-b from-[#F3F7F4]/95 to-[#EAF1EC]/85"
-                  : "border-border bg-muted/30"
-              }`}
-            >
-              <div
-                className={`flex h-14 w-14 items-center justify-center rounded-2xl ${
-                  clinicSite
-                    ? "border border-[#D5E0D8] bg-white shadow-[0_8px_24px_rgba(93,127,109,0.1)]"
-                    : "bg-primary/10"
-                }`}
-              >
-                <Lock className={`h-6 w-6 ${clinicSite ? clinicTextPrimary : "text-primary"}`} />
-              </div>
-              <div className="space-y-1.5">
-                <p className={`text-base font-semibold ${valueClass}`}>דף התשלום מוכן</p>
-                <p className={`text-sm leading-relaxed ${mutedClass}`}>
-                  לחצו למעבר לדף הסליקה המאובטח של Pelecard
-                </p>
-              </div>
-              <a
-                ref={payLinkRef}
-                href={iframeUrl}
-                className={`inline-flex w-full max-w-sm items-center justify-center gap-2 rounded-2xl px-5 py-4 text-base font-semibold text-white transition-transform active:scale-[0.99] ${
-                  clinicSite
-                    ? "bg-[#5D7F6D] shadow-[0_8px_24px_rgba(93,127,109,0.22)] hover:bg-[#4F6F5F]"
-                    : "bg-primary"
-                }`}
-              >
-                <Lock className="h-4 w-4 shrink-0" />
-                המשך לתשלום מאובטח
-              </a>
-              <p className={`text-xs ${mutedClass}`}>
-                Visa · Mastercard · Apple Pay · Google Pay
-              </p>
-            </div>
           ) : iframeUrl ? (
             <div
-              className={`w-full max-w-full overflow-visible rounded-xl border sm:rounded-2xl ${
+              className={`w-full max-w-full overflow-hidden rounded-xl border sm:rounded-2xl ${
                 clinicSite
-                  ? "border-[#D5E0D8] bg-[#F3F7F4]"
+                  ? "border-[#D5E0D8] bg-white"
                   : "border-border bg-background"
               }`}
             >
-              <div
-                className={`flex items-center justify-center gap-2 border-b px-3 py-2 text-xs font-semibold sm:gap-2.5 sm:px-4 sm:py-2.5 ${
-                  clinicSite
-                    ? "border-[#D5E0D8] bg-[#F0F4F1]/95 text-[#5D7F6D]"
-                    : "border-border bg-muted text-muted-foreground"
-                }`}
-              >
-                <Lock className="h-3.5 w-3.5 shrink-0" />
-                <span>תשלום מאובטח</span>
-                <span className="opacity-40">·</span>
-                <img src={VISA_LOGO} alt="" className="h-4 w-auto sm:h-5" width={36} height={24} />
-                <img src={MASTERCARD_LOGO} alt="" className="h-4 w-auto sm:h-5" width={36} height={24} />
-              </div>
               <iframe
                 title="סליקת אשראי Pelecard"
                 src={iframeUrl}
@@ -594,7 +495,6 @@ export default function PaymentStep({
         type="button"
         onClick={() => {
           if (showCheckout && !paymentDone) {
-            setUseFullPageCheckout(false);
             setShowCheckout(false);
             setIframeUrl("");
             setInitError("");
