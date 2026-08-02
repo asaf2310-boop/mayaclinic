@@ -28,7 +28,7 @@ const MASTERCARD_LOGO = "/payment/mastercard-logo.svg";
  * Mobile: viewport-tall scrollable frame. Desktop: taller fixed frame.
  */
 const PELECARD_IFRAME_HEIGHT_CLASS =
-  "h-[min(920px,calc(100dvh-9rem))] min-h-[640px] sm:h-[min(1100px,calc(100dvh-8rem))] md:min-h-[1100px] md:h-[max(1100px,calc(100dvh-6rem))]";
+  "h-[min(520px,calc(100dvh-10rem))] min-h-[360px] sm:h-[min(560px,calc(100dvh-9rem))] md:min-h-[480px] md:h-[max(480px,calc(100dvh-8rem))]";
 const PELECARD_IFRAME_STYLE = {
   overflow: "auto",
   display: "block",
@@ -473,7 +473,7 @@ export default function PaymentStep({
               }`}
             >
               <iframe
-                title="סליקת אשראי Pelecard"
+                title="תשלום Apple Pay / Google Pay"
                 src={iframeUrl}
                 scrolling="yes"
                 className={`w-full max-w-full border-0 ${PELECARD_IFRAME_HEIGHT_CLASS} ${
@@ -481,6 +481,7 @@ export default function PaymentStep({
                 }`}
                 style={PELECARD_IFRAME_STYLE}
                 allow="payment *"
+                allowpaymentrequest="true"
               />
             </div>
           ) : (

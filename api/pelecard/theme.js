@@ -1080,8 +1080,7 @@ html, body {
 body {
   font-family: Heebo, "Segoe UI", Tahoma, Arial, sans-serif !important;
   color: #2F3B34 !important;
-  /* Room to scroll focused fields above the iOS keyboard */
-  padding-bottom: 220px !important;
+  padding-bottom: 48px !important;
 }
 
 *,
@@ -1098,7 +1097,64 @@ canvas {
   height: auto !important;
 }
 
-/* Wallet chooser — label + logo rows, aligned across all methods */
+/* ==== Wallet-only checkout: Apple Pay + Google Pay logos ==== */
+
+/* Hide manual credit-card entry + green submit (wallets launch native sheets) */
+#AccountNumber,
+#creditCardExpDateRow,
+#cvvRow,
+#totalAllRow,
+#paymentsNo,
+#paymentAll,
+#downPayment,
+#downPaymentRow,
+#paymentAllRow,
+#credit_card_number_input,
+#date_month_input,
+#date_year_input,
+#dateContainer,
+#cvv_input,
+#id_number_input,
+#totalAll,
+#num_of_payments,
+#each_payment_input,
+#first_payment_input,
+.form-group:has(#credit_card_number_input),
+.form-group:has(#cvv_input),
+.form-group:has(#totalAll),
+.form-group:has(#date_month_input),
+.form-group:has(#dateContainer),
+.form-group:has(#id_number_input),
+.control-group:has(#credit_card_number_input),
+.control-group:has(#cvv_input),
+.control-group:has(#totalAll),
+.control-group:has(#date_month_input),
+.control-group:has(#dateContainer),
+.control-group:has(#id_number_input),
+.form-group-submit,
+.form-group-submit-in,
+.btn-submit,
+button.btn-submit,
+input.btn-submit,
+#submit,
+#submitBtn,
+.form-group-submit button[type="submit"],
+.form-group-submit input[type="submit"],
+button#info,
+.form-group-sup,
+.form-group-sup-1,
+.form-group-sup-2 {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  max-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
+}
+
+/* Remaining method tiles (Apple / Google) — logo only, centered */
 .pay-logo-col,
 .tab-button,
 .tab-button > button,
@@ -1120,69 +1176,50 @@ canvas {
 apple-pay-button,
 button.apple-pay-button {
   display: flex !important;
+  visibility: visible !important;
   flex-direction: row !important;
   flex-wrap: nowrap !important;
   align-items: center !important;
-  justify-content: space-between !important;
-  gap: 12px !important;
+  justify-content: center !important;
+  gap: 0 !important;
   box-sizing: border-box !important;
   width: 100% !important;
   max-width: 100% !important;
-  min-height: 52px !important;
-  height: 52px !important;
-  max-height: 56px !important;
-  margin: 8px 0 !important;
-  padding: 0 16px !important;
+  min-height: 64px !important;
+  height: 64px !important;
+  max-height: 72px !important;
+  margin: 10px 0 !important;
+  padding: 0 20px !important;
   overflow: hidden !important;
-  line-height: 1.25 !important;
-  text-align: start !important;
-  font-size: 15px !important;
-  font-weight: 600 !important;
-  background-position: right 16px center !important;
+  line-height: 0 !important;
+  text-align: center !important;
+  font-size: 0 !important;
+  color: transparent !important;
+  letter-spacing: 0 !important;
+  background-position: center center !important;
   background-repeat: no-repeat !important;
-  background-size: 48px 24px !important;
-  --apple-pay-button-height: 52px;
-  --apple-pay-button-border-radius: 12px;
-  --apple-pay-button-padding: 0 16px;
+  background-size: auto 36px !important;
+  --apple-pay-button-height: 64px;
+  --apple-pay-button-border-radius: 14px;
+  --apple-pay-button-padding: 0px;
   --apple-pay-button-box-sizing: border-box;
 }
 
-.pay-logo-col > *,
-.tab-button > *,
-.tab-button > button > *,
-.pay-logo-col button > *,
-.body-content button.tab-button > *,
-#GooglePayButton > *,
-#ApplePayButton > *,
-[id*="GooglePay"] > *,
-[id*="ApplePay"] > *,
-[class*="payment-method"] button > *,
-[class*="PaymentMethod"] button > * {
-  float: none !important;
-  position: static !important;
-  align-self: center !important;
-  line-height: 1.25 !important;
-  vertical-align: middle !important;
-  margin-top: 0 !important;
-  margin-bottom: 0 !important;
-}
-
-.pay-logo-col > span,
-.tab-button > span,
-.tab-button > button > span,
-.pay-logo-col button > span,
-.body-content button.tab-button > span,
-#GooglePayButton > span,
-#ApplePayButton > span,
-[id*="GooglePay"] > span,
-[id*="ApplePay"] > span,
-[class*="payment-method"] button > span,
-[class*="PaymentMethod"] button > span {
-  display: inline-flex !important;
-  align-items: center !important;
-  flex: 1 1 auto !important;
-  min-width: 0 !important;
-  text-align: start !important;
+/* Hide text labels inside wallet tiles; keep logo media */
+.pay-logo-col > span:not(:has(img)):not(:has(svg)),
+.tab-button > span:not(:has(img)):not(:has(svg)),
+.tab-button > button > span:not(:has(img)):not(:has(svg)),
+.pay-logo-col button > span:not(:has(img)):not(:has(svg)),
+.body-content button.tab-button > span:not(:has(img)):not(:has(svg)),
+#GooglePayButton > span:not(:has(img)):not(:has(svg)),
+#ApplePayButton > span:not(:has(img)):not(:has(svg)),
+[id*="GooglePay"] > span:not(:has(img)):not(:has(svg)),
+[id*="ApplePay"] > span:not(:has(img)):not(:has(svg)),
+[class*="google-pay"] > span:not(:has(img)):not(:has(svg)),
+[class*="apple-pay"] > span:not(:has(img)):not(:has(svg)),
+[class*="payment-method"] button > span:not(:has(img)):not(:has(svg)),
+[class*="PaymentMethod"] button > span:not(:has(img)):not(:has(svg)) {
+  display: none !important;
 }
 
 .pay-logo-col img,
@@ -1212,18 +1249,40 @@ button.apple-pay-button {
 [class*="payment-method"] button img,
 [class*="PaymentMethod"] button img {
   display: block !important;
-  flex: 0 0 56px !important;
-  width: 56px !important;
-  max-width: 56px !important;
-  height: 24px !important;
-  max-height: 24px !important;
-  margin: 0 !important;
+  flex: 0 0 auto !important;
+  width: auto !important;
+  max-width: 160px !important;
+  height: 36px !important;
+  max-height: 36px !important;
+  margin: 0 auto !important;
   object-fit: contain !important;
   object-position: center !important;
-  vertical-align: middle !important;
   position: static !important;
   float: none !important;
   transform: none !important;
+  font-size: 16px !important;
+  color: initial !important;
+}
+
+/* Hide credit-card tile after wallet show-rules (must win cascade) */
+.tab-button:has(img[src*="Visa" i], img[src*="visa" i], img[src*="Master" i], img[src*="master" i], img[src*="Mastercard" i], img[src*="mastercard" i], img[src*="Isracard" i], img[src*="isracard" i], img[alt*="Visa" i], img[alt*="Master" i], img[alt*="אשראי" i]):not(:has(img[src*="Apple" i], img[src*="apple" i], img[src*="Google" i], img[src*="google" i], img[alt*="Apple" i], img[alt*="Google" i])),
+.pay-logo-col:has(img[src*="Visa" i], img[src*="visa" i], img[src*="Master" i], img[src*="master" i], img[src*="Mastercard" i], img[src*="mastercard" i], img[src*="Isracard" i], img[src*="isracard" i], img[alt*="Visa" i], img[alt*="Master" i], img[alt*="אשראי" i]):not(:has(img[src*="Apple" i], img[src*="apple" i], img[src*="Google" i], img[src*="google" i], img[alt*="Apple" i], img[alt*="Google" i], [id*="ApplePay"], [id*="GooglePay"])),
+button.tab-button:has(img[src*="Visa" i], img[src*="Master" i], img[src*="mastercard" i], img[src*="visa" i]),
+.body-content .tab-button:has(img[src*="Visa" i], img[src*="Master" i], img[src*="mastercard" i], img[src*="visa" i]),
+/* When credit + Apple + Google are siblings, credit is first */
+.pay-logo-col:first-child:has(+ .pay-logo-col + .pay-logo-col),
+.tab-button:first-of-type:has(~ .tab-button ~ .tab-button),
+.body-content button.tab-button:first-of-type:has(~ button.tab-button ~ button.tab-button) {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
 }
 
 .body-content {
@@ -1580,11 +1639,7 @@ button.btn-submit:focus,
     border-radius: 12px !important;
   }
 
-  /* Wallet chooser — keep the same label/logo row alignment on mobile */
-  .tab-button,
-  .tab-button > button,
-  .pay-logo-col,
-  .pay-logo-col button,
+  /* Wallet-only — keep logo tiles large and centered on mobile */
   #GooglePayButton,
   #ApplePayButton,
   [id*="GooglePay"],
@@ -1595,30 +1650,23 @@ button.btn-submit:focus,
   [class*="apple-pay"],
   [class*="GooglePay"],
   [class*="ApplePay"],
-  [class*="payment-method"] button,
-  [class*="PaymentMethod"] button,
-  .body-content button.tab-button,
   .apple-pay-button,
   apple-pay-button,
-  button.apple-pay-button {
+  button.apple-pay-button,
+  .tab-button:has(img[src*="Apple" i], img[src*="apple" i], img[src*="Google" i], img[src*="google" i], img[alt*="Apple" i], img[alt*="Google" i]),
+  .pay-logo-col button:has(img[src*="Apple" i], img[src*="apple" i], img[src*="Google" i], img[src*="google" i], img[alt*="Apple" i], img[alt*="Google" i]) {
     display: flex !important;
     align-items: center !important;
-    justify-content: space-between !important;
-    min-height: 52px !important;
-    height: 52px !important;
-    max-height: 56px !important;
-    margin: 8px 0 !important;
-    padding: 0 16px !important;
-    line-height: 1.25 !important;
+    justify-content: center !important;
+    min-height: 64px !important;
+    height: 64px !important;
+    margin: 10px 0 !important;
+    padding: 0 20px !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
     width: 100% !important;
   }
 
-  .tab-button img,
-  .tab-button svg,
-  .pay-logo-col img,
-  .pay-logo-col svg,
-  .pay-logo-col button img,
-  .body-content button.tab-button img,
   #GooglePayButton img,
   #ApplePayButton img,
   [id*="GooglePay"] img,
@@ -1626,15 +1674,15 @@ button.btn-submit:focus,
   [class*="google-pay"] img,
   [class*="apple-pay"] img,
   [class*="GooglePay"] img,
-  [class*="ApplePay"] img {
-    flex: 0 0 56px !important;
-    width: 56px !important;
-    max-width: 56px !important;
-    height: 24px !important;
-    max-height: 24px !important;
-    margin: 0 !important;
+  [class*="ApplePay"] img,
+  .tab-button:has(img[src*="Apple" i], img[src*="apple" i], img[src*="Google" i], img[src*="google" i], img[alt*="Apple" i], img[alt*="Google" i]) img,
+  .pay-logo-col button:has(img[src*="Apple" i], img[src*="apple" i], img[src*="Google" i], img[src*="google" i], img[alt*="Apple" i], img[alt*="Google" i]) img {
+    width: auto !important;
+    max-width: 160px !important;
+    height: 36px !important;
+    max-height: 36px !important;
+    margin: 0 auto !important;
     object-fit: contain !important;
-    object-position: center !important;
   }
 
   /* Any absolute/float leftovers from Pelecard base CSS */
