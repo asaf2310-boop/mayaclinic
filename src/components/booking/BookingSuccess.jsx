@@ -25,7 +25,7 @@ const STATUS_MAP = {
   completed: { label: "הושלם", color: "text-blue-600 bg-blue-50" },
 };
 
-export default function BookingSuccess({ appointment, onReset }) {
+export default function BookingSuccess({ appointment, onReset, hidePrices = false }) {
   const clinicSite = getClinicSite();
   const appointments = appointment.appointments || [appointment];
   const price = (appointment.treatment_price ?? DEFAULT_PRICE) * appointments.length;
@@ -86,14 +86,16 @@ export default function BookingSuccess({ appointment, onReset }) {
             <span className={clinicSite ? clinicTextMuted : "text-muted-foreground"}>סטטוס:</span>
             <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${status.color}`}>{status.label}</span>
           </div>
-          <div
-            className={`mt-3 flex justify-between border-t pt-3 ${
-              clinicSite ? "border-[#E8ECE8]" : "border-border"
-            }`}
-          >
-            <span className={clinicSite ? clinicTextMuted : "text-muted-foreground"}>לתשלום:</span>
-            <span className={`text-base font-bold ${clinicSite ? clinicTextPrimary : "text-foreground"}`}>₪{price}</span>
-          </div>
+          {!hidePrices && (
+            <div
+              className={`mt-3 flex justify-between border-t pt-3 ${
+                clinicSite ? "border-[#E8ECE8]" : "border-border"
+              }`}
+            >
+              <span className={clinicSite ? clinicTextMuted : "text-muted-foreground"}>לתשלום:</span>
+              <span className={`text-base font-bold ${clinicSite ? clinicTextPrimary : "text-foreground"}`}>₪{price}</span>
+            </div>
+          )}
         </div>
       </div>
 
