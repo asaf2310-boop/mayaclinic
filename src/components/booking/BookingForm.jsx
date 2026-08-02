@@ -214,7 +214,7 @@ export default function BookingForm({
         />
         {requireEmail ? (
           <p className={clinicSite ? clinicFormHint : "text-xs text-muted-foreground"}>
-            נשלח לכאן אישור הזמנת התור לאחר האימות
+            נשלח לכאן אישור הזמנת התור
           </p>
         ) : null}
       </div>
