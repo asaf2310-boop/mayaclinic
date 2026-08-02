@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ArrowRight, CreditCard, Loader2, Lock, ShieldCheck } from "lucide-react";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
@@ -79,6 +79,7 @@ export default function PaymentStep({
   const [isMeridianSubmitting, setIsMeridianSubmitting] = useState(false);
   const [meridianSuccess, setMeridianSuccess] = useState(null);
   const [isFullPageRedirecting, setIsFullPageRedirecting] = useState(false);
+  const fullPageRedirectStarted = useRef(false);
   const clinicSite = getClinicSite();
   const meridianUrl = clinicSite?.heroMeridianLink?.url || "";
   const { toast } = useToast();
@@ -169,18 +170,17 @@ export default function PaymentStep({
 
   // On phones, Pelecard's wallet UI clips fields/pay button inside an iframe.
   // Open the gateway as a full page — FeedbackOnTop returns to our success/failure URLs.
+  // Important: do NOT schedule location change in a timeout that React cleanup can cancel
+  // when setIsFullPageRedirecting causes a re-render (that left users stuck on this screen).
   useEffect(() => {
-    if (isMeridian || !showCheckout || paymentDone || !iframeUrl || isFullPageRedirecting) {
-      return;
-    }
+    if (isMeridian || !showCheckout || paymentDone || !iframeUrl) return;
+    if (fullPageRedirectStarted.current) return;
     if (!preferFullPagePelecard()) return;
 
+    fullPageRedirectStarted.current = true;
     setIsFullPageRedirecting(true);
-    const timer = window.setTimeout(() => {
-      window.location.assign(iframeUrl);
-    }, 80);
-    return () => window.clearTimeout(timer);
-  }, [isMeridian, showCheckout, paymentDone, iframeUrl, isFullPageRedirecting]);
+    window.location.assign(iframeUrl);
+  }, [isMeridian, showCheckout, paymentDone, iframeUrl]);
 
   useEffect(() => {
     if (isMeridian || !showCheckout || paymentDone) return;
@@ -515,11 +515,13 @@ export default function PaymentStep({
               {isFullPageRedirecting && iframeUrl && (
                 <a
                   href={iframeUrl}
-                  className={`mt-2 text-sm font-semibold underline underline-offset-2 ${
-                    clinicSite ? clinicTextPrimary : "text-primary"
+                  className={`mt-3 inline-flex w-full max-w-xs items-center justify-center rounded-2xl px-5 py-3.5 text-sm font-semibold text-white ${
+                    clinicSite
+                      ? "bg-[#5D7F6D] shadow-[0_8px_24px_rgba(93,127,109,0.22)]"
+                      : "bg-primary"
                   }`}
                 >
-                  אם לא הועברתם אוטומטית — לחצו כאן לתשלום
+                  המשך לתשלום מאובטח
                 </a>
               )}
             </div>
@@ -567,6 +569,8 @@ export default function PaymentStep({
         type="button"
         onClick={() => {
           if (showCheckout && !paymentDone) {
+            fullPageRedirectStarted.current = false;
+            setIsFullPageRedirecting(false);
             setShowCheckout(false);
             setIframeUrl("");
             setInitError("");
