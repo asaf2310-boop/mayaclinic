@@ -254,7 +254,7 @@ export async function verifyMeridianTreatmentId({
       found: false,
       treatmentId: meridianId,
       message:
-        "לא נמצא מייל ממרידיאן עם מזהה הטיפול הזה. בדקו שההזמנה הושלמה במרידיאן ונסו שוב בעוד דקה.",
+        "מזהה הטיפול לא אושר. בדקו את המספר ונסו שוב בעוד רגע.",
     };
   }
 

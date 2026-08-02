@@ -33,7 +33,7 @@ export async function verifyMeridianTreatmentId({ appointmentIds, treatmentId })
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(data?.error || "מזהה הטיפול לא נמצא במייל");
+    throw new Error(data?.error || "לא ניתן לאשר את המזהה. בדקו את המספר ונסו שוב.");
   }
 
   return data;

@@ -83,7 +83,7 @@ export default function Book() {
                 </h1>
                 <p className={clinicSite ? clinicBookPageSubtitle : "text-lg text-muted-foreground"}>
                   {paymentMethod === "meridian"
-                    ? "בחרו תאריך ושעה · לאחר ההזמנה נאמת מזהה טיפול ממרידיאן"
+                    ? "בחרו תאריך ושעה · לאחר ההזמנה הזינו מזהה טיפול ממרידיאן"
                     : clinicSite
                       ? "בחרו תאריך ושעה נוחים לטיפול"
                       : "בחרו טיפול, תאריך ושעה נוחים"}
