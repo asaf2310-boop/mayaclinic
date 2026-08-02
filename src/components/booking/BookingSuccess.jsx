@@ -46,10 +46,10 @@ export default function BookingSuccess({ appointment, onReset, hidePrices = fals
       </div>
 
       <h2 className={`mb-2 text-2xl font-bold sm:mb-3 sm:text-3xl ${clinicSite ? clinicTextHeading : "text-foreground"}`}>
-        התורים נקבעו בהצלחה!
+        התור נקבע בהצלחה
       </h2>
       <p className={`mb-6 text-base sm:mb-8 sm:text-lg ${clinicSite ? clinicTextMuted : "text-muted-foreground"}`}>
-        נשלח אליכם אישור בקרוב
+        נשלח אישור הזמנת תור למייל
       </p>
 
       <div

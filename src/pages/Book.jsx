@@ -143,6 +143,7 @@ export default function Book() {
                       selectedTreatment={selectedTreatment}
                       onSubmit={handleFormSubmit}
                       isSubmitting={false}
+                      requireEmail={paymentMethod === "meridian"}
                     />
                   </>
                 )}

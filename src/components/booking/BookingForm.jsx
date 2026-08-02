@@ -29,7 +29,12 @@ import {
   filterAvailableSlots,
 } from "@/lib/bookingSlots";
 
-export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting }) {
+export default function BookingForm({
+  selectedTreatment,
+  onSubmit,
+  isSubmitting,
+  requireEmail = false,
+}) {
   const clinicSite = getClinicSite();
   const [form, setForm] = useState({
     patient_name: "",
@@ -194,16 +199,24 @@ export default function BookingForm({ selectedTreatment, onSubmit, isSubmitting 
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="email" className={labelClass}>אימייל</Label>
+        <Label htmlFor="email" className={labelClass}>
+          {requireEmail ? "אימייל *" : "אימייל"}
+        </Label>
         <Input
           id="email"
           type="email"
           placeholder="your@email.com"
           value={form.patient_email}
           onChange={(e) => handleChange("patient_email", e.target.value)}
+          required={requireEmail}
           dir="ltr"
           className={inputClass ? `${inputClass} text-left` : "text-left"}
         />
+        {requireEmail ? (
+          <p className={clinicSite ? clinicFormHint : "text-xs text-muted-foreground"}>
+            נשלח לכאן אישור הזמנת התור לאחר האימות
+          </p>
+        ) : null}
       </div>
 
       <div className="space-y-2">
