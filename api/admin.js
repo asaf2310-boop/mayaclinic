@@ -22,6 +22,7 @@ import {
 } from "../server/googleAdminAuth.js";
 import { resolveClinicTenantFromHost } from "../server/clinicTenant.js";
 import { supabaseRequest } from "../server/supabaseServer.js";
+import { probeMeridianMailbox } from "../server/meridianEmail.js";
 
 const TENANT_ENTITIES = new Set([
   "appointments",
@@ -345,6 +346,19 @@ export default async function handler(req, res) {
 
   const tenantId = requireTenant(req, res);
   if (!tenantId) return;
+
+  if (req.method === "GET" && action === "meridian-imap-probe") {
+    try {
+      const result = await probeMeridianMailbox();
+      res.status(result.ok ? 200 : 503).json(result);
+    } catch (error) {
+      res.status(500).json({
+        ok: false,
+        error: error?.message || "IMAP probe failed",
+      });
+    }
+    return;
+  }
 
   try {
     const entity = String(req.query?.entity || "").trim();

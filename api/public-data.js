@@ -200,6 +200,9 @@ export default async function handler(req, res) {
       error?.status && Number.isInteger(error.status) ? error.status : 500;
     res.status(status).json({
       error: error?.message || "Failed to load public clinic data",
+      code: error?.code || undefined,
+      detail: error?.detail || undefined,
+      user: error?.user || undefined,
     });
   }
 }

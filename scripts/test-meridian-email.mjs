@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import {
+  classifyImapError,
   emailMatchesMeridianTreatment,
   isValidMeridianTreatmentId,
   normalizeMeridianTreatmentId,
 } from "../server/meridianEmail.js";
+import { getGmailCredentials } from "../server/gmailCredentials.js";
 
 assert.equal(normalizeMeridianTreatmentId("750445114"), "750445114");
 assert.equal(normalizeMeridianTreatmentId(" 750-445-114 "), "750445114");
@@ -42,5 +44,15 @@ assert.equal(
   ),
   true
 );
+
+process.env.GMAIL_USER = " ofirbabyinfo@gmail.com ";
+process.env.GMAIL_APP_PASSWORD = "abcd efgh ijkl mnop";
+assert.deepEqual(getGmailCredentials(), {
+  user: "ofirbabyinfo@gmail.com",
+  pass: "abcdefghijklmnop",
+});
+
+const authClassified = classifyImapError(new Error("Command failed"), "connect");
+assert.equal(authClassified.code, "imap_auth");
 
 console.log("meridian email helpers: ok");
