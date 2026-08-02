@@ -1098,28 +1098,91 @@ canvas {
   height: auto !important;
 }
 
-/* Wallet chooser — center logos inside the payment-method squares */
+/* Wallet chooser — label + logo rows, aligned across all methods */
 .pay-logo-col,
 .tab-button,
 .tab-button > button,
 .pay-logo-col button,
 .body-content button.tab-button,
 #GooglePayButton,
+#ApplePayButton,
 [id*="GooglePay"],
+[id*="ApplePay"],
 [id*="googlePay"],
+[id*="applePay"],
 [class*="google-pay"],
+[class*="apple-pay"],
 [class*="GooglePay"],
+[class*="ApplePay"],
 [class*="payment-method"] button,
-[class*="PaymentMethod"] button {
+[class*="PaymentMethod"] button,
+.apple-pay-button,
+apple-pay-button,
+button.apple-pay-button {
   display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
   align-items: center !important;
-  justify-content: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-height: 52px !important;
+  height: 52px !important;
+  max-height: 56px !important;
+  margin: 8px 0 !important;
+  padding: 0 16px !important;
   overflow: hidden !important;
-  line-height: 0 !important;
-  text-align: center !important;
-  background-position: center center !important;
+  line-height: 1.25 !important;
+  text-align: start !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  background-position: right 16px center !important;
   background-repeat: no-repeat !important;
-  background-size: auto 55% !important;
+  background-size: 48px 24px !important;
+  --apple-pay-button-height: 52px;
+  --apple-pay-button-border-radius: 12px;
+  --apple-pay-button-padding: 0 16px;
+  --apple-pay-button-box-sizing: border-box;
+}
+
+.pay-logo-col > *,
+.tab-button > *,
+.tab-button > button > *,
+.pay-logo-col button > *,
+.body-content button.tab-button > *,
+#GooglePayButton > *,
+#ApplePayButton > *,
+[id*="GooglePay"] > *,
+[id*="ApplePay"] > *,
+[class*="payment-method"] button > *,
+[class*="PaymentMethod"] button > * {
+  float: none !important;
+  position: static !important;
+  align-self: center !important;
+  line-height: 1.25 !important;
+  vertical-align: middle !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.pay-logo-col > span,
+.tab-button > span,
+.tab-button > button > span,
+.pay-logo-col button > span,
+.body-content button.tab-button > span,
+#GooglePayButton > span,
+#ApplePayButton > span,
+[id*="GooglePay"] > span,
+[id*="ApplePay"] > span,
+[class*="payment-method"] button > span,
+[class*="PaymentMethod"] button > span {
+  display: inline-flex !important;
+  align-items: center !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  text-align: start !important;
 }
 
 .pay-logo-col img,
@@ -1134,49 +1197,33 @@ canvas {
 .body-content button.tab-button svg,
 #GooglePayButton img,
 #GooglePayButton svg,
+#ApplePayButton img,
+#ApplePayButton svg,
 [id*="GooglePay"] img,
 [id*="GooglePay"] svg,
+[id*="ApplePay"] img,
+[id*="ApplePay"] svg,
 [id*="googlePay"] img,
+[id*="applePay"] img,
 [class*="google-pay"] img,
+[class*="apple-pay"] img,
 [class*="GooglePay"] img,
+[class*="ApplePay"] img,
 [class*="payment-method"] button img,
 [class*="PaymentMethod"] button img {
   display: block !important;
-  margin: 0 auto !important;
-  max-height: 28px !important;
-  max-width: min(140px, 70%) !important;
-  width: auto !important;
-  height: auto !important;
+  flex: 0 0 56px !important;
+  width: 56px !important;
+  max-width: 56px !important;
+  height: 24px !important;
+  max-height: 24px !important;
+  margin: 0 !important;
   object-fit: contain !important;
   object-position: center !important;
   vertical-align: middle !important;
   position: static !important;
   float: none !important;
   transform: none !important;
-}
-
-/* Apple Pay native button — size only; keep vendor rendering intact */
-.apple-pay-button,
-apple-pay-button,
-button.apple-pay-button,
-#ApplePayButton,
-[id*="ApplePay"],
-[id*="applePay"],
-[class*="apple-pay"],
-[class*="ApplePay"] {
-  --apple-pay-button-height: 48px;
-  --apple-pay-button-border-radius: 12px;
-  --apple-pay-button-padding: 0px;
-  --apple-pay-button-box-sizing: border-box;
-  height: 48px !important;
-  min-height: 48px !important;
-  max-height: 52px !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  margin: 6px 0 !important;
-  padding: 0 !important;
-  box-sizing: border-box !important;
-  overflow: hidden !important;
 }
 
 .body-content {
@@ -1533,35 +1580,37 @@ button.btn-submit:focus,
     border-radius: 12px !important;
   }
 
-  /* Wallet chooser — compact squares with centered logos */
+  /* Wallet chooser — keep the same label/logo row alignment on mobile */
   .tab-button,
   .tab-button > button,
   .pay-logo-col,
   .pay-logo-col button,
   #GooglePayButton,
+  #ApplePayButton,
   [id*="GooglePay"],
+  [id*="ApplePay"],
   [id*="googlePay"],
+  [id*="applePay"],
   [class*="google-pay"],
+  [class*="apple-pay"],
   [class*="GooglePay"],
+  [class*="ApplePay"],
   [class*="payment-method"] button,
   [class*="PaymentMethod"] button,
-  .body-content button.tab-button {
+  .body-content button.tab-button,
+  .apple-pay-button,
+  apple-pay-button,
+  button.apple-pay-button {
     display: flex !important;
     align-items: center !important;
-    justify-content: center !important;
-    min-height: 48px !important;
-    height: 48px !important;
-    max-height: 52px !important;
-    margin: 6px 0 !important;
-    padding: 0 12px !important;
-    box-sizing: border-box !important;
+    justify-content: space-between !important;
+    min-height: 52px !important;
+    height: 52px !important;
+    max-height: 56px !important;
+    margin: 8px 0 !important;
+    padding: 0 16px !important;
+    line-height: 1.25 !important;
     width: 100% !important;
-    max-width: 100% !important;
-    overflow: hidden !important;
-    line-height: 0 !important;
-    background-position: center center !important;
-    background-repeat: no-repeat !important;
-    background-size: auto 55% !important;
   }
 
   .tab-button img,
@@ -1571,30 +1620,21 @@ button.btn-submit:focus,
   .pay-logo-col button img,
   .body-content button.tab-button img,
   #GooglePayButton img,
+  #ApplePayButton img,
   [id*="GooglePay"] img,
+  [id*="ApplePay"] img,
   [class*="google-pay"] img,
-  [class*="GooglePay"] img {
-    max-height: 26px !important;
-    max-width: min(140px, 68%) !important;
-    margin: 0 auto !important;
-  }
-
-  .apple-pay-button,
-  apple-pay-button,
-  button.apple-pay-button,
-  #ApplePayButton,
-  [id*="ApplePay"],
-  [id*="applePay"],
-  [class*="apple-pay"],
-  [class*="ApplePay"] {
-    --apple-pay-button-height: 48px;
-    --apple-pay-button-border-radius: 12px;
-    --apple-pay-button-padding: 0px;
-    height: 48px !important;
-    min-height: 48px !important;
-    margin: 6px 0 !important;
-    padding: 0 !important;
-    width: 100% !important;
+  [class*="apple-pay"] img,
+  [class*="GooglePay"] img,
+  [class*="ApplePay"] img {
+    flex: 0 0 56px !important;
+    width: 56px !important;
+    max-width: 56px !important;
+    height: 24px !important;
+    max-height: 24px !important;
+    margin: 0 !important;
+    object-fit: contain !important;
+    object-position: center !important;
   }
 
   /* Any absolute/float leftovers from Pelecard base CSS */
