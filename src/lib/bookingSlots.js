@@ -94,9 +94,12 @@ export const hasAppointmentTimeConflict = (
   appointments,
   { bookingDurationMinutes = 60 } = {}
 ) => {
-  const sameDay = getActiveAppointments(appointments).filter(
-    (existing) => existing.date === date && existing.id !== id
-  );
+  const sameDay = getActiveAppointments(appointments).filter((existing) => {
+    if (existing.date !== date) return false;
+    // When both sides lack an id (new booking checks), still compare the slot.
+    if (id && existing.id && existing.id === id) return false;
+    return true;
+  });
   return sameDay.some((existing) =>
     isSlotBlockedByAppointment(time, existing, { bookingDurationMinutes })
   );

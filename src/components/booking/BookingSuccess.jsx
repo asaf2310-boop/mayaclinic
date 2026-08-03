@@ -30,6 +30,9 @@ export default function BookingSuccess({ appointment, onReset, hidePrices = fals
   const appointments = appointment.appointments || [appointment];
   const price = (appointment.treatment_price ?? DEFAULT_PRICE) * appointments.length;
   const status = STATUS_MAP[appointments[0]?.status] || STATUS_MAP.pending;
+  const patientEmail = String(
+    appointment.patient_email || appointments[0]?.patient_email || ""
+  ).trim();
 
   return (
     <motion.div
@@ -49,7 +52,7 @@ export default function BookingSuccess({ appointment, onReset, hidePrices = fals
         התור נקבע בהצלחה
       </h2>
       <p className={`mb-6 text-base sm:mb-8 sm:text-lg ${clinicSite ? clinicTextMuted : "text-muted-foreground"}`}>
-        נשלח אישור הזמנת תור למייל
+        {patientEmail ? "נשלח אישור הזמנת תור למייל" : "התור נשמר בהצלחה במערכת"}
       </p>
 
       <div

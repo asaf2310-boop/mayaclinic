@@ -7,6 +7,7 @@ import {
   isValidMeridianTreatmentId,
   normalizeMeridianTreatmentId,
 } from "./meridianEmail.js";
+import { hasAppointmentTimeConflict } from "../src/lib/bookingSlots.js";
 
 function nowIso() {
   return new Date().toISOString();
@@ -87,10 +88,60 @@ export async function updatePaymentSession(bookingRef, patch) {
   return Array.isArray(rows) ? rows[0] : rows;
 }
 
+async function fetchActiveAppointmentsForDates(dates = [], tenantId = "") {
+  const uniqueDates = [...new Set((dates || []).map((d) => String(d || "").trim()).filter(Boolean))];
+  if (!uniqueDates.length) return [];
+
+  const dateList = uniqueDates.map((d) => encodeURIComponent(d)).join(",");
+  const tenant = String(tenantId || "").trim();
+  const tenantFilter = tenant ? `&tenant_id=eq.${encodeURIComponent(tenant)}` : "";
+
+  try {
+    return (
+      (await supabaseRequest(
+        `appointments?date=in.(${dateList})${tenantFilter}&status=neq.cancelled&select=id,date,time,status,tenant_id&limit=500`
+      )) || []
+    );
+  } catch (error) {
+    // Older DBs without tenant_id — retry without tenant filter.
+    if (String(error?.message || "").includes("tenant_id")) {
+      return (
+        (await supabaseRequest(
+          `appointments?date=in.(${dateList})&status=neq.cancelled&select=id,date,time,status&limit=500`
+        )) || []
+      );
+    }
+    throw error;
+  }
+}
+
+async function assertBookingSlotsAvailable(booking, { bookingDurationMinutes = 60 } = {}) {
+  const dates = (booking.appointments || []).map((item) => item.date);
+  const existing = await fetchActiveAppointmentsForDates(dates, booking.tenant_id);
+
+  for (const appointment of booking.appointments || []) {
+    if (
+      hasAppointmentTimeConflict(
+        { date: appointment.date, time: appointment.time },
+        existing,
+        { bookingDurationMinutes }
+      )
+    ) {
+      const error = new Error(
+        `השעה ${appointment.time} בתאריך ${appointment.date} כבר תפוסה. בחרו מועד אחר.`
+      );
+      error.status = 409;
+      throw error;
+    }
+  }
+}
+
 export async function createAppointmentsFromBooking(
   booking,
-  { paymentNote = "", paid = true, status = "confirmed" } = {}
+  { paymentNote = "", paid = true, status = "confirmed", bookingDurationMinutes = 60 } = {}
 ) {
+  await assertBookingSlotsAvailable(booking, { bookingDurationMinutes });
+
   const notes = [String(booking.notes || "").trim(), paymentNote].filter(Boolean).join("\n");
   const createdIds = [];
   const createdRows = [];
