@@ -1,7 +1,11 @@
 import { supabaseRequest } from "./supabaseServer.js";
 import { validatePelecardPayment } from "./pelecard.js";
-import { buildConfirmationEmail } from "./emailTemplates.js";
+import {
+  buildClinicBookingNotifyEmail,
+  buildConfirmationEmail,
+} from "./emailTemplates.js";
 import { getClinicName, isEmailConfigured, sendEmail } from "./gmail.js";
+import { getBookingNotifyEmails } from "./bookingNotify.js";
 import {
   findMeridianTreatmentEmail,
   isValidMeridianTreatmentId,
@@ -211,7 +215,13 @@ export async function createMeridianBooking(rawBooking = {}) {
     status: "confirmed",
   });
 
-  // Confirmation email is sent after Meridian treatment-ID verification succeeds.
+  // Notify clinic immediately when a Meridian booking enters the system.
+  await maybeSendClinicBookingNotify(createdRows, {
+    sourceLabel: "מרידיאן",
+    extraNote: "ממתין לאימות מזהה טיפול ממרידיאן",
+  });
+
+  // Patient confirmation email is sent after Meridian treatment-ID verification succeeds.
   return { createdIds, appointments: createdRows };
 }
 
@@ -360,7 +370,37 @@ async function maybeSendConfirmationEmail(appointments) {
     });
     await sendEmail({ to: patientEmail, subject, html });
   } catch (error) {
-    console.error("Pelecard confirmation email failed:", error?.message || error);
+    console.error("Patient confirmation email failed:", error?.message || error);
+  }
+}
+
+async function maybeSendClinicBookingNotify(
+  appointments,
+  { sourceLabel = "האתר", extraNote = "" } = {}
+) {
+  if (!isEmailConfigured() || !appointments?.length) return;
+
+  const recipients = getBookingNotifyEmails();
+  if (!recipients.length) return;
+
+  try {
+    const clinicName = getClinicName();
+    const first = appointments[0] || {};
+    const { subject, html } = buildClinicBookingNotifyEmail({
+      patientName: first.patient_name || "",
+      patientPhone: first.patient_phone || "",
+      patientEmail: first.patient_email || "",
+      appointments,
+      clinicName,
+      sourceLabel,
+      extraNote,
+    });
+
+    await Promise.all(
+      recipients.map((to) => sendEmail({ to, subject, html }))
+    );
+  } catch (error) {
+    console.error("Clinic booking notify email failed:", error?.message || error);
   }
 }
 
@@ -452,6 +492,10 @@ export async function finalizePaymentFromPelecard({
   });
 
   await maybeSendConfirmationEmail(createdRows);
+  await maybeSendClinicBookingNotify(createdRows, {
+    sourceLabel: "תשלום באשראי",
+    extraNote: paymentNote,
+  });
 
   return {
     session: updated,

@@ -68,6 +68,44 @@ export function buildConfirmationEmail({ patientName, appointments, clinicName }
   };
 }
 
+export function buildClinicBookingNotifyEmail({
+  patientName,
+  patientPhone,
+  patientEmail,
+  appointments,
+  clinicName,
+  sourceLabel = "האתר",
+  extraNote = "",
+}) {
+  const phone = String(patientPhone || "").trim() || "—";
+  const email = String(patientEmail || "").trim() || "—";
+  const noteBlock = extraNote
+    ? `<p style="font-size:15px;line-height:1.6;margin-top:12px;color:#444;">${escapeHtml(extraNote)}</p>`
+    : "";
+
+  const bodyHtml = `
+    <p style="font-size:16px;line-height:1.6;">התקבלה הזמנת תור חדשה דרך ${escapeHtml(sourceLabel)}.</p>
+    <p style="font-size:15px;line-height:1.7;margin:12px 0;">
+      <strong>שם:</strong> ${escapeHtml(patientName || "—")}<br/>
+      <strong>טלפון:</strong> ${escapeHtml(phone)}<br/>
+      <strong>אימייל:</strong> ${escapeHtml(email)}
+    </p>
+    ${formatAppointmentsTable(appointments)}
+    ${noteBlock}`;
+
+  const first = appointments?.[0];
+  const when = first
+    ? `${formatDateHe(first.date)} ${first.time || ""}`.trim()
+    : "";
+
+  return {
+    subject: when
+      ? `הזמנה חדשה — ${patientName || "לקוח"} · ${when}`
+      : `הזמנה חדשה — ${patientName || "לקוח"} · ${clinicName}`,
+    html: baseLayout({ title: "הזמנת תור חדשה", bodyHtml, clinicName }),
+  };
+}
+
 export function buildReminderEmail({ patientName, appointments, clinicName }) {
   const bodyHtml = `
     <p style="font-size:16px;line-height:1.6;">שלום ${escapeHtml(patientName || "יקיר/ה")},</p>
