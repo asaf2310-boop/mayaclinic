@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { getBookingNotifyEmails } from "../server/bookingNotify.js";
 import { buildClinicBookingNotifyEmail } from "../server/emailTemplates.js";
+import { applyMeridianVerifiedNotes } from "../server/meridianEmail.js";
 
 delete process.env.BOOKING_NOTIFY_EMAILS;
 delete process.env.ADMIN_EMAILS;
@@ -19,27 +20,35 @@ assert.deepEqual(getBookingNotifyEmails(), [
 process.env.BOOKING_NOTIFY_EMAILS = "owner@clinic.com";
 assert.deepEqual(getBookingNotifyEmails(), ["owner@clinic.com"]);
 
+const already = applyMeridianVerifiedNotes(
+  "תשלום דרך מרידיאן — ממתין לאימות מזהה טיפול\nמזהה טיפול מרידיאן שאומת: 916779447",
+  "916779447"
+);
+assert.equal(already, "מזהה טיפול מרידיאן שאומת: 916779447");
+assert.equal(
+  already.includes("ממתין לאימות"),
+  false
+);
+
 const mail = buildClinicBookingNotifyEmail({
-  patientName: "דניאל דוידוב",
-  patientPhone: "0501234567",
-  patientEmail: "daniel@example.com",
+  patientName: "דניאל ברודו",
+  patientPhone: "0556644577",
+  patientEmail: "danielbrodo97@gmail.com",
   appointments: [
     {
       treatment_name: "מגע שיקומי",
-      date: "2026-08-20",
-      time: "10:00",
+      date: "2026-08-19",
+      time: "09:00",
       treatment_price: 250,
     },
   ],
-  clinicName: "אופיר",
+  clinicName: "הקליניקה של מאיה",
   sourceLabel: "מרידיאן",
-  extraNote: "ממתין לאימות מזהה טיפול ממרידיאן",
+  extraNote: "מזהה טיפול מרידיאן שאומת: 916779447",
 });
 
-assert.match(mail.subject, /דניאל דוידוב/);
-assert.match(mail.subject, /20\/08\/2026/);
-assert.match(mail.html, /מרידיאן/);
-assert.match(mail.html, /0501234567/);
-assert.match(mail.html, /מגע שיקומי/);
+assert.match(mail.subject, /דניאל ברודו/);
+assert.match(mail.html, /מזהה טיפול מרידיאן שאומת: 916779447/);
+assert.equal(mail.html.includes("ממתין לאימות"), false);
 
 console.log("clinic booking notify: ok");

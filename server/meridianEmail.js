@@ -18,6 +18,19 @@ export function isValidMeridianTreatmentId(raw) {
   return id.length >= 6 && id.length <= 20;
 }
 
+export function applyMeridianVerifiedNotes(existingNotes, meridianId) {
+  const id = normalizeMeridianTreatmentId(meridianId);
+  const verificationNote = `מזהה טיפול מרידיאן שאומת: ${id}`;
+  const cleaned = String(existingNotes || "")
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => !/ממתין לאימות/.test(line))
+    .filter((line) => !/מזהה טיפול מרידיאן שאומת/.test(line));
+  cleaned.push(verificationNote);
+  return cleaned.join("\n");
+}
+
 function includesAny(haystack, needles) {
   const text = String(haystack || "").toLowerCase();
   return needles.some((needle) => text.includes(String(needle).toLowerCase()));

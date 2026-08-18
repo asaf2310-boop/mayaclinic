@@ -7,6 +7,7 @@ import {
 import { getClinicName, isEmailConfigured, sendEmail } from "./gmail.js";
 import { getBookingNotifyEmails } from "./bookingNotify.js";
 import {
+  applyMeridianVerifiedNotes,
   findMeridianTreatmentEmail,
   isValidMeridianTreatmentId,
   normalizeMeridianTreatmentId,
@@ -200,6 +201,7 @@ export async function createAppointmentsFromBooking(
 /**
  * Create appointments for Meridian benefit flow.
  * Reserves the slot; client then submits Meridian treatment ID for email verification.
+ * Clinic notify is sent after verification (so the email matches the real status).
  */
 export async function createMeridianBooking(rawBooking = {}) {
   const booking = normalizeBookingPayload(rawBooking);
@@ -215,13 +217,7 @@ export async function createMeridianBooking(rawBooking = {}) {
     status: "confirmed",
   });
 
-  // Notify clinic immediately when a Meridian booking enters the system.
-  await maybeSendClinicBookingNotify(createdRows, {
-    sourceLabel: "מרידיאן",
-    extraNote: "ממתין לאימות מזהה טיפול ממרידיאן",
-  });
-
-  // Patient confirmation email is sent after Meridian treatment-ID verification succeeds.
+  // Patient confirmation + clinic notify happen after treatment-ID verification.
   return { createdIds, appointments: createdRows };
 }
 
@@ -299,12 +295,27 @@ export async function verifyMeridianTreatmentId({
     );
   });
   if (alreadyVerified) {
+    const cleaned = [];
+    for (const row of active) {
+      const notes = applyMeridianVerifiedNotes(row.notes, meridianId);
+      if (notes === String(row.notes || "").trim()) {
+        cleaned.push(row);
+        continue;
+      }
+      const patched = await supabaseRequest(`appointments?id=eq.${encodeURIComponent(row.id)}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({ notes }),
+      });
+      const record = Array.isArray(patched) ? patched[0] : patched;
+      cleaned.push(record || { ...row, notes });
+    }
     return {
       ok: true,
       found: true,
       alreadyVerified: true,
       treatmentId: meridianId,
-      appointments: active,
+      appointments: cleaned,
     };
   }
 
@@ -319,14 +330,10 @@ export async function verifyMeridianTreatmentId({
     };
   }
 
-  const verificationNote = `מזהה טיפול מרידיאן שאומת: ${meridianId}`;
   const updated = [];
 
   for (const row of active) {
-    const existingNotes = String(row.notes || "").trim();
-    const notes = existingNotes.includes(verificationNote)
-      ? existingNotes
-      : [existingNotes, verificationNote].filter(Boolean).join("\n");
+    const notes = applyMeridianVerifiedNotes(row.notes, meridianId);
 
     const patched = await supabaseRequest(`appointments?id=eq.${encodeURIComponent(row.id)}`, {
       method: "PATCH",
@@ -341,6 +348,10 @@ export async function verifyMeridianTreatmentId({
   }
 
   await maybeSendConfirmationEmail(updated);
+  await maybeSendClinicBookingNotify(updated, {
+    sourceLabel: "מרידיאן",
+    extraNote: `מזהה טיפול מרידיאן שאומת: ${meridianId}`,
+  });
 
   return {
     ok: true,
