@@ -1,6 +1,10 @@
+import { resolveClinicPayboxOverride } from "@/lib/clinicSite";
+
 export function resolvePayboxLink(treatment, clinicSite) {
   const treatmentLink = String(treatment?.paybox_link || "").trim();
   if (treatmentLink) return treatmentLink;
+  const overrideLink = resolveClinicPayboxOverride(treatment, clinicSite);
+  if (overrideLink) return overrideLink;
   return String(clinicSite?.payboxLink || "").trim();
 }
 

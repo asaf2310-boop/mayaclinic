@@ -71,6 +71,14 @@ export const CLINIC_SITES = {
 
     payboxLink: "https://links.payboxapp.com/m8x1lhYoD3b",
 
+    payboxOverrides: [
+      {
+        name: "מפגש הדרכה התפתחותית לתינוקות וילדים (פתח תקווה והסביבה)",
+        price: 350,
+        url: "https://links.payboxapp.com/D5nYQd0Lm4b",
+      },
+    ],
+
   },
 
 };
@@ -192,6 +200,25 @@ export function filterTreatmentsForClinic(treatments = [], site = getClinicSite(
   }
 
   return filtered;
+}
+
+export function resolveClinicPayboxOverride(treatment, site = getClinicSite()) {
+  const overrides = Array.isArray(site?.payboxOverrides) ? site.payboxOverrides : [];
+  const treatmentName = String(treatment?.name || "").trim();
+  const treatmentPrice = Number(treatment?.price);
+
+  const match = overrides.find((item) => {
+    const overrideName = String(item?.name || "").trim();
+    const overridePrice = Number(item?.price);
+    return (
+      overrideName === treatmentName &&
+      Number.isFinite(overridePrice) &&
+      Number.isFinite(treatmentPrice) &&
+      overridePrice === treatmentPrice
+    );
+  });
+
+  return String(match?.url || "").trim();
 }
 
 export function filterByClinicTenant(rows = [], site = getClinicSite()) {
