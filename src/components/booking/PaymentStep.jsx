@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ArrowRight, CreditCard, Loader2, Lock, ShieldCheck } from "lucide-react";
+import { ArrowRight, CreditCard, Loader2, Lock, ShieldCheck, Wallet } from "lucide-react";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
 import { getClinicSite } from "@/lib/clinicSite";
@@ -14,6 +14,11 @@ import {
   initPelecardSession,
   isPelecardReturnMessage,
 } from "@/lib/pelecard";
+import {
+  getPayboxPaymentDetails,
+  openPayboxLink,
+  resolvePayboxLink,
+} from "@/lib/paymentLinks";
 import {
   createMeridianBooking,
   verifyMeridianTreatmentId,
@@ -86,6 +91,10 @@ export default function PaymentStep({
   const ctaClass = clinicSite
     ? "rounded-2xl bg-[#5D7F6D] text-white shadow-[0_8px_24px_rgba(93,127,109,0.22)] hover:bg-[#4F6F5F]"
     : "rounded-xl bg-primary text-primary-foreground";
+  const payboxDetails = getPayboxPaymentDetails(
+    resolvePayboxLink(treatment, clinicSite),
+    totalPrice
+  );
 
   useEffect(() => {
     if (isMeridian) {
@@ -210,6 +219,17 @@ export default function PaymentStep({
       return;
     }
     setShowCheckout(true);
+  };
+
+  const handleStartPayboxPayment = () => {
+    const result = openPayboxLink(resolvePayboxLink(treatment, clinicSite));
+    if (result.missingConfig) {
+      toast({
+        title: "קישור PayBox חסר",
+        description: "לא הוגדר קישור PayBox עבור טיפול זה.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleVerifyMeridianTreatmentId = async (event) => {
@@ -471,12 +491,36 @@ export default function PaymentStep({
                   />
                 </span>
               </button>
+              <button
+                type="button"
+                onClick={handleStartPayboxPayment}
+                disabled={!payboxDetails.isConfigured}
+                className={`mb-2.5 flex w-full items-center justify-center gap-2.5 border px-4 py-3.5 text-[15px] font-semibold transition-transform active:scale-[0.99] disabled:opacity-60 sm:gap-3 sm:px-6 sm:py-4 sm:text-base ${
+                  clinicSite
+                    ? "rounded-2xl border-[#D5E0D8] bg-white/90 text-[#2F3E35] hover:bg-[#F7FAF8]"
+                    : "rounded-xl border-border bg-background text-foreground"
+                }`}
+                aria-label={`תשלום בפייבוקס על סך ${payboxDetails.amountDisplay}`}
+              >
+                <Wallet className="h-5 w-5 shrink-0" />
+                <span className="leading-none">תשלום בפייבוקס · {payboxDetails.amountDisplay}</span>
+              </button>
               <p className={`text-center text-xs sm:text-[13px] ${mutedClass}`}>
                 תשלום מאובטח בדף סליקה · Visa ו־Mastercard
               </p>
+              {payboxDetails.isConfigured && (
+                <p className={`text-center text-xs sm:text-[13px] ${mutedClass}`}>
+                  או תשלום ישיר דרך PayBox
+                </p>
+              )}
               {pelecardConfigured === false && (
                 <p className="mt-2 text-center text-sm text-[#9B2C2C]">
                   סליקת אשראי עדיין לא הוגדרה בשרת.
+                </p>
+              )}
+              {!payboxDetails.isConfigured && (
+                <p className="mt-2 text-center text-sm text-[#9B2C2C]">
+                  קישור PayBox עדיין לא הוגדר לטיפול זה.
                 </p>
               )}
             </>
