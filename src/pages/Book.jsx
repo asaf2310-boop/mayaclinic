@@ -102,7 +102,7 @@ export default function Book() {
     ? clinicSite?.momentBooking?.pageTitle || "קביעת תור — לקוחות מובמנט"
     : "קביעת תור";
   const pageSubtitle = isMoment
-    ? clinicSite?.momentBooking?.pageSubtitle || "כל תור 45 דקות"
+    ? clinicSite?.momentBooking?.pageSubtitle || ""
     : paymentMethod === "meridian"
       ? "בחרו תאריך ושעה · לאחר ההזמנה הזינו מזהה טיפול ממרידיאן"
       : clinicSite
@@ -131,9 +131,11 @@ export default function Book() {
                 <h1 className={clinicSite ? clinicBookPageTitle : "mb-3 text-3xl font-bold tracking-tight text-foreground md:text-4xl"}>
                   {pageTitle}
                 </h1>
-                <p className={clinicSite ? clinicBookPageSubtitle : "text-lg text-muted-foreground"}>
-                  {pageSubtitle}
-                </p>
+                {pageSubtitle ? (
+                  <p className={clinicSite ? clinicBookPageSubtitle : "text-lg text-muted-foreground"}>
+                    {pageSubtitle}
+                  </p>
+                ) : null}
               </div>
 
               <div

@@ -85,7 +85,6 @@ export const CLINIC_SITES = {
       durationMinutes: 45,
       ctaLabel: "קביעת תור — לקוחות Movement",
       pageTitle: "קביעת תור — לקוחות מובמנט",
-      pageSubtitle: "טיפולים ללקוחות מובמנט · כל תור 45 דקות · ללא תשלום באשראי",
       /** Base names hidden on the Movement booking channel. */
       excludeTreatmentBaseNames: ["התנהגות לילד"],
     },

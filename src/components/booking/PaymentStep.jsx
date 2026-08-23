@@ -408,13 +408,13 @@ export default function PaymentStep({
                 ? "אישור תור — לקוחות מובמנט"
                 : "תשלום על התור"}
           </h2>
-          <p className={`mx-auto max-w-sm text-sm leading-relaxed sm:text-base ${mutedClass}`}>
-            {isMeridian
-              ? "הזינו את מזהה הטיפול מאתר מרידיאן לאישור התור"
-              : isMovement
-                ? "תור ללקוחות מובמנט · משך כל טיפול 45 דקות · ללא תשלום באשראי"
+          {!isMovement && (
+            <p className={`mx-auto max-w-sm text-sm leading-relaxed sm:text-base ${mutedClass}`}>
+              {isMeridian
+                ? "הזינו את מזהה הטיפול מאתר מרידיאן לאישור התור"
                 : "לפני אישור התור, יש לשלם את עלות הטיפול בכרטיס אשראי"}
-          </p>
+            </p>
+          )}
         </div>
       )}
 
