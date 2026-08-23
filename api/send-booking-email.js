@@ -1,5 +1,9 @@
-import { buildConfirmationEmail } from "../server/emailTemplates.js";
+import {
+  buildClinicBookingNotifyEmail,
+  buildConfirmationEmail,
+} from "../server/emailTemplates.js";
 import { getClinicName, isEmailConfigured, sendEmail } from "../server/gmail.js";
+import { getBookingNotifyEmails } from "../server/bookingNotify.js";
 import { fetchRecentAppointmentsByIds } from "../server/supabaseServer.js";
 
 export default async function handler(req, res) {
@@ -30,21 +34,59 @@ export default async function handler(req, res) {
 
     const patientEmail = String(appointments[0].patient_email || "").trim();
     const patientName = appointments[0].patient_name || "";
+    const clinicName = getClinicName();
+    let sent = 0;
+    const errors = [];
 
-    if (!patientEmail) {
-      res.status(400).json({ error: "Patient email missing" });
+    if (patientEmail) {
+      try {
+        const { subject, html } = buildConfirmationEmail({
+          patientName,
+          appointments,
+          clinicName,
+        });
+        await sendEmail({ to: patientEmail, subject, html });
+        sent += 1;
+      } catch (error) {
+        errors.push(`patient: ${error.message || error}`);
+      }
+    }
+
+    const clinicRecipients = getBookingNotifyEmails();
+    if (clinicRecipients.length) {
+      try {
+        const first = appointments[0] || {};
+        const clinicMail = buildClinicBookingNotifyEmail({
+          patientName: first.patient_name || patientName,
+          patientPhone: first.patient_phone || "",
+          patientEmail: first.patient_email || patientEmail,
+          appointments,
+          clinicName,
+          sourceLabel: "האתר",
+        });
+        await Promise.all(
+          clinicRecipients.map((to) =>
+            sendEmail({ to, subject: clinicMail.subject, html: clinicMail.html })
+          )
+        );
+        sent += clinicRecipients.length;
+      } catch (error) {
+        errors.push(`clinic: ${error.message || error}`);
+      }
+    }
+
+    if (!patientEmail && !clinicRecipients.length) {
+      res.status(400).json({ error: "No email recipients" });
       return;
     }
 
-    const clinicName = getClinicName();
-    const { subject, html } = buildConfirmationEmail({
-      patientName,
-      appointments,
-      clinicName,
+    res.status(200).json({
+      ok: true,
+      sent,
+      patientEmailed: Boolean(patientEmail),
+      clinicEmailed: clinicRecipients.length > 0,
+      errors: errors.length ? errors : undefined,
     });
-
-    await sendEmail({ to: patientEmail, subject, html });
-    res.status(200).json({ ok: true, sent: 1 });
   } catch (error) {
     res.status(500).json({ error: error.message || "Failed to send email" });
   }

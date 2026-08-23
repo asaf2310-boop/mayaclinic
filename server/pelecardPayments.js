@@ -221,6 +221,46 @@ export async function createMeridianBooking(rawBooking = {}) {
   return { createdIds, appointments: createdRows };
 }
 
+/**
+ * Create appointments for Movement (מובמנט) clients.
+ * 45-minute sessions, no price, no credit payment — emails patient + clinic immediately.
+ */
+export async function createMovementBooking(rawBooking = {}) {
+  const booking = normalizeBookingPayload(rawBooking);
+  if (!isBookingPayloadValid(booking)) {
+    const error = new Error("booking payload is required (patient, treatment, appointments)");
+    error.status = 400;
+    throw error;
+  }
+
+  if (!booking.patient_email) {
+    const error = new Error("נדרש אימייל לאישור התור");
+    error.status = 400;
+    throw error;
+  }
+
+  const baseName = String(booking.treatment_name || "")
+    .replace(/\s*\(מובמנט[^)]*\)\s*$/u, "")
+    .trim();
+  booking.treatment_name = `${baseName} (מובמנט · 45 דק׳)`;
+  booking.treatment_price = null;
+
+  const { createdIds, createdRows } = await createAppointmentsFromBooking(booking, {
+    paymentNote: "ערוץ: לקוחת מובמנט · 45 דק׳ · ללא תשלום באשראי באתר",
+    paid: false,
+    status: "confirmed",
+    bookingDurationMinutes: 45,
+  });
+
+  await maybeSendConfirmationEmail(createdRows);
+  await maybeSendClinicBookingNotify(createdRows, {
+    sourceLabel: "מובמנט / Movement",
+    extraNote: "תור ללקוחות מובמנט · 45 דקות · ללא תשלום באשראי באתר",
+  });
+
+  return { createdIds, appointments: createdRows };
+}
+
 function normalizeAppointmentIds(rawIds = []) {
   return [...new Set(
     (Array.isArray(rawIds) ? rawIds : [])

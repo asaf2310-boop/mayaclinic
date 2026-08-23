@@ -23,6 +23,10 @@ export const clinicPrimaryBtn =
 export const clinicHeroCtaBtn =
   "relative flex w-full items-center justify-center rounded-[18px] bg-gradient-to-l from-[#5D7F6D] to-[#6F9180] px-5 py-3 text-base font-semibold tracking-wide text-white shadow-[0_12px_30px_rgba(0,0,0,0.12)] transition-all duration-300 ease-in-out hover:shadow-[0_18px_40px_rgba(0,0,0,0.16)] active:scale-[0.99] sm:rounded-[20px] sm:px-6 sm:py-3.5 sm:text-lg md:rounded-[24px] md:px-8 md:py-[18px] md:text-xl";
 
+/** Secondary home CTA (Movement) — outline under the primary book button. */
+export const clinicHeroCtaSecondaryBtn =
+  "relative flex w-full items-center justify-center rounded-[18px] border-2 border-[#5D7F6D]/35 bg-white/95 px-5 py-2.5 text-sm font-semibold tracking-wide text-[#5D7F6D] shadow-[0_8px_22px_rgba(93,127,109,0.08)] transition-all duration-300 ease-in-out hover:border-[#5D7F6D]/55 hover:bg-[#F7FAF8] hover:shadow-[0_12px_28px_rgba(93,127,109,0.12)] active:scale-[0.99] sm:rounded-[20px] sm:px-6 sm:py-3 sm:text-base md:rounded-[24px] md:px-8 md:py-3.5 md:text-lg";
+
 export const clinicHeroCtaIcon =
   "pointer-events-none absolute left-5 h-[18px] w-[18px] text-white/70 md:left-6 md:h-[22px] md:w-[22px]";
 

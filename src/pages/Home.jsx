@@ -22,6 +22,7 @@ import {
   clinicPageGradient,
   clinicHeroCtaBtn,
   clinicHeroCtaIcon,
+  clinicHeroCtaSecondaryBtn,
   clinicHeroPremiumCard,
   clinicHeroPremiumIconRing,
   clinicHeroPremiumLabel,
@@ -145,6 +146,14 @@ export default function Home() {
                     <Leaf className={clinicHeroCtaIcon} strokeWidth={1.5} aria-hidden="true" />
                     {clinicSite.heroCtaPrimary}
                   </Link>
+                  {clinicSite.momentBooking && (
+                    <Link
+                      to={`/book?channel=${clinicSite.momentBooking.channel || "movement"}`}
+                      className={clinicHeroCtaSecondaryBtn}
+                    >
+                      {clinicSite.momentBooking.ctaLabel || "קביעת תור — לקוחות Movement"}
+                    </Link>
+                  )}
                   {clinicSite.heroExternalLinks?.length > 0 && (
                     <div className="grid grid-cols-2 gap-2.5 sm:gap-5">
                       {clinicSite.heroExternalLinks.map((link) => (

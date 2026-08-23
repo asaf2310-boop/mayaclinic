@@ -79,6 +79,17 @@ export const CLINIC_SITES = {
       },
     ],
 
+    /** Movement (מובמנט) booking channel — /book?channel=movement */
+    momentBooking: {
+      channel: "movement",
+      durationMinutes: 45,
+      ctaLabel: "קביעת תור — לקוחות Movement",
+      pageTitle: "קביעת תור — לקוחות מובמנט",
+      pageSubtitle: "טיפולים ללקוחות מובמנט · כל תור 45 דקות · ללא תשלום באשראי",
+      /** Base names hidden on the Movement booking channel. */
+      excludeTreatmentBaseNames: ["התנהגות לילד"],
+    },
+
   },
 
 };
@@ -142,6 +153,57 @@ export function isHolisticTreatmentName(name) {
 export function getAllowedTreatmentNames(site = getClinicSite()) {
   if (!site) return null;
   return site.seedTreatments.map((treatment) => treatment.name);
+}
+
+export function isMomentBookingChannel(channel) {
+  const value = String(channel || "").trim().toLowerCase();
+  const configured = String(getClinicSite()?.momentBooking?.channel || "movement")
+    .trim()
+    .toLowerCase();
+  return value === configured || value === "moment" || value === "movement";
+}
+
+/** Display name without trailing duration (e.g. " — 60 דק׳"). */
+export function treatmentBaseName(name = "") {
+  return String(name)
+    .replace(/\s*[—–-]\s*\d+\s*דק[׳']?\s*$/u, "")
+    .trim();
+}
+
+/**
+ * Treatments for the public booking page by channel.
+ * Movement (מובמנט): no prices, every session forced to 45 minutes, excluded bases hidden.
+ */
+export function getTreatmentsForBookingChannel(treatments = [], channel, site = getClinicSite()) {
+  const catalog = filterTreatmentsForClinic(treatments, site);
+  if (!isMomentBookingChannel(channel)) return catalog;
+
+  const duration = site?.momentBooking?.durationMinutes ?? 45;
+  const excluded = new Set(
+    (site?.momentBooking?.excludeTreatmentBaseNames || []).map((name) =>
+      String(name || "").trim()
+    )
+  );
+  const seen = new Set();
+  const momentTreatments = [];
+
+  for (const treatment of catalog) {
+    const baseName = treatmentBaseName(treatment.name) || treatment.name;
+    if (excluded.has(baseName)) continue;
+    if (/התנהגות\s*לילד/u.test(baseName)) continue;
+    if (seen.has(baseName)) continue;
+    seen.add(baseName);
+    momentTreatments.push({
+      ...treatment,
+      name: baseName,
+      duration_minutes: duration,
+      price: null,
+      hide_price: true,
+      booking_channel: site?.momentBooking?.channel || "movement",
+    });
+  }
+
+  return momentTreatments;
 }
 
 function rowTenantId(row) {

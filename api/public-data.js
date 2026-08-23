@@ -2,6 +2,7 @@ import { supabaseRequest } from "../server/supabaseServer.js";
 import { resolveClinicTenantFromHost } from "../server/clinicTenant.js";
 import {
   createMeridianBooking,
+  createMovementBooking,
   normalizeBookingPayload,
   verifyMeridianTreatmentId,
 } from "../server/pelecardPayments.js";
@@ -112,6 +113,21 @@ export default async function handler(req, res) {
         });
 
         const result = await createMeridianBooking(booking);
+        res.status(200).json({
+          ok: true,
+          appointmentIds: result.createdIds,
+          appointments: result.appointments,
+        });
+        return;
+      }
+
+      if (action === "createMovementBooking") {
+        const booking = normalizeBookingPayload({
+          ...(body.booking || {}),
+          tenant_id: tenantId,
+        });
+
+        const result = await createMovementBooking(booking);
         res.status(200).json({
           ok: true,
           appointmentIds: result.createdIds,

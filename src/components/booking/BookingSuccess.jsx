@@ -33,6 +33,11 @@ export default function BookingSuccess({ appointment, onReset, hidePrices = fals
   const patientEmail = String(
     appointment.patient_email || appointments[0]?.patient_email || ""
   ).trim();
+  const treatmentLabel = String(
+    appointment.treatment_name || appointments[0]?.treatment_name || ""
+  );
+  const isMovementSuccess =
+    hidePrices && /מובמנט|movement/i.test(treatmentLabel);
 
   return (
     <motion.div
@@ -52,7 +57,13 @@ export default function BookingSuccess({ appointment, onReset, hidePrices = fals
         התור נקבע בהצלחה
       </h2>
       <p className={`mb-6 text-base sm:mb-8 sm:text-lg ${clinicSite ? clinicTextMuted : "text-muted-foreground"}`}>
-        {patientEmail ? "נשלח אישור הזמנת תור למייל" : "התור נשמר בהצלחה במערכת"}
+        {isMovementSuccess
+          ? patientEmail
+            ? "תור ללקוחות מובמנט · 45 דקות · נשלח אישור למייל"
+            : "תור ללקוחות מובמנט · 45 דקות"
+          : patientEmail
+            ? "נשלח אישור הזמנת תור למייל"
+            : "התור נשמר בהצלחה במערכת"}
       </p>
 
       <div

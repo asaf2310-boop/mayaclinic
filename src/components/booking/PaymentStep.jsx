@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ArrowRight, CreditCard, Loader2, Lock, ShieldCheck, Wallet } from "lucide-react";
+import { ArrowRight, CheckCircle2, CreditCard, Loader2, Lock, ShieldCheck, Wallet } from "lucide-react";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
 import { getClinicSite } from "@/lib/clinicSite";
@@ -23,6 +23,7 @@ import {
   createMeridianBooking,
   verifyMeridianTreatmentId,
 } from "@/lib/meridianBooking";
+import { createMovementBooking } from "@/lib/movementBooking";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { getClinicTenantId } from "@/lib/tenant";
@@ -66,6 +67,8 @@ export default function PaymentStep({
   paymentMethod = "credit",
 }) {
   const isMeridian = paymentMethod === "meridian";
+  const isMovement = paymentMethod === "movement";
+  const hidePrices = isMeridian || isMovement || Boolean(formData?.hide_price);
   const appointments = formData.appointments || [];
   const unitPrice = treatment?.price ?? 250;
   const totalPrice = unitPrice * appointments.length;
@@ -81,6 +84,9 @@ export default function PaymentStep({
   const [meridianVerifyError, setMeridianVerifyError] = useState("");
   const [meridianAppointmentIds, setMeridianAppointmentIds] = useState([]);
   const [meridianSuccess, setMeridianSuccess] = useState(null);
+  const [isMovementConfirming, setIsMovementConfirming] = useState(false);
+  const [movementError, setMovementError] = useState("");
+  const [movementSuccess, setMovementSuccess] = useState(null);
   const clinicSite = getClinicSite();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -97,7 +103,7 @@ export default function PaymentStep({
   );
 
   useEffect(() => {
-    if (isMeridian) {
+    if (isMeridian || isMovement) {
       setPelecardConfigured(false);
       return;
     }
@@ -110,10 +116,10 @@ export default function PaymentStep({
     return () => {
       cancelled = true;
     };
-  }, [isMeridian]);
+  }, [isMeridian, isMovement]);
 
   useEffect(() => {
-    if (isMeridian || !showCheckout || pelecardConfigured !== true || paymentDone) return;
+    if (isMeridian || isMovement || !showCheckout || pelecardConfigured !== true || paymentDone) return;
 
     let cancelled = false;
     (async () => {
@@ -163,6 +169,7 @@ export default function PaymentStep({
     };
   }, [
     isMeridian,
+    isMovement,
     showCheckout,
     pelecardConfigured,
     paymentDone,
@@ -176,7 +183,7 @@ export default function PaymentStep({
   ]);
 
   useEffect(() => {
-    if (isMeridian || !showCheckout || paymentDone) return;
+    if (isMeridian || isMovement || !showCheckout || paymentDone) return;
 
     function onMessage(event) {
       if (!isPelecardReturnMessage(event)) return;
@@ -207,7 +214,7 @@ export default function PaymentStep({
 
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [isMeridian, showCheckout, paymentDone, bookingRef, navigate]);
+  }, [isMeridian, isMovement, showCheckout, paymentDone, bookingRef, navigate]);
 
   const handleStartCreditPayment = () => {
     if (pelecardConfigured === false) {
@@ -288,12 +295,61 @@ export default function PaymentStep({
     }
   };
 
+  const handleConfirmMovementBooking = async (event) => {
+    event?.preventDefault?.();
+    setIsMovementConfirming(true);
+    setMovementError("");
+    try {
+      const created = await createMovementBooking({
+        patient_name: formData.patient_name,
+        patient_phone: formData.patient_phone,
+        patient_email: formData.patient_email,
+        notes: formData.notes,
+        marketing_consent: formData.marketing_consent,
+        treatment_id: formData.treatment_id || treatment?.id,
+        treatment_name: formData.treatment_name || treatment?.name,
+        treatment_price: null,
+        tenant_id: getClinicTenantId() || clinicSite?.id || "maya",
+        appointments: formData.appointments || [],
+      });
+
+      setMovementSuccess({
+        appointments: created.appointments || [],
+        treatment_name:
+          created.appointments?.[0]?.treatment_name ||
+          `${treatment?.name || formData.treatment_name || ""} (מובמנט · 45 דק׳)`,
+        treatment_price: null,
+        hide_price: true,
+        patient_email: formData.patient_email,
+      });
+    } catch (error) {
+      setMovementError(error?.message || "לא ניתן לאשר את התור. נסו שוב.");
+    } finally {
+      setIsMovementConfirming(false);
+    }
+  };
+
   if (meridianSuccess) {
     return (
       <BookingSuccess
         appointment={meridianSuccess}
         hidePrices
         onReset={() => navigate("/book", { replace: true })}
+      />
+    );
+  }
+
+  if (movementSuccess) {
+    return (
+      <BookingSuccess
+        appointment={movementSuccess}
+        hidePrices
+        onReset={() =>
+          navigate(
+            `/book?channel=${clinicSite?.momentBooking?.channel || "movement"}`,
+            { replace: true }
+          )
+        }
       />
     );
   }
@@ -335,6 +391,8 @@ export default function PaymentStep({
           >
             {isMeridian ? (
               <ShieldCheck className={`h-6 w-6 sm:h-8 sm:w-8 ${clinicSite ? clinicTextPrimary : "text-primary"}`} />
+            ) : isMovement ? (
+              <CheckCircle2 className={`h-6 w-6 sm:h-8 sm:w-8 ${clinicSite ? clinicTextPrimary : "text-primary"}`} />
             ) : (
               <CreditCard className={`h-6 w-6 sm:h-8 sm:w-8 ${clinicSite ? clinicTextPrimary : "text-primary"}`} />
             )}
@@ -344,12 +402,18 @@ export default function PaymentStep({
               clinicSite ? clinicTextHeading : "text-foreground"
             }`}
           >
-            {isMeridian ? "אימות מזהה מרידיאן" : "תשלום על התור"}
+            {isMeridian
+              ? "אימות מזהה מרידיאן"
+              : isMovement
+                ? "אישור תור — לקוחות מובמנט"
+                : "תשלום על התור"}
           </h2>
           <p className={`mx-auto max-w-sm text-sm leading-relaxed sm:text-base ${mutedClass}`}>
             {isMeridian
               ? "הזינו את מזהה הטיפול מאתר מרידיאן לאישור התור"
-              : "לפני אישור התור, יש לשלם את עלות הטיפול בכרטיס אשראי"}
+              : isMovement
+                ? "תור ללקוחות מובמנט · משך כל טיפול 45 דקות · ללא תשלום באשראי"
+                : "לפני אישור התור, יש לשלם את עלות הטיפול בכרטיס אשראי"}
           </p>
         </div>
       )}
@@ -397,7 +461,7 @@ export default function PaymentStep({
             />
           )}
 
-          {!isMeridian && (
+          {!hidePrices && (
             <div
               className={`flex items-center justify-between gap-3 border-t pt-3 ${
                 clinicSite ? "border-[#E8ECE8]" : "border-border"
@@ -407,6 +471,15 @@ export default function PaymentStep({
               <span className={`text-xl font-bold tabular-nums ${primaryClass}`}>
                 ₪{totalPrice}
               </span>
+            </div>
+          )}
+          {isMovement && (
+            <div
+              className={`border-t pt-3 text-sm ${
+                clinicSite ? "border-[#E8ECE8]" : "border-border"
+              } ${mutedClass}`}
+            >
+              לקוחות מובמנט — ללא הצגת מחיר באתר · כל תור 45 דקות
             </div>
           )}
         </div>
@@ -461,6 +534,39 @@ export default function PaymentStep({
                 </span>
               </button>
             </form>
+          ) : isMovement ? (
+            <div className="space-y-4">
+              <div
+                className={`rounded-2xl border p-4 text-center text-sm leading-6 ${
+                  clinicSite
+                    ? "border-[#D5E0D8] bg-[#F7FAF8]/90 text-[#2F3E35]"
+                    : "border-border bg-muted/40 text-foreground"
+                }`}
+              >
+                לאחר אישור התור יישלח סיכום למייל שלכם ולקליניקה. הטיפול מיועד ללקוחות מובמנט.
+              </div>
+
+              {movementError && (
+                <p className="text-center text-sm text-[#9B2C2C]">{movementError}</p>
+              )}
+
+              <button
+                type="button"
+                onClick={handleConfirmMovementBooking}
+                disabled={isMovementConfirming}
+                className={`flex w-full items-center justify-center gap-2.5 px-4 py-3.5 text-[15px] font-semibold transition-transform active:scale-[0.99] disabled:opacity-60 sm:gap-3 sm:px-6 sm:py-4 sm:text-base ${ctaClass}`}
+                aria-label="אשר את התור"
+              >
+                {isMovementConfirming ? (
+                  <Loader2 className="h-5 w-5 shrink-0 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="h-5 w-5 shrink-0" />
+                )}
+                <span className="leading-none">
+                  {isMovementConfirming ? "מאשרים תור..." : "אשר את התור"}
+                </span>
+              </button>
+            </div>
           ) : (
             <>
               <button
