@@ -3,7 +3,10 @@ import { Link, useSearchParams } from "react-router-dom";
 import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Navbar from "../components/layout/Navbar";
-import { fetchPelecardSession } from "@/lib/pelecard";
+import {
+  fetchPelecardSession,
+  getStoredPelecardSessionToken,
+} from "@/lib/pelecard";
 import { getClinicSite } from "@/lib/clinicSite";
 import {
   clinicFadeIn,
@@ -18,12 +21,14 @@ import {
 export default function PaymentFailure() {
   const [params] = useSearchParams();
   const bookingRef = String(params.get("ref") || "").trim();
-  const sessionToken = String(params.get("token") || "").trim();
+  const sessionTokenFromUrl = String(params.get("token") || "").trim();
   const code = String(params.get("code") || "").trim();
   const clinicSite = getClinicSite();
   const [message, setMessage] = useState("");
 
   useEffect(() => {
+    const sessionToken =
+      sessionTokenFromUrl || getStoredPelecardSessionToken(bookingRef);
     if (!bookingRef || !sessionToken) return;
     let cancelled = false;
     (async () => {
@@ -38,7 +43,7 @@ export default function PaymentFailure() {
     return () => {
       cancelled = true;
     };
-  }, [bookingRef, sessionToken]);
+  }, [bookingRef, sessionTokenFromUrl]);
 
   return (
     <div

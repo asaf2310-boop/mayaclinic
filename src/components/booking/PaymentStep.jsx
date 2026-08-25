@@ -11,6 +11,7 @@ import {
 import {
   createBookingRef,
   fetchPelecardStatus,
+  getStoredPelecardSessionToken,
   initPelecardSession,
   isPelecardReturnMessage,
 } from "@/lib/pelecard";
@@ -189,21 +190,29 @@ export default function PaymentStep({
       if (!isPelecardReturnMessage(event)) return;
       const data = event.data;
       const ref = data.bookingRef || data.paramX || data.userKey || bookingRef;
+      const sessionToken =
+        String(data.sessionToken || "").trim() || getStoredPelecardSessionToken(ref);
       setPaymentDone(true);
 
       if (data.redirectUrl) {
-        window.location.assign(data.redirectUrl);
+        let redirectUrl = String(data.redirectUrl);
+        if (sessionToken && redirectUrl.indexOf("token=") === -1) {
+          redirectUrl +=
+            (redirectUrl.indexOf("?") >= 0 ? "&" : "?") +
+            `token=${encodeURIComponent(sessionToken)}`;
+        }
+        window.location.assign(redirectUrl);
         return;
       }
 
       if (data.ok) {
-        const redirect = data.sessionToken
-          ? `/payment/success?ref=${encodeURIComponent(ref || "")}&token=${encodeURIComponent(data.sessionToken)}`
+        const redirect = sessionToken
+          ? `/payment/success?ref=${encodeURIComponent(ref || "")}&token=${encodeURIComponent(sessionToken)}`
           : `/payment/success?ref=${encodeURIComponent(ref || "")}`;
         navigate(redirect, { replace: true });
       } else {
-        const tokenQuery = data.sessionToken
-          ? `&token=${encodeURIComponent(data.sessionToken)}`
+        const tokenQuery = sessionToken
+          ? `&token=${encodeURIComponent(sessionToken)}`
           : "";
         navigate(
           `/payment/failure?ref=${encodeURIComponent(ref || "")}${tokenQuery}&code=${encodeURIComponent(data.pelecardStatusCode || "error")}`,

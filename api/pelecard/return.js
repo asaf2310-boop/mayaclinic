@@ -33,9 +33,15 @@ export default async function handler(req, res) {
   const sessionToken = String(params.token || "").trim();
   const origin = resolvePublicOrigin(req);
 
+  // Token may be empty here (intentionally omitted from GoodURL / stripped by Pelecard).
+  // The HTML bridge restores it from sessionStorage before redirecting to the SPA.
   const redirectPath = isSuccess
-    ? `/payment/success?ref=${encodeURIComponent(bookingRef)}&token=${encodeURIComponent(sessionToken)}`
-    : `/payment/failure?ref=${encodeURIComponent(bookingRef)}&token=${encodeURIComponent(sessionToken)}&code=${encodeURIComponent(statusCode || "error")}`;
+    ? `/payment/success?ref=${encodeURIComponent(bookingRef)}${
+        sessionToken ? `&token=${encodeURIComponent(sessionToken)}` : ""
+      }`
+    : `/payment/failure?ref=${encodeURIComponent(bookingRef)}${
+        sessionToken ? `&token=${encodeURIComponent(sessionToken)}` : ""
+      }&code=${encodeURIComponent(statusCode || "error")}`;
   const redirectUrl = origin ? `${origin}${redirectPath}` : redirectPath;
 
   const payload = {
@@ -143,6 +149,19 @@ export default async function handler(req, res) {
     (function () {
       var payload = ${JSON.stringify(payload)};
       var target = ${JSON.stringify(redirectUrl)};
+      var ref = String(payload.bookingRef || "");
+      try {
+        if ((!payload.sessionToken || !String(payload.sessionToken).trim()) && ref) {
+          var stored = sessionStorage.getItem("pelecard-session-token:" + ref) || "";
+          if (stored) {
+            payload.sessionToken = stored;
+            var joiner = target.indexOf("?") >= 0 ? "&" : "?";
+            if (target.indexOf("token=") === -1) {
+              target = target + joiner + "token=" + encodeURIComponent(stored);
+            }
+          }
+        }
+      } catch (e) {}
       try {
         if (window.parent && window.parent !== window) {
           window.parent.postMessage(payload, "*");

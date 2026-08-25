@@ -3,7 +3,10 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import Navbar from "../components/layout/Navbar";
 import BookingSuccess from "../components/booking/BookingSuccess";
-import { fetchPelecardSession } from "@/lib/pelecard";
+import {
+  fetchPelecardSession,
+  getStoredPelecardSessionToken,
+} from "@/lib/pelecard";
 import { getClinicSite } from "@/lib/clinicSite";
 import {
   clinicFadeIn,
@@ -20,7 +23,7 @@ const MAX_WAIT_MS = 45000;
 export default function PaymentSuccess() {
   const [params] = useSearchParams();
   const bookingRef = String(params.get("ref") || "").trim();
-  const sessionToken = String(params.get("token") || "").trim();
+  const sessionTokenFromUrl = String(params.get("token") || "").trim();
   const navigate = useNavigate();
   const clinicSite = getClinicSite();
   const [session, setSession] = useState(null);
@@ -28,6 +31,8 @@ export default function PaymentSuccess() {
   const [timedOut, setTimedOut] = useState(false);
 
   useEffect(() => {
+    const sessionToken =
+      sessionTokenFromUrl || getStoredPelecardSessionToken(bookingRef);
     if (!bookingRef || !sessionToken) {
       setError("קישור התשלום אינו תקין או שפג תוקפו");
       return;
@@ -72,7 +77,7 @@ export default function PaymentSuccess() {
     return () => {
       cancelled = true;
     };
-  }, [bookingRef, navigate, sessionToken]);
+  }, [bookingRef, navigate, sessionTokenFromUrl]);
 
   const appointment =
     session?.status === "paid"

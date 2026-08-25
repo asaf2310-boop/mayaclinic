@@ -71,8 +71,10 @@ export default async function handler(req, res) {
 
     const sessionToken = createPaymentSessionToken(bookingRef);
     // Browser lands here (FeedbackOnTop) → redirects to SPA success/failure.
-    const goodUrl = `${origin}/api/pelecard/return?outcome=good&ref=${encodeURIComponent(bookingRef)}&token=${encodeURIComponent(sessionToken)}`;
-    const errorUrl = `${origin}/api/pelecard/return?outcome=error&ref=${encodeURIComponent(bookingRef)}&token=${encodeURIComponent(sessionToken)}`;
+    // Keep Good/Error URLs short: Pelecard may drop long query strings (session token).
+    // Token is recovered from sessionStorage on the return page / SPA.
+    const goodUrl = `${origin}/api/pelecard/return?outcome=good&ref=${encodeURIComponent(bookingRef)}`;
+    const errorUrl = `${origin}/api/pelecard/return?outcome=error&ref=${encodeURIComponent(bookingRef)}`;
     // Pelecard server notifies our backend (authoritative).
     const serverSideGoodFeedbackUrl = `${origin}/api/pelecard/feedback?outcome=good&ref=${encodeURIComponent(bookingRef)}`;
     const serverSideErrorFeedbackUrl = `${origin}/api/pelecard/feedback?outcome=error&ref=${encodeURIComponent(bookingRef)}`;
