@@ -220,12 +220,35 @@ export async function initPelecardPayment({
 }
 
 /**
+ * Pelecard docs: ValidateByUniqueKey returns 1 on match, 0 otherwise.
+ * Some gateways/libraries also return True/true.
+ */
+export function isPelecardValidateSuccess(result) {
+  if (result === true || result === 1) return true;
+  if (typeof result === "number" && result === 1) return true;
+  if (typeof result === "string") {
+    const raw = result.trim().toLowerCase().replace(/^"|"$/g, "");
+    if (raw === "1" || raw === "true") return true;
+  }
+  if (result && typeof result === "object") {
+    if (result.raw != null) return isPelecardValidateSuccess(result.raw);
+    if (result.Result != null) return isPelecardValidateSuccess(result.Result);
+    if (result.result != null) return isPelecardValidateSuccess(result.result);
+  }
+  return false;
+}
+
+/**
  * Validate a completed transaction with PaymentGW/ValidateByUniqueKey.
  * Returns true only when Pelecard confirms the amount/key pair.
+ *
+ * UniqueKey must be the UserKey from init when one was sent; otherwise
+ * PelecardTransactionId. Callers may pass several candidates via uniqueKeys.
  */
 export async function validatePelecardPayment({
   confirmationKey,
   uniqueKey,
+  uniqueKeys = [],
   totalAgorot,
 }) {
   const config = getPelecardConfig();
@@ -235,33 +258,79 @@ export async function validatePelecardPayment({
     throw error;
   }
 
-  const payload = {
-    ConfirmationKey: String(confirmationKey || ""),
-    UniqueKey: String(uniqueKey || ""),
-    TotalX100: String(Math.round(Number(totalAgorot) || 0)),
-  };
+  const total = String(Math.round(Number(totalAgorot) || 0));
+  const key = String(confirmationKey || "").trim();
+  const keys = [
+    ...new Set(
+      [uniqueKey, ...(Array.isArray(uniqueKeys) ? uniqueKeys : [])]
+        .map((value) => String(value || "").trim())
+        .filter(Boolean)
+    ),
+  ];
 
-  if (!payload.ConfirmationKey || !payload.UniqueKey || payload.TotalX100 === "0") {
+  if (!key || !keys.length || total === "0") {
     const error = new Error("Missing validation fields");
     error.status = 400;
     throw error;
   }
 
-  const result = await pelecardPost(
-    "PaymentGW/ValidateByUniqueKey",
-    payload,
-    config.gatewayBase
-  );
+  let lastResult = null;
+  for (const candidate of keys) {
+    const payload = {
+      ConfirmationKey: key,
+      UniqueKey: candidate,
+      TotalX100: total,
+    };
 
-  // Pelecard returns a truthy body (often "True"/true) on success; empty/false otherwise.
-  if (result === true || result === "True" || result === "true") return true;
-  if (typeof result === "string" && result.trim().toLowerCase() === "true") return true;
-  if (result && typeof result === "object" && result.raw) {
-    const raw = String(result.raw).trim().toLowerCase();
-    if (raw === "true" || raw === '"true"') return true;
+    const result = await pelecardPost(
+      "PaymentGW/ValidateByUniqueKey",
+      payload,
+      config.gatewayBase
+    );
+    lastResult = result;
+
+    if (isPelecardValidateSuccess(result)) return true;
+  }
+
+  if (typeof console !== "undefined") {
+    console.warn(
+      "[pelecard] ValidateByUniqueKey rejected",
+      JSON.stringify({ confirmationKey: key.slice(0, 8), total, uniqueKeys: keys, lastResult })
+    );
   }
 
   return false;
+}
+
+/**
+ * Lookup a completed iframe transaction (auth required).
+ * Used as a fallback when ValidateByUniqueKey is inconclusive.
+ */
+export async function getPelecardTransaction(transactionId) {
+  const config = getPelecardConfig();
+  if (!config.configured) {
+    const error = new Error("Pelecard is not configured");
+    error.status = 503;
+    throw error;
+  }
+
+  const id = String(transactionId || "").trim();
+  if (!id) {
+    const error = new Error("Missing transaction id");
+    error.status = 400;
+    throw error;
+  }
+
+  return pelecardPost(
+    "PaymentGW/GetTransaction",
+    {
+      terminal: config.terminal,
+      user: config.user,
+      password: config.password,
+      TransactionId: id,
+    },
+    config.gatewayBase
+  );
 }
 
 export function resolvePublicOrigin(req) {

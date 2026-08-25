@@ -1,5 +1,5 @@
 import { supabaseRequest } from "./supabaseServer.js";
-import { validatePelecardPayment } from "./pelecard.js";
+import { getPelecardTransaction, validatePelecardPayment } from "./pelecard.js";
 import {
   buildClinicBookingNotifyEmail,
   buildConfirmationEmail,
@@ -492,15 +492,63 @@ export async function finalizePaymentFromPelecard({
     return { session: updated, alreadyProcessed: false, valid: false };
   }
 
-  const uniqueKey = bookingRef;
   const totalAgorot = session.total_agorot;
-  const key = confirmationKey || session.confirmation_key || "";
+  // Prefer the ConfirmationKey from init (stored on the session). Callback keys
+  // can differ; Pelecard binds the init key to UserKey + Total.
+  const confirmationCandidates = [
+    ...new Set(
+      [session.confirmation_key, confirmationKey]
+        .map((value) => String(value || "").trim())
+        .filter(Boolean)
+    ),
+  ];
+  // UniqueKey = UserKey from init (bookingRef). If UserKey was empty Pelecard
+  // accepts PelecardTransactionId instead — try both.
+  const uniqueCandidates = [
+    ...new Set(
+      [bookingRef, pelecardTransactionId, resultPayload?.ParamX, resultPayload?.UserKey]
+        .map((value) => String(value || "").trim())
+        .filter(Boolean)
+    ),
+  ];
 
-  const valid = await validatePelecardPayment({
-    confirmationKey: key,
-    uniqueKey,
-    totalAgorot,
-  });
+  let valid = false;
+  let key = confirmationCandidates[0] || "";
+  for (const candidateKey of confirmationCandidates) {
+    valid = await validatePelecardPayment({
+      confirmationKey: candidateKey,
+      uniqueKeys: uniqueCandidates,
+      totalAgorot,
+    });
+    if (valid) {
+      key = candidateKey;
+      break;
+    }
+  }
+
+  // Fallback: authenticated GetTransaction when status is already 000.
+  if (!valid && pelecardTransactionId && statusOk) {
+    try {
+      const txn = await getPelecardTransaction(pelecardTransactionId);
+      const status =
+        String(txn?.StatusCode || txn?.ResultData?.StatusCode || txn?.statusCode || "").trim();
+      const debitTotal = Number(
+        txn?.ResultData?.DebitTotal ?? txn?.DebitTotal ?? txn?.ResultData?.Total ?? NaN
+      );
+      const amountMatches =
+        !Number.isFinite(debitTotal) ||
+        Math.round(debitTotal) === Math.round(Number(totalAgorot) || 0) ||
+        // Some payloads return shekels rather than agorot.
+        Math.round(debitTotal * 100) === Math.round(Number(totalAgorot) || 0);
+      if ((status === "000" || status === "") && amountMatches && txn) {
+        valid = true;
+        key =
+          String(txn?.ResultData?.ConfirmationKey || txn?.ConfirmationKey || "").trim() || key;
+      }
+    } catch (error) {
+      console.error("Pelecard GetTransaction fallback failed:", error?.message || error);
+    }
+  }
 
   if (!valid) {
     const updated = await updatePaymentSession(bookingRef, {
