@@ -42,7 +42,7 @@ export async function supabaseRequest(path, options = {}) {
   return text ? JSON.parse(text) : null;
 }
 
-export async function fetchRecentAppointmentsByIds(ids = []) {
+export async function fetchRecentAppointmentsByIds(ids = [], { maxAgeMs = 10 * 60 * 1000 } = {}) {
   if (!ids.length) return [];
 
   const idList = ids.map((id) => encodeURIComponent(id)).join(",");
@@ -51,10 +51,10 @@ export async function fetchRecentAppointmentsByIds(ids = []) {
       `appointments?id=in.(${idList})&select=id,patient_name,patient_email,patient_phone,treatment_name,treatment_price,date,time,status,created_at`
     )) || [];
 
-  const tenMinutesAgo = Date.now() - 10 * 60 * 1000;
+  const oldestAllowed = Date.now() - Math.max(0, Number(maxAgeMs) || 0);
   return rows.filter((row) => {
     const createdAt = row.created_at ? new Date(row.created_at).getTime() : 0;
-    return createdAt >= tenMinutesAgo && row.status !== "cancelled";
+    return createdAt >= oldestAllowed && row.status !== "cancelled";
   });
 }
 

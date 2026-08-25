@@ -6,6 +6,16 @@ import { getClinicName, isEmailConfigured, sendEmail } from "../server/gmail.js"
 import { getBookingNotifyEmails } from "../server/bookingNotify.js";
 import { fetchRecentAppointmentsByIds } from "../server/supabaseServer.js";
 
+/** Allow resend for same-day bookings when explicit appointment IDs are provided. */
+const RESEND_MAX_AGE_MS = 48 * 60 * 60 * 1000;
+
+function maskEmail(email) {
+  const value = String(email || "").trim();
+  const at = value.indexOf("@");
+  if (at <= 1) return value ? "***" : "";
+  return `${value.slice(0, 2)}***${value.slice(at)}`;
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.status(405).json({ error: "Method not allowed" });
@@ -26,7 +36,9 @@ export default async function handler(req, res) {
       return;
     }
 
-    const appointments = await fetchRecentAppointmentsByIds(appointmentIds);
+    const appointments = await fetchRecentAppointmentsByIds(appointmentIds, {
+      maxAgeMs: RESEND_MAX_AGE_MS,
+    });
     if (!appointments.length) {
       res.status(404).json({ error: "No recent appointments found" });
       return;
@@ -81,10 +93,12 @@ export default async function handler(req, res) {
     }
 
     res.status(200).json({
-      ok: true,
+      ok: errors.length === 0,
       sent,
       patientEmailed: Boolean(patientEmail),
+      patientEmailMasked: patientEmail ? maskEmail(patientEmail) : "",
       clinicEmailed: clinicRecipients.length > 0,
+      clinicRecipientsMasked: clinicRecipients.map(maskEmail),
       errors: errors.length ? errors : undefined,
     });
   } catch (error) {
