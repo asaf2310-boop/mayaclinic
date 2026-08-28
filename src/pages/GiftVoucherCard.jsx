@@ -10,7 +10,7 @@ export default function GiftVoucherCard() {
   const name = String(params.get("name") || "");
   const greeting = String(params.get("greeting") || "");
   const quantity = Math.max(1, Math.min(10, Number(params.get("quantity")) || 1));
-  return <div className={`min-h-screen page-background ${clinicPageGradient}`}><Navbar/><main className="mx-auto max-w-xl px-4 pb-16 pt-24" dir="rtl"><section className={`${clinicGlassPanel} relative overflow-hidden border border-white/70 p-2 shadow-[0_24px_70px_rgba(67,94,78,0.2)]`}>
+  return <div className={`min-h-screen page-background ${clinicPageGradient} !bg-[#EFE7DA] bg-[radial-gradient(circle_at_top_right,rgba(255,250,240,0.78),transparent_42%),linear-gradient(145deg,#F3EDE3_0%,#EAE0D2_52%,#F1E9DE_100%)]`}><Navbar/><main className="mx-auto max-w-xl px-4 pb-16 pt-24" dir="rtl"><section className={`${clinicGlassPanel} relative overflow-hidden border border-[#E1D5C5] !bg-[#F8F1E7]/95 p-2 shadow-[0_24px_70px_rgba(86,68,48,0.18)]`}>
     <div className="relative overflow-hidden rounded-[24px] border border-[#D7E4DB] bg-gradient-to-br from-[#FBFDFB] via-[#F0F6F2] to-[#E5EFE8] px-6 py-9 text-center sm:px-10 sm:py-12">
       <div className="pointer-events-none absolute -left-12 -top-12 h-40 w-40 rounded-full bg-[#A8C4B4]/25 blur-2xl"/><div className="pointer-events-none absolute -bottom-14 -right-10 h-44 w-44 rounded-full bg-[#D7BFAE]/20 blur-2xl"/>
       <Sparkles className="absolute left-7 top-7 h-6 w-6 text-[#B28D6C]/60"/><Leaf className="absolute bottom-8 right-7 h-8 w-8 rotate-12 text-[#7F9B8A]/50"/>

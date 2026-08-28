@@ -18,6 +18,7 @@ import ClinicBootstrap from './components/ClinicBootstrap';
 import AdminPwaManifest from './components/AdminPwaManifest';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminLoginRequired from './components/AdminLoginRequired';
+import ScrollToTop from './components/ScrollToTop';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -65,6 +66,7 @@ function App() {
         <DemoDocumentTitle />
         <ClinicBootstrap />
         <Router>
+          <ScrollToTop />
           <AdminPwaManifest />
           <AuthenticatedApp />
         </Router>
