@@ -118,3 +118,15 @@ export function buildReminderEmail({ patientName, appointments, clinicName }) {
     html: baseLayout({ title: "תזכורת לתור", bodyHtml, clinicName }),
   };
 }
+
+export function buildGiftVoucherEmail({ purchaserName, recipientName = "", greeting = "", code, quantity, amountIls, clinicName, bookingUrl = "" }) {
+  const link = bookingUrl ? `<p style="margin-top:20px"><a href="${escapeHtml(bookingUrl)}" style="background:#5D7F6D;color:white;padding:12px 20px;border-radius:10px;text-decoration:none">לקביעת תור</a></p>` : "";
+  const greetingBlock = greeting ? `<div style="margin:18px 0;padding:16px;background:#f3f7f4;border-radius:10px;white-space:pre-line">${escapeHtml(greeting)}</div>` : "";
+  const bodyHtml = `<p style="font-size:16px">שלום ${escapeHtml(purchaserName)},</p><p>שובר המתנה${recipientName ? ` עבור ${escapeHtml(recipientName)}` : ""} מוכן:</p>${greetingBlock}<p dir="ltr" style="font:700 30px monospace;text-align:center;letter-spacing:2px">${escapeHtml(code)}</p><p><strong>${quantity} טיפולים</strong> · ₪${Number(amountIls).toLocaleString("he-IL")}</p><p>למימוש: קובעים תור כרגיל, ובעמוד התשלום מזינים את מספר השובר.</p>${link}`;
+  return { subject: `שובר המתנה שלך — ${clinicName}`, html: baseLayout({ title: "שובר המתנה שלך", bodyHtml, clinicName }) };
+}
+
+export function buildClinicGiftVoucherNotifyEmail({ purchaserName, purchaserPhone, purchaserEmail, recipientName, recipientEmail, greeting, code, quantity, amountIls, clinicName }) {
+  const bodyHtml = `<p>נרכש שובר מתנה חדש.</p><p><strong>מזמין:</strong> ${escapeHtml(purchaserName)}<br/><strong>טלפון:</strong> ${escapeHtml(purchaserPhone)}<br/><strong>אימייל:</strong> ${escapeHtml(purchaserEmail)}<br/><strong>מטופל:</strong> ${escapeHtml(recipientName || "—")}<br/><strong>אימייל המטופל:</strong> ${escapeHtml(recipientEmail || "לא נבחרה שליחה")}<br/><strong>ברכה:</strong> ${escapeHtml(greeting || "—")}<br/><strong>שובר:</strong> ${escapeHtml(code)}<br/><strong>כמות:</strong> ${quantity}<br/><strong>סכום:</strong> ₪${Number(amountIls).toLocaleString("he-IL")}</p>`;
+  return { subject: `רכישת שובר מתנה — ${purchaserName}`, html: baseLayout({ title: "רכישת שובר מתנה", bodyHtml, clinicName }) };
+}

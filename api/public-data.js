@@ -5,6 +5,7 @@ import {
   createMovementBooking,
   normalizeBookingPayload,
   verifyMeridianTreatmentId,
+  redeemGiftVoucher,
 } from "../server/pelecardPayments.js";
 
 // IMAP inbox search for Meridian verification can exceed the default 10s.
@@ -105,6 +106,12 @@ export default async function handler(req, res) {
     if (req.method === "POST") {
       const body = readBody(req);
       const action = String(body.action || "").trim();
+
+      if (action === "redeemGiftVoucher") {
+        const result = await redeemGiftVoucher({ rawBooking: body.booking || {}, code: body.code || "", tenantId });
+        res.status(200).json({ ok: true, appointmentIds: result.createdIds, appointments: result.appointments, voucher: result.voucher });
+        return;
+      }
 
       if (action === "createMeridianBooking") {
         const booking = normalizeBookingPayload({

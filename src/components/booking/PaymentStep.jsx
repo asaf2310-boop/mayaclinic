@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ArrowRight, CheckCircle2, CreditCard, Loader2, Lock, ShieldCheck, Wallet } from "lucide-react";
+import { ArrowRight, CheckCircle2, CreditCard, Gift, Loader2, Lock, ShieldCheck, Wallet } from "lucide-react";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
 import { getClinicSite } from "@/lib/clinicSite";
@@ -29,6 +29,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { getClinicTenantId } from "@/lib/tenant";
 import BookingSuccess from "./BookingSuccess";
+import { redeemGiftVoucher } from "@/lib/giftVoucher";
 
 const VISA_LOGO = "/payment/visa-logo.svg";
 const MASTERCARD_LOGO = "/payment/mastercard-logo.svg";
@@ -88,6 +89,10 @@ export default function PaymentStep({
   const [isMovementConfirming, setIsMovementConfirming] = useState(false);
   const [movementError, setMovementError] = useState("");
   const [movementSuccess, setMovementSuccess] = useState(null);
+  const [voucherCode, setVoucherCode] = useState("");
+  const [voucherLoading, setVoucherLoading] = useState(false);
+  const [voucherError, setVoucherError] = useState("");
+  const [voucherSuccess, setVoucherSuccess] = useState(null);
   const clinicSite = getClinicSite();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -338,6 +343,15 @@ export default function PaymentStep({
     }
   };
 
+  const handleRedeemVoucher = async (event) => {
+    event.preventDefault(); setVoucherLoading(true); setVoucherError("");
+    try {
+      const result = await redeemGiftVoucher({ code: voucherCode, booking: { patient_name: formData.patient_name, patient_phone: formData.patient_phone, patient_email: formData.patient_email, notes: formData.notes, marketing_consent: formData.marketing_consent, treatment_id: formData.treatment_id || treatment?.id, treatment_name: formData.treatment_name || treatment?.name, treatment_price: treatment?.price ?? formData.treatment_price ?? null, appointments: formData.appointments || [] } });
+      setVoucherSuccess({ appointments: result.appointments || [], treatment_name: treatment?.name || formData.treatment_name, treatment_price: treatment?.price ?? formData.treatment_price ?? null });
+    } catch (error) { setVoucherError(error?.message || "לא ניתן לממש את השובר"); }
+    finally { setVoucherLoading(false); }
+  };
+
   if (meridianSuccess) {
     return (
       <BookingSuccess
@@ -362,6 +376,8 @@ export default function PaymentStep({
       />
     );
   }
+
+  if (voucherSuccess) return <BookingSuccess appointment={voucherSuccess} onReset={() => navigate("/book", { replace: true })} />;
 
   return (
     <motion.div
@@ -638,6 +654,12 @@ export default function PaymentStep({
                   קישור PayBox עדיין לא הוגדר לטיפול זה.
                 </p>
               )}
+              <div className="my-5 flex items-center gap-3"><div className="h-px flex-1 bg-[#D5E0D8]"/><span className={mutedClass}>או</span><div className="h-px flex-1 bg-[#D5E0D8]"/></div>
+              <form onSubmit={handleRedeemVoucher} className="space-y-3">
+                <label className="block text-right"><span className={`mb-2 block text-sm font-medium ${valueClass}`}>מספר שובר מתנה</span><input value={voucherCode} onChange={(event)=>{setVoucherCode(event.target.value.toUpperCase());setVoucherError("");}} placeholder="OFIR-XXXXXX" autoComplete="off" className="w-full rounded-2xl border border-[#D5E0D8] bg-white px-4 py-3 text-left font-mono uppercase tracking-wider outline-none focus:ring-2 focus:ring-[#5D7F6D]/25" dir="ltr" /></label>
+                {voucherError && <p className="text-center text-sm text-[#9B2C2C]">{voucherError}</p>}
+                <button type="submit" disabled={voucherLoading || voucherCode.replace(/[\s-]/g, "").length < 10} className={`flex w-full items-center justify-center gap-2 px-4 py-3.5 font-semibold disabled:opacity-50 ${ctaClass}`}>{voucherLoading?<Loader2 className="h-5 w-5 animate-spin"/>:<Gift className="h-5 w-5"/>}מימוש שובר ואישור התור</button>
+              </form>
             </>
           )}
         </div>

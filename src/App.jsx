@@ -11,6 +11,8 @@ import Admin from './pages/Admin';
 import AdminPatient from './pages/AdminPatient';
 import PaymentSuccess from './pages/PaymentSuccess';
 import PaymentFailure from './pages/PaymentFailure';
+import GiftVoucher from './pages/GiftVoucher';
+import GiftVoucherCard from './pages/GiftVoucherCard';
 import DemoDocumentTitle from './components/DemoDocumentTitle';
 import ClinicBootstrap from './components/ClinicBootstrap';
 import AdminPwaManifest from './components/AdminPwaManifest';
@@ -41,6 +43,8 @@ const AuthenticatedApp = () => {
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/book" element={<Book />} />
+      <Route path="/gift" element={<GiftVoucher />} />
+      <Route path="/gift/card" element={<GiftVoucherCard />} />
       <Route path="/payment/success" element={<PaymentSuccess />} />
       <Route path="/payment/failure" element={<PaymentFailure />} />
       <Route element={<ProtectedRoute unauthenticatedElement={<AdminLoginRequired />} />}>

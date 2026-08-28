@@ -30,6 +30,7 @@ const TENANT_ENTITIES = new Set([
   "availability",
   "patient_profiles",
   "weekly_schedule",
+  "gift_vouchers",
 ]);
 
 function readBody(req) {
@@ -373,6 +374,10 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "POST" && action === "create") {
+      if (entity === "gift_vouchers") {
+        res.status(405).json({ error: "Gift vouchers cannot be created manually" });
+        return;
+      }
       res.status(200).json(await createEntity(entity, readBody(req).row, tenantId));
       return;
     }

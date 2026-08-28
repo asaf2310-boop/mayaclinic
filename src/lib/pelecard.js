@@ -38,6 +38,14 @@ export async function initPelecardSession({ amount, bookingRef, treatmentName, b
   return data;
 }
 
+export async function initGiftVoucherSession(payload) {
+  const response = await fetch("/api/pelecard/init", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...payload, kind: "gift_voucher" }) });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || "לא ניתן לפתוח את התשלום");
+  if (typeof sessionStorage !== "undefined" && data?.bookingRef && data?.sessionToken) sessionStorage.setItem(`${PELECARD_SESSION_TOKEN_KEY}:${data.bookingRef}`, data.sessionToken);
+  return data;
+}
+
 export async function validatePelecardSession(payload = {}) {
   const bookingRef = String(payload.bookingRef || payload.uniqueKey || "").trim();
   const token =

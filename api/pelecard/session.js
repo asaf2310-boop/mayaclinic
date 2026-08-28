@@ -1,6 +1,7 @@
 import { getPaymentSessionByRef } from "../../server/pelecardPayments.js";
 import { supabaseRequest } from "../../server/supabaseServer.js";
 import { verifyPaymentSessionToken } from "../../server/paymentSessionToken.js";
+import { getPaidGiftVoucher } from "../../server/giftVouchers.js";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
@@ -38,9 +39,13 @@ export default async function handler(req, res) {
     }
 
     const booking = session.booking_payload || {};
+    const kind = booking.kind || "booking";
+    const giftVoucher = kind === "gift_voucher" && session.status === "paid" ? await getPaidGiftVoucher(bookingRef) : null;
 
     res.status(200).json({
       ok: true,
+      kind,
+      voucher: giftVoucher ? { code: giftVoucher.code, treatmentsTotal: giftVoucher.treatments_total, treatmentsRemaining: giftVoucher.treatments_remaining, amountIls: giftVoucher.amount_agorot / 100, purchaserEmail: giftVoucher.purchaser_email, recipientName: giftVoucher.recipient_name, recipientEmail: giftVoucher.recipient_email, recipientPhone: giftVoucher.recipient_phone, sendToRecipient: giftVoucher.send_to_recipient, sendToWhatsapp: giftVoucher.send_to_whatsapp, greeting: giftVoucher.greeting || "" } : null,
       bookingRef: session.booking_ref,
       status: session.status,
       totalAgorot: session.total_agorot,

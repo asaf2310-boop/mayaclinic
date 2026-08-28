@@ -8,8 +8,9 @@ import AvailabilityManager from "../components/admin/AvailabilityManager";
 import RevenueReport from "../components/admin/RevenueReport";
 import CustomerManagement from "../components/admin/CustomerManagement";
 import TreatmentManagement from "../components/admin/TreatmentManagement";
+import GiftVoucherManagement from "../components/admin/GiftVoucherManagement";
 import { Card } from "@/components/ui/card";
-import { BarChart3, CalendarCheck, CalendarDays, CheckCircle2, Clock, LogOut, Settings2, Sparkles, Users } from "lucide-react";
+import { BarChart3, CalendarCheck, CalendarDays, CheckCircle2, Clock, Gift, LogOut, Settings2, Sparkles, Users } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/AuthContext";
@@ -100,6 +101,7 @@ export default function Admin() {
     { value: "treatments", label: "טיפולים", icon: Sparkles },
     { value: "customers", label: "לקוחות", icon: Users },
     { value: "revenue", label: "דוח הכנסות", icon: BarChart3 },
+    { value: "gift-vouchers", label: "שוברי מתנה", icon: Gift },
   ];
 
   const statusTabs = [
@@ -143,7 +145,7 @@ export default function Admin() {
 
           <Tabs value={activeAdminTab} onValueChange={setActiveAdminTab} dir="rtl">
             <div
-              className={`mb-8 grid w-full grid-cols-1 gap-3 rounded-2xl border p-3 shadow-sm sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 ${
+              className={`mb-8 grid w-full grid-cols-1 gap-3 rounded-2xl border p-3 shadow-sm sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 ${
                 clinicSite
                   ? clinicGlassPanel
                   : "border-border/60 bg-card"
@@ -257,6 +259,7 @@ export default function Admin() {
                 <RevenueReport appointments={clinicAppointments} treatments={clinicTreatments} />
               )}
             </TabsContent>
+            <TabsContent value="gift-vouchers"><GiftVoucherManagement /></TabsContent>
           </Tabs>
         </div>
       </main>

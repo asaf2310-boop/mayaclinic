@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import Navbar from "../components/layout/Navbar";
 import BookingSuccess from "../components/booking/BookingSuccess";
+import GiftVoucherSuccess from "../components/booking/GiftVoucherSuccess";
 import {
   fetchPelecardSession,
   getStoredPelecardSessionToken,
@@ -95,7 +96,9 @@ export default function PaymentSuccess() {
       <Navbar />
       <main className="relative px-6 pb-16 pt-24" dir="rtl">
         <div className={`relative mx-auto max-w-2xl ${clinicSite ? clinicFadeIn : ""}`}>
-          {appointment ? (
+          {session?.status === "paid" && session?.kind === "gift_voucher" && session?.voucher ? (
+            <GiftVoucherSuccess voucher={session.voucher} />
+          ) : appointment ? (
             <BookingSuccess
               appointment={appointment}
               onReset={() => navigate("/book", { replace: true })}

@@ -10,6 +10,7 @@ import {
   normalizeBookingPayload,
 } from "../../server/pelecardPayments.js";
 import { createPaymentSessionToken } from "../../server/paymentSessionToken.js";
+import { createPendingGiftVoucher, GIFT_VOUCHER_UNIT_ILS } from "../../server/giftVouchers.js";
 
 const CLINIC_PAYMENT_TOP =
   process.env.PELECARD_TOP_TEXT || "אופיר - מרכז טיפול הוליסטי";
@@ -43,15 +44,33 @@ export default async function handler(req, res) {
 
   try {
     const body = readBody(req);
-    const amountShekels = Number(body.amount);
+    const isGiftVoucher = body.kind === "gift_voucher";
+    const quantity = Number(body.quantity);
+    const amountShekels = isGiftVoucher ? quantity * GIFT_VOUCHER_UNIT_ILS : Number(body.amount);
     const totalAgorot = shekelsToAgorot(amountShekels);
     if (!totalAgorot) {
       res.status(400).json({ error: "amount must be a positive number (ILS)" });
       return;
     }
 
-    const booking = normalizeBookingPayload(body.booking || {});
-    if (!isBookingPayloadValid(booking)) {
+    const giftEmail = String(body.purchaser_email || "").trim();
+    const recipientEmail = String(body.recipient_email || "").trim();
+    const sendToRecipient = Boolean(body.send_to_recipient);
+    const sendToWhatsapp = Boolean(body.send_to_whatsapp);
+    const recipientPhone = String(body.recipient_phone || "").replace(/[^\d+]/g, "");
+    const giftValid = Number.isInteger(quantity) && quantity >= 1 && quantity <= 10 &&
+      String(body.purchaser_name || "").trim() && String(body.purchaser_phone || "").trim() && String(body.recipient_name || "").trim() &&
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(giftEmail) && (!sendToRecipient || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail)) && (!sendToWhatsapp || recipientPhone.replace(/\D/g, "").length >= 9);
+    const booking = isGiftVoucher ? {
+      kind: "gift_voucher", quantity, unit_price: GIFT_VOUCHER_UNIT_ILS,
+      purchaser_name: String(body.purchaser_name).trim(), purchaser_phone: String(body.purchaser_phone).trim(),
+      purchaser_email: giftEmail, tenant_id: String(body.tenant_id || process.env.VITE_CLINIC_TENANT_ID || "maya").trim(),
+      recipient_name: String(body.recipient_name || "").trim(), recipient_email: recipientEmail,
+      send_to_recipient: sendToRecipient, greeting: String(body.greeting || "").trim(),
+      recipient_phone: recipientPhone, send_to_whatsapp: sendToWhatsapp,
+      treatment_name: "שובר מתנה לטיפול",
+    } : normalizeBookingPayload(body.booking || {});
+    if ((isGiftVoucher && !giftValid) || (!isGiftVoucher && !isBookingPayloadValid(booking))) {
       res.status(400).json({
         error: "booking payload is required (patient, treatment, appointments)",
       });
@@ -104,6 +123,9 @@ export default async function handler(req, res) {
       bookingPayload: booking,
       tenantId: booking.tenant_id,
     });
+    if (isGiftVoucher) {
+      await createPendingGiftVoucher({ bookingRef, quantity, purchaserName: booking.purchaser_name, purchaserPhone: booking.purchaser_phone, purchaserEmail: booking.purchaser_email, recipientName: booking.recipient_name, recipientEmail: booking.recipient_email, recipientPhone: booking.recipient_phone, sendToRecipient: booking.send_to_recipient, sendToWhatsapp: booking.send_to_whatsapp, greeting: booking.greeting, tenantId: booking.tenant_id });
+    }
 
     res.status(200).json({
       ok: true,
@@ -122,12 +144,15 @@ export default async function handler(req, res) {
   } catch (error) {
     const status = error?.status && Number.isInteger(error.status) ? error.status : 500;
     const message = error?.message || "Failed to init Pelecard payment";
+    const missingGiftVouchers = String(message).includes("gift_vouchers");
     const missingTable =
       String(message).includes("pelecard_payments") ||
       String(message).includes("Could not find the table");
 
     res.status(status).json({
-      error: missingTable
+      error: missingGiftVouchers
+        ? "חסרה טבלת gift_vouchers — הריצו supabase/gift-vouchers.sql ב-Supabase"
+        : missingTable
         ? "חסרה טבלת pelecard_payments — הריצו supabase/pelecard-payments.sql"
         : message,
       configured: true,

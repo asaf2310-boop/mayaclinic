@@ -3,6 +3,8 @@ import { getPelecardTransaction, validatePelecardPayment } from "./pelecard.js";
 import {
   buildClinicBookingNotifyEmail,
   buildConfirmationEmail,
+  buildGiftVoucherEmail,
+  buildClinicGiftVoucherNotifyEmail,
 } from "./emailTemplates.js";
 import { getClinicName, isEmailConfigured, sendEmail } from "./gmail.js";
 import { getBookingNotifyEmails } from "./bookingNotify.js";
@@ -13,6 +15,7 @@ import {
   normalizeMeridianTreatmentId,
 } from "./meridianEmail.js";
 import { hasAppointmentTimeConflict } from "../src/lib/bookingSlots.js";
+import { activateGiftVoucher, appendVoucherAppointments, redeemVoucherAtomic, restoreVoucherBalance } from "./giftVouchers.js";
 
 function nowIso() {
   return new Date().toISOString();
@@ -120,7 +123,7 @@ async function fetchActiveAppointmentsForDates(dates = [], tenantId = "") {
   }
 }
 
-async function assertBookingSlotsAvailable(booking, { bookingDurationMinutes = 60 } = {}) {
+export async function assertBookingSlotsAvailable(booking, { bookingDurationMinutes = 60 } = {}) {
   const dates = (booking.appointments || []).map((item) => item.date);
   const existing = await fetchActiveAppointmentsForDates(dates, booking.tenant_id);
 
@@ -259,6 +262,25 @@ export async function createMovementBooking(rawBooking = {}) {
   });
 
   return { createdIds, appointments: createdRows };
+}
+
+export async function redeemGiftVoucher({ rawBooking, code, tenantId }) {
+  const booking = normalizeBookingPayload({ ...rawBooking, tenant_id: tenantId });
+  if (!isBookingPayloadValid(booking)) throw Object.assign(new Error("פרטי ההזמנה אינם תקינים"), { status: 400 });
+  await assertBookingSlotsAvailable(booking);
+  const redeemed = await redeemVoucherAtomic({ code, count: booking.appointments.length, tenantId });
+  const voucher = Array.isArray(redeemed) ? redeemed[0] : redeemed;
+  try {
+    const { createdIds, createdRows } = await createAppointmentsFromBooking(booking, { paymentNote: `שולם בשובר מתנה ${voucher.code}`, paid: true, status: "confirmed" });
+    await appendVoucherAppointments(voucher.id, createdIds);
+    await maybeSendConfirmationEmail(createdRows);
+    await maybeSendClinicBookingNotify(createdRows, { sourceLabel: "שובר מתנה", extraNote: `שובר: ${voucher.code}` });
+    return { createdIds, appointments: createdRows, voucher };
+  } catch (error) {
+    // Compensation is deliberately explicit; the SQL RPC guarantees the debit itself is atomic.
+    await restoreVoucherBalance(voucher.id, booking.appointments.length).catch(() => {});
+    throw error;
+  }
 }
 
 function normalizeAppointmentIds(rawIds = []) {
@@ -558,6 +580,26 @@ export async function finalizePaymentFromPelecard({
       error_message: "ValidateByUniqueKey failed",
     });
     return { session: updated, alreadyProcessed: false, valid: false };
+  }
+
+  if (session.booking_payload?.kind === "gift_voucher") {
+    const activation = await activateGiftVoucher(bookingRef);
+    const voucher = activation.voucher;
+    const updated = await updatePaymentSession(bookingRef, { status: "paid", confirmation_key: key || session.confirmation_key, pelecard_transaction_id: pelecardTransactionId || null, approval_no: approvalNo || null, result_payload: resultPayload || null, error_message: null });
+    if (!activation.alreadyActive && isEmailConfigured()) {
+      const clinicName = getClinicName(); const amountIls = voucher.amount_agorot / 100;
+      const publicOrigin = String(process.env.PUBLIC_ORIGIN || process.env.PELECARD_PUBLIC_ORIGIN || "").replace(/\/$/, "");
+      const voucherUrl = publicOrigin ? `${publicOrigin}/gift/card?${new URLSearchParams({ code: voucher.code, name: voucher.recipient_name || "", greeting: voucher.greeting || "", quantity: String(voucher.treatments_total) })}` : "";
+      const customerMail = buildGiftVoucherEmail({ purchaserName: voucher.purchaser_name, recipientName: voucher.recipient_name, greeting: voucher.greeting, code: voucher.code, quantity: voucher.treatments_total, amountIls, clinicName, bookingUrl: voucherUrl || (publicOrigin ? `${publicOrigin}/book` : "") });
+      await sendEmail({ to: voucher.purchaser_email, ...customerMail }).catch((error) => console.error("Gift voucher email failed:", error?.message || error));
+      if (voucher.send_to_recipient && voucher.recipient_email) {
+        const recipientMail = buildGiftVoucherEmail({ purchaserName: voucher.recipient_name || "", recipientName: voucher.recipient_name, greeting: voucher.greeting, code: voucher.code, quantity: voucher.treatments_total, amountIls, clinicName, bookingUrl: voucherUrl || (publicOrigin ? `${publicOrigin}/book` : "") });
+        await sendEmail({ to: voucher.recipient_email, ...recipientMail }).catch((error) => console.error("Recipient gift voucher email failed:", error?.message || error));
+      }
+      const clinicMail = buildClinicGiftVoucherNotifyEmail({ purchaserName: voucher.purchaser_name, purchaserPhone: voucher.purchaser_phone, purchaserEmail: voucher.purchaser_email, recipientName: voucher.recipient_name, recipientEmail: voucher.send_to_recipient ? voucher.recipient_email : "", greeting: voucher.greeting, code: voucher.code, quantity: voucher.treatments_total, amountIls, clinicName });
+      await Promise.all(getBookingNotifyEmails().map((to) => sendEmail({ to, ...clinicMail }).catch((error) => console.error("Clinic gift email failed:", error?.message || error))));
+    }
+    return { session: updated, voucher, alreadyProcessed: false, valid: true };
   }
 
   const booking = normalizeBookingPayload(session.booking_payload || {});

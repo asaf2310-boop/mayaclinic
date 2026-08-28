@@ -146,6 +146,7 @@ export default function Home() {
                     <Leaf className={clinicHeroCtaIcon} strokeWidth={1.5} aria-hidden="true" />
                     {clinicSite.heroCtaPrimary}
                   </Link>
+                  <Link to="/gift" className={clinicHeroCtaSecondaryBtn}>רכישת שובר מתנה</Link>
                   {clinicSite.momentBooking && (
                     <Link
                       to={`/book?channel=${clinicSite.momentBooking.channel || "movement"}`}
