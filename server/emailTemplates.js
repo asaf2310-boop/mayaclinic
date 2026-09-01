@@ -40,6 +40,39 @@ function formatAppointmentsTable(appointments = []) {
     </table>`;
 }
 
+function formatVisitInstructionsBlock() {
+  return `
+    <div style="margin-top:24px;padding:20px 18px;background:linear-gradient(165deg,#f3f7f4 0%,#faf9f7 100%);border:1px solid #E8ECE8;border-radius:14px;">
+      <p style="margin:0 0 16px;font-size:15px;font-weight:700;color:#2F3B34;letter-spacing:0.01em;">פרטים חשובים לפני הגעה</p>
+
+      <div style="margin-bottom:12px;padding:14px 16px;background:#ffffff;border-radius:12px;border-right:4px solid #5D7F6D;box-shadow:0 1px 4px rgba(47,59,52,0.06);">
+        <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#5D7F6D;">📍 כתובת</p>
+        <p style="margin:0;font-size:15px;line-height:1.7;color:#2F3B34;">
+          ישראל עידוד 8, פתח תקווה<br/>
+          קומה 7, דירה 26
+        </p>
+      </div>
+
+      <div style="margin-bottom:12px;padding:14px 16px;background:#ffffff;border-radius:12px;box-shadow:0 1px 4px rgba(47,59,52,0.05);">
+        <p style="margin:0;font-size:15px;line-height:1.75;color:#444;">
+          <span style="display:inline-block;margin-left:6px;">🌿</span>
+          הטיפול מתבצע עם חלק תחתון תחת כיסוי בד
+        </p>
+      </div>
+
+      <div style="margin-bottom:4px;padding:14px 16px;background:#ffffff;border-radius:12px;box-shadow:0 1px 4px rgba(47,59,52,0.05);">
+        <p style="margin:0;font-size:15px;line-height:1.75;color:#444;">
+          <span style="display:inline-block;margin-left:6px;">💧</span>
+          מומלץ לא להתקלח אחרי הטיפול כמה שעות כדי לשמר את האפקט הטיפולי
+        </p>
+      </div>
+
+      <p style="margin:18px 0 0;font-size:18px;font-weight:600;color:#5D7F6D;text-align:center;line-height:1.5;">
+        נתראה 🌸
+      </p>
+    </div>`;
+}
+
 function baseLayout({ title, bodyHtml, clinicName }) {
   return `<!doctype html>
 <html lang="he" dir="rtl">
@@ -60,7 +93,8 @@ export function buildConfirmationEmail({ patientName, appointments, clinicName }
     <p style="font-size:16px;line-height:1.6;">שלום ${escapeHtml(patientName || "יקיר/ה")},</p>
     <p style="font-size:16px;line-height:1.6;">התור שלך נקבע בהצלחה. להלן פרטי הזמנת התור:</p>
     ${formatAppointmentsTable(appointments)}
-    <p style="font-size:15px;line-height:1.6;margin-top:16px;">נשמח לראותך בזמן. לשינוי או ביטול, צרו קשר עם הקליניקה.</p>`;
+    ${formatVisitInstructionsBlock()}
+    <p style="font-size:14px;line-height:1.6;margin-top:18px;color:#666;">לשינוי או ביטול, צרו קשר עם הקליניקה.</p>`;
 
   return {
     subject: `אישור הזמנת תור — ${clinicName}`,
@@ -111,7 +145,7 @@ export function buildReminderEmail({ patientName, appointments, clinicName }) {
     <p style="font-size:16px;line-height:1.6;">שלום ${escapeHtml(patientName || "יקיר/ה")},</p>
     <p style="font-size:16px;line-height:1.6;">תזכורת: מחר יש לך תור ב${escapeHtml(clinicName)}.</p>
     ${formatAppointmentsTable(appointments)}
-    <p style="font-size:15px;line-height:1.6;margin-top:16px;">מחכים לראותך!</p>`;
+    ${formatVisitInstructionsBlock()}`;
 
   return {
     subject: `תזכורת לתור מחר — ${clinicName}`,
