@@ -4,6 +4,7 @@ import {
 } from "../server/emailTemplates.js";
 import { getClinicName, isEmailConfigured, sendEmail } from "../server/gmail.js";
 import { getBookingNotifyEmails } from "../server/bookingNotify.js";
+import { isAllowedAdminEmail } from "../server/googleAdminAuth.js";
 import { fetchRecentAppointmentsByIds } from "../server/supabaseServer.js";
 
 /** Allow resend for same-day bookings when explicit appointment IDs are provided. */
@@ -14,6 +15,17 @@ function maskEmail(email) {
   const at = value.indexOf("@");
   if (at <= 1) return value ? "***" : "";
   return `${value.slice(0, 2)}***${value.slice(at)}`;
+}
+
+function sampleAppointments(body = {}) {
+  return [
+    {
+      treatment_name: String(body.treatmentName || "מגע שיקומי").trim(),
+      date: String(body.date || "2026-09-16").trim(),
+      time: String(body.time || "14:30").trim(),
+      treatment_price: Number(body.treatmentPrice) || 320,
+    },
+  ];
 }
 
 export default async function handler(req, res) {
@@ -30,6 +42,28 @@ export default async function handler(req, res) {
   try {
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
     const appointmentIds = Array.isArray(body.appointmentIds) ? body.appointmentIds : [];
+    const testTo = String(body.testTo || "").trim().toLowerCase();
+    const isAdminTest = Boolean(testTo && isAllowedAdminEmail(testTo));
+
+    if (isAdminTest && !appointmentIds.length) {
+      const clinicName = getClinicName();
+      const appointments = sampleAppointments(body);
+      const { subject, html } = buildConfirmationEmail({
+        patientName: String(body.patientName || "אסף").trim(),
+        appointments,
+        clinicName,
+      });
+      await sendEmail({ to: testTo, subject, html });
+      res.status(200).json({
+        ok: true,
+        sent: 1,
+        test: true,
+        patientEmailed: true,
+        patientEmailMasked: maskEmail(testTo),
+        clinicEmailed: false,
+      });
+      return;
+    }
 
     if (!appointmentIds.length) {
       res.status(400).json({ error: "appointmentIds required" });
@@ -44,7 +78,9 @@ export default async function handler(req, res) {
       return;
     }
 
-    const patientEmail = String(appointments[0].patient_email || "").trim();
+    const patientEmail = isAdminTest
+      ? testTo
+      : String(appointments[0].patient_email || "").trim();
     const patientName = appointments[0].patient_name || "";
     const clinicName = getClinicName();
     let sent = 0;
@@ -64,7 +100,7 @@ export default async function handler(req, res) {
       }
     }
 
-    const clinicRecipients = getBookingNotifyEmails();
+    const clinicRecipients = isAdminTest ? [] : getBookingNotifyEmails();
     if (clinicRecipients.length) {
       try {
         const first = appointments[0] || {};
