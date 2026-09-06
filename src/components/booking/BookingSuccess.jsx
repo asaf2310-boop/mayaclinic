@@ -59,8 +59,8 @@ export default function BookingSuccess({ appointment, onReset, hidePrices = fals
       <p className={`mb-6 text-base sm:mb-8 sm:text-lg ${clinicSite ? clinicTextMuted : "text-muted-foreground"}`}>
         {isMovementSuccess
           ? patientEmail
-            ? "תור ללקוחות מובמנט · 45 דקות · נשלח אישור למייל"
-            : "תור ללקוחות מובמנט · 45 דקות"
+            ? "תור ללקוחות מובמנט · 60 דקות · נשלח אישור למייל"
+            : "תור ללקוחות מובמנט · 60 דקות"
           : patientEmail
             ? "נשלח אישור הזמנת תור למייל"
             : "התור נשמר בהצלחה במערכת"}

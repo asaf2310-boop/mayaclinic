@@ -82,7 +82,7 @@ export const CLINIC_SITES = {
     /** Movement (מובמנט) booking channel — /book?channel=movement */
     momentBooking: {
       channel: "movement",
-      durationMinutes: 45,
+      durationMinutes: 60,
       ctaLabel: "קביעת תור — לקוחות Movement",
       pageTitle: "קביעת תור — לקוחות מובמנט",
       /** Base names hidden on the Movement booking channel. */
@@ -171,13 +171,13 @@ export function treatmentBaseName(name = "") {
 
 /**
  * Treatments for the public booking page by channel.
- * Movement (מובמנט): no prices, every session forced to 45 minutes, excluded bases hidden.
+ * Movement (מובמנט): no prices, every session forced to 60 minutes, excluded bases hidden.
  */
 export function getTreatmentsForBookingChannel(treatments = [], channel, site = getClinicSite()) {
   const catalog = filterTreatmentsForClinic(treatments, site);
   if (!isMomentBookingChannel(channel)) return catalog;
 
-  const duration = site?.momentBooking?.durationMinutes ?? 45;
+  const duration = site?.momentBooking?.durationMinutes ?? 60;
   const excluded = new Set(
     (site?.momentBooking?.excludeTreatmentBaseNames || []).map((name) =>
       String(name || "").trim()

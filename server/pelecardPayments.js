@@ -226,7 +226,7 @@ export async function createMeridianBooking(rawBooking = {}) {
 
 /**
  * Create appointments for Movement (מובמנט) clients.
- * 45-minute sessions, no price, no credit payment — emails patient + clinic immediately.
+ * 60-minute sessions, no price, no credit payment — emails patient + clinic immediately.
  */
 export async function createMovementBooking(rawBooking = {}) {
   const booking = normalizeBookingPayload(rawBooking);
@@ -245,20 +245,20 @@ export async function createMovementBooking(rawBooking = {}) {
   const baseName = String(booking.treatment_name || "")
     .replace(/\s*\(מובמנט[^)]*\)\s*$/u, "")
     .trim();
-  booking.treatment_name = `${baseName} (מובמנט · 45 דק׳)`;
+  booking.treatment_name = `${baseName} (מובמנט · 60 דק׳)`;
   booking.treatment_price = null;
 
   const { createdIds, createdRows } = await createAppointmentsFromBooking(booking, {
-    paymentNote: "ערוץ: לקוחת מובמנט · 45 דק׳ · ללא תשלום באשראי באתר",
+    paymentNote: "ערוץ: לקוחת מובמנט · 60 דק׳ · ללא תשלום באשראי באתר",
     paid: false,
     status: "confirmed",
-    bookingDurationMinutes: 45,
+    bookingDurationMinutes: 60,
   });
 
   await maybeSendConfirmationEmail(createdRows);
   await maybeSendClinicBookingNotify(createdRows, {
     sourceLabel: "מובמנט / Movement",
-    extraNote: "תור ללקוחות מובמנט · 45 דקות · ללא תשלום באשראי באתר",
+    extraNote: "תור ללקוחות מובמנט · 60 דקות · ללא תשלום באשראי באתר",
   });
 
   return { createdIds, appointments: createdRows };

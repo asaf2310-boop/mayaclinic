@@ -335,7 +335,7 @@ export default function PaymentStep({
         appointments: created.appointments || [],
         treatment_name:
           created.appointments?.[0]?.treatment_name ||
-          `${treatment?.name || formData.treatment_name || ""} (מובמנט · 45 דק׳)`,
+          `${treatment?.name || formData.treatment_name || ""} (מובמנט · 60 דק׳)`,
         treatment_price: null,
         hide_price: true,
         patient_email: formData.patient_email,
@@ -567,7 +567,7 @@ export default function PaymentStep({
                 clinicSite ? "border-[#E8ECE8]" : "border-border"
               } ${mutedClass}`}
             >
-              לקוחות מובמנט — ללא הצגת מחיר באתר · כל תור 45 דקות
+              לקוחות מובמנט — ללא הצגת מחיר באתר · כל תור 60 דקות
             </div>
           )}
         </div>
