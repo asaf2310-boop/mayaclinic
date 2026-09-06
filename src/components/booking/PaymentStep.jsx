@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ArrowRight, CheckCircle2, CreditCard, Gift, Loader2, Lock, ShieldCheck, Wallet } from "lucide-react";
+import { ArrowRight, Banknote, CheckCircle2, CreditCard, Gift, Loader2, Lock, ShieldCheck, Wallet } from "lucide-react";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
 import { getClinicSite } from "@/lib/clinicSite";
@@ -25,6 +25,7 @@ import {
   verifyMeridianTreatmentId,
 } from "@/lib/meridianBooking";
 import { createMovementBooking } from "@/lib/movementBooking";
+import { createCashBooking } from "@/lib/cashBooking";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { getClinicTenantId } from "@/lib/tenant";
@@ -89,6 +90,9 @@ export default function PaymentStep({
   const [isMovementConfirming, setIsMovementConfirming] = useState(false);
   const [movementError, setMovementError] = useState("");
   const [movementSuccess, setMovementSuccess] = useState(null);
+  const [isCashConfirming, setIsCashConfirming] = useState(false);
+  const [cashError, setCashError] = useState("");
+  const [cashSuccess, setCashSuccess] = useState(null);
   const [voucherCode, setVoucherCode] = useState("");
   const [voucherLoading, setVoucherLoading] = useState(false);
   const [voucherError, setVoucherError] = useState("");
@@ -343,6 +347,56 @@ export default function PaymentStep({
     }
   };
 
+  const handleConfirmCashBooking = async (event) => {
+    event?.preventDefault?.();
+    const email = String(formData.patient_email || "").trim();
+    if (!email || !email.includes("@")) {
+      setCashError("נא להזין אימייל בפרטי ההזמנה — יישלח אליו אישור התור");
+      toast({
+        title: "נדרש אימייל",
+        description: "חזרו לשלב הפרטים והשלימו כתובת אימייל לקבלת אישור התור.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsCashConfirming(true);
+    setCashError("");
+    try {
+      const created = await createCashBooking({
+        patient_name: formData.patient_name,
+        patient_phone: formData.patient_phone,
+        patient_email: email,
+        notes: formData.notes,
+        marketing_consent: formData.marketing_consent,
+        treatment_id: formData.treatment_id || treatment?.id,
+        treatment_name: formData.treatment_name || treatment?.name,
+        treatment_price: treatment?.price ?? formData.treatment_price ?? null,
+        tenant_id: getClinicTenantId() || clinicSite?.id || "maya",
+        appointments: formData.appointments || [],
+      });
+
+      setCashSuccess({
+        appointments: created.appointments || [],
+        treatment_name:
+          created.appointments?.[0]?.treatment_name ||
+          treatment?.name ||
+          formData.treatment_name,
+        treatment_price:
+          created.appointments?.[0]?.treatment_price ??
+          treatment?.price ??
+          formData.treatment_price ??
+          null,
+        patient_email: email,
+        payment_note: "תשלום במזומן בהגעה לקליניקה",
+      });
+    } catch (error) {
+      setCashError(error?.message || "לא ניתן לאשר את התור. נסו שוב.");
+    } finally {
+      setIsCashConfirming(false);
+    }
+  };
+
   const handleRedeemVoucher = async (event) => {
     event.preventDefault(); setVoucherLoading(true); setVoucherError("");
     try {
@@ -373,6 +427,15 @@ export default function PaymentStep({
             { replace: true }
           )
         }
+      />
+    );
+  }
+
+  if (cashSuccess) {
+    return (
+      <BookingSuccess
+        appointment={cashSuccess}
+        onReset={() => navigate("/book", { replace: true })}
       />
     );
   }
@@ -636,6 +699,31 @@ export default function PaymentStep({
                 <Wallet className="h-5 w-5 shrink-0" />
                 <span className="leading-none">תשלום בפייבוקס · {payboxDetails.amountDisplay}</span>
               </button>
+              <button
+                type="button"
+                onClick={handleConfirmCashBooking}
+                disabled={isCashConfirming}
+                className={`mb-2.5 flex w-full items-center justify-center gap-2.5 border px-4 py-3.5 text-[15px] font-semibold transition-transform active:scale-[0.99] disabled:opacity-60 sm:gap-3 sm:px-6 sm:py-4 sm:text-base ${
+                  clinicSite
+                    ? "rounded-2xl border-[#D5E0D8] bg-white/90 text-[#2F3E35] hover:bg-[#F7FAF8]"
+                    : "rounded-xl border-border bg-background text-foreground"
+                }`}
+                aria-label={`תשלום במזומן בהגעה על סך ₪${totalPrice}`}
+              >
+                {isCashConfirming ? (
+                  <Loader2 className="h-5 w-5 shrink-0 animate-spin" />
+                ) : (
+                  <Banknote className="h-5 w-5 shrink-0" />
+                )}
+                <span className="leading-none">
+                  {isCashConfirming
+                    ? "מאשרים תור…"
+                    : `תשלום במזומן בהגעה · ₪${totalPrice}`}
+                </span>
+              </button>
+              {cashError && (
+                <p className="mb-2 text-center text-sm text-[#9B2C2C]">{cashError}</p>
+              )}
               <p className={`text-center text-xs sm:text-[13px] ${mutedClass}`}>
                 תשלום מאובטח בדף סליקה · Visa ו־Mastercard
               </p>
@@ -644,6 +732,9 @@ export default function PaymentStep({
                   או תשלום ישיר דרך PayBox
                 </p>
               )}
+              <p className={`text-center text-xs sm:text-[13px] ${mutedClass}`}>
+                או אישור תור ותשלום במזומן בהגעה לקליניקה
+              </p>
               {pelecardConfigured === false && (
                 <p className="mt-2 text-center text-sm text-[#9B2C2C]">
                   סליקת אשראי עדיין לא הוגדרה בשרת.

@@ -264,6 +264,39 @@ export async function createMovementBooking(rawBooking = {}) {
   return { createdIds, appointments: createdRows };
 }
 
+/**
+ * Cash on arrival — reserve the appointment now; payment at the clinic.
+ * Sends patient confirmation + clinic notify immediately (paid remains false).
+ */
+export async function createCashBooking(rawBooking = {}) {
+  const booking = normalizeBookingPayload(rawBooking);
+  if (!isBookingPayloadValid(booking)) {
+    const error = new Error("booking payload is required (patient, treatment, appointments)");
+    error.status = 400;
+    throw error;
+  }
+
+  if (!booking.patient_email) {
+    const error = new Error("נדרש אימייל לאישור התור");
+    error.status = 400;
+    throw error;
+  }
+
+  const { createdIds, createdRows } = await createAppointmentsFromBooking(booking, {
+    paymentNote: "תשלום במזומן בהגעה לקליניקה",
+    paid: false,
+    status: "confirmed",
+  });
+
+  await maybeSendConfirmationEmail(createdRows);
+  await maybeSendClinicBookingNotify(createdRows, {
+    sourceLabel: "מזומן בהגעה",
+    extraNote: "התשלום יתבצע במזומן בהגעה לקליניקה",
+  });
+
+  return { createdIds, appointments: createdRows };
+}
+
 export async function redeemGiftVoucher({ rawBooking, code, tenantId }) {
   const booking = normalizeBookingPayload({ ...rawBooking, tenant_id: tenantId });
   if (!isBookingPayloadValid(booking)) throw Object.assign(new Error("פרטי ההזמנה אינם תקינים"), { status: 400 });
