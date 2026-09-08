@@ -89,18 +89,21 @@ export default function BookingCalendar({
             <div key={`empty-${i}`} />
           ))}
           {daysInMonth.map((date) => {
+            const dateStr = format(date, "yyyy-MM-dd");
             const available = isDateAvailable(date);
             const selected = selectedDate && isSameDay(date, selectedDate);
             const isPast = isBefore(date, today);
             const isToday = isSameDay(date, today);
-            const dateStr = format(date, "yyyy-MM-dd");
             const slotCount = slotCountByDate[dateStr] ?? 0;
 
             return (
               <button
-                key={date.toISOString()}
+                key={dateStr}
                 type="button"
-                onClick={() => onDateSelect(date)}
+                onClick={() => {
+                  if (!available) return;
+                  onDateSelect(date);
+                }}
                 disabled={!available}
                 aria-selected={selected}
                 className={`${clinicCalendarDayBase}

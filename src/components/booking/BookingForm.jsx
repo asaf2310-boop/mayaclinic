@@ -68,22 +68,25 @@ export default function BookingForm({
   } = useQuery({
     queryKey: ["availability"],
     queryFn: () => base44.entities.Availability.listAll("date"),
+    staleTime: 60_000,
   });
 
-  const { data: allAppointmentsRaw = [] } = useQuery({
+  const { data: allAppointmentsRaw = [], isLoading: loadingAppointments } = useQuery({
     queryKey: ["appointments-for-booking"],
     queryFn: () => base44.entities.Appointment.list("date", 1000),
+    staleTime: 30_000,
   });
 
-  const { data: existingAppointmentsRaw = [], isFetching: isFetchingAppointments } = useQuery({
+  // Soft refresh for the selected day only — never block the UI on this request.
+  const { data: freshAppointmentsRaw, isSuccess: hasFreshAppointments } = useQuery({
     queryKey: ["appointments-for-date", form.date],
     queryFn: () => base44.entities.Appointment.filter({ date: form.date }),
     enabled: !!form.date,
+    staleTime: 15_000,
   });
 
   const availabilityRecords = asArray(availabilityRecordsRaw);
   const allAppointments = asArray(allAppointmentsRaw);
-  const existingAppointments = asArray(existingAppointmentsRaw);
 
   const bookingDurationMinutes = selectedTreatment?.duration_minutes ?? 60;
 
@@ -97,11 +100,6 @@ export default function BookingForm({
     [allAppointments, clinicSite]
   );
 
-  const clinicAppointmentsForDate = useMemo(
-    () => filterAppointmentsForClinic(existingAppointments, clinicSite),
-    [existingAppointments, clinicSite]
-  );
-
   const appointmentsByDate = useMemo(() => {
     const byDate = {};
     for (const appointment of clinicAppointments) {
@@ -111,6 +109,21 @@ export default function BookingForm({
     }
     return byDate;
   }, [clinicAppointments]);
+
+  // Show times immediately from the preloaded list; swap in fresh day data when it arrives.
+  const clinicAppointmentsForDate = useMemo(() => {
+    if (!form.date) return [];
+    if (hasFreshAppointments) {
+      return filterAppointmentsForClinic(asArray(freshAppointmentsRaw), clinicSite);
+    }
+    return appointmentsByDate[form.date] || [];
+  }, [
+    form.date,
+    hasFreshAppointments,
+    freshAppointmentsRaw,
+    appointmentsByDate,
+    clinicSite,
+  ]);
 
   const activeDates = useMemo(() => {
     return new Set(
@@ -146,17 +159,20 @@ export default function BookingForm({
   };
 
   useEffect(() => {
-    if (form.time && !isFetchingAppointments && !availableSlots.includes(form.time)) {
+    if (form.time && !availableSlots.includes(form.time)) {
       handleChange("time", "");
     }
-  }, [form.time, isFetchingAppointments, availableSlots]);
+  }, [form.time, availableSlots]);
 
   // On phones, times sit below the fold after tapping a date — scroll them into view.
   useEffect(() => {
     if (!form.date || !timeSlotsRef.current) return;
     const node = timeSlotsRef.current;
     const id = window.requestAnimationFrame(() => {
-      node.scrollIntoView({ behavior: "smooth", block: "start" });
+      const rect = node.getBoundingClientRect();
+      const fullyVisible = rect.top >= 0 && rect.bottom <= window.innerHeight;
+      if (fullyVisible) return;
+      node.scrollIntoView({ behavior: "smooth", block: "nearest" });
     });
     return () => window.cancelAnimationFrame(id);
   }, [form.date]);
@@ -281,7 +297,7 @@ export default function BookingForm({
             slots={availableSlots}
             selectedSlot={form.time}
             onSelect={(slot) => handleChange("time", slot)}
-            isLoading={isFetchingAppointments}
+            isLoading={loadingAppointments && availableSlots.length === 0}
             durationMinutes={selectedTreatment?.duration_minutes}
             hoursHint={clinicSite?.bookingHoursHint}
           />

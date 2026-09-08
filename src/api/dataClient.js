@@ -220,7 +220,25 @@ async function fetchPublicEntity(tableName, filters = {}, order = "", limit = 10
   return Array.isArray(data) ? data : [];
 }
 
+// After the first anonymous 401/403, skip further admin round-trips for public reads.
+let skipAdminReadsForPublicTables = false;
+
+function markAdminReadsUnavailable(status) {
+  if (status === 401 || status === 403) {
+    skipAdminReadsForPublicTables = true;
+  }
+}
+
 async function requestAdminEntity(action, entity, { id = "", row, filters = {}, order = "", limit = 100, offset = 0 } = {}) {
+  const isPublicRead =
+    PUBLIC_SERVER_TABLES.has(entity) && (action === "list" || action === "filter");
+
+  if (isPublicRead && skipAdminReadsForPublicTables) {
+    const error = new Error("Admin session required");
+    error.status = 401;
+    throw error;
+  }
+
   const params = new URLSearchParams({
     action,
     entity,
@@ -240,6 +258,7 @@ async function requestAdminEntity(action, entity, { id = "", row, filters = {}, 
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
+    markAdminReadsUnavailable(response.status);
     const error = new Error(data?.error || "Admin request failed");
     error.status = response.status;
     throw error;
@@ -248,32 +267,47 @@ async function requestAdminEntity(action, entity, { id = "", row, filters = {}, 
 }
 
 function createSupabasePublicEntity(tableName) {
+  const preferPublicReads = PUBLIC_SERVER_TABLES.has(tableName);
+
   return {
     async filter(filters = {}) {
+      // Anonymous booking: go straight to public-data after we know admin is locked.
+      if (preferPublicReads && skipAdminReadsForPublicTables) {
+        return fetchPublicEntity(tableName, filters);
+      }
       try {
         const rows = await requestAdminEntity("filter", tableName, { filters });
         if (Array.isArray(rows)) return rows;
         // Malformed admin payload — try public API for booking tables.
-        if (!PUBLIC_SERVER_TABLES.has(tableName)) return [];
+        if (!preferPublicReads) return [];
       } catch (error) {
         // Anonymous booking always falls back to the public API.
-        if (!PUBLIC_SERVER_TABLES.has(tableName)) throw error;
+        if (!preferPublicReads) throw error;
       }
       return fetchPublicEntity(tableName, filters);
     },
 
     async list(order = "-created_at", limit = 100, offset = 0) {
+      if (preferPublicReads && skipAdminReadsForPublicTables) {
+        return fetchPublicEntity(tableName, {}, order, limit, offset);
+      }
       try {
         const rows = await requestAdminEntity("list", tableName, { order, limit, offset });
         if (Array.isArray(rows)) return rows;
-        if (!PUBLIC_SERVER_TABLES.has(tableName)) return [];
+        if (!preferPublicReads) return [];
       } catch (error) {
-        if (!PUBLIC_SERVER_TABLES.has(tableName)) throw error;
+        if (!preferPublicReads) throw error;
       }
       return fetchPublicEntity(tableName, {}, order, limit, offset);
     },
 
     async listAll(order = "date", pageSize = 200) {
+      // /api/public-data returns the tenant window in one shot (no real offset paging).
+      if (preferPublicReads) {
+        const rows = await this.list(order, Math.max(pageSize, 2000), 0);
+        return Array.isArray(rows) ? rows : [];
+      }
+
       const rows = [];
       let offset = 0;
 
