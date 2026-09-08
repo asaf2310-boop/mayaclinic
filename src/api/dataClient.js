@@ -251,22 +251,24 @@ function createSupabasePublicEntity(tableName) {
   return {
     async filter(filters = {}) {
       try {
-        return await requestAdminEntity("filter", tableName, { filters });
+        const rows = await requestAdminEntity("filter", tableName, { filters });
+        if (Array.isArray(rows)) return rows;
+        // Malformed admin payload — try public API for booking tables.
+        if (!PUBLIC_SERVER_TABLES.has(tableName)) return [];
       } catch (error) {
-        if (!PUBLIC_SERVER_TABLES.has(tableName) || ![401, 403].includes(error.status)) {
-          throw error;
-        }
+        // Anonymous booking always falls back to the public API.
+        if (!PUBLIC_SERVER_TABLES.has(tableName)) throw error;
       }
       return fetchPublicEntity(tableName, filters);
     },
 
     async list(order = "-created_at", limit = 100, offset = 0) {
       try {
-        return await requestAdminEntity("list", tableName, { order, limit, offset });
+        const rows = await requestAdminEntity("list", tableName, { order, limit, offset });
+        if (Array.isArray(rows)) return rows;
+        if (!PUBLIC_SERVER_TABLES.has(tableName)) return [];
       } catch (error) {
-        if (!PUBLIC_SERVER_TABLES.has(tableName) || ![401, 403].includes(error.status)) {
-          throw error;
-        }
+        if (!PUBLIC_SERVER_TABLES.has(tableName)) throw error;
       }
       return fetchPublicEntity(tableName, {}, order, limit, offset);
     },

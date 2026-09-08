@@ -283,7 +283,8 @@ export function resolveClinicPayboxOverride(treatment, site = getClinicSite()) {
 }
 
 export function filterByClinicTenant(rows = [], site = getClinicSite()) {
-  if (!site) return rows;
+  if (!site) return Array.isArray(rows) ? rows : [];
+  if (!Array.isArray(rows)) return [];
 
   const tenantId = site.id;
 
@@ -308,6 +309,7 @@ export function filterByClinicTenant(rows = [], site = getClinicSite()) {
 }
 
 export function filterAppointmentsForClinic(appointments = [], site = getClinicSite()) {
+  if (!Array.isArray(appointments)) return [];
   if (!site) return appointments;
 
   const allowedNames = new Set(getAllowedTreatmentNames(site) || []);
