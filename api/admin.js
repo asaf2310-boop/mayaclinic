@@ -23,6 +23,7 @@ import {
 import { resolveClinicTenantFromHost } from "../server/clinicTenant.js";
 import { supabaseRequest } from "../server/supabaseServer.js";
 import { probeMeridianMailbox } from "../server/meridianEmail.js";
+import { notifyClinicAppointmentCancelled } from "../server/clinicCancellationNotify.js";
 
 const TENANT_ENTITIES = new Set([
   "appointments",
@@ -231,10 +232,26 @@ async function createEntity(entity, row, tenantId) {
   }
 }
 
+async function getEntityById(entity, id, tenantId) {
+  const path = withTenantFilter(
+    entity,
+    entity,
+    tenantId,
+    `id=eq.${encodeURIComponent(id)}&select=*`
+  );
+  const rows = await supabaseRequest(path);
+  return Array.isArray(rows) ? rows[0] || null : rows || null;
+}
+
 async function updateEntity(entity, id, row, tenantId) {
   const payload = { ...(row || {}) };
   delete payload.tenant_id;
   delete payload.id;
+
+  const previous =
+    entity === "appointments" && payload.status !== undefined
+      ? await getEntityById(entity, id, tenantId)
+      : null;
 
   const path = withTenantFilter(
     `${entity}`,
@@ -252,15 +269,42 @@ async function updateEntity(entity, id, row, tenantId) {
   if (!rowOut) {
     throw new Error("Record not found for this clinic tenant");
   }
+
+  const previousStatus = String(previous?.status || "");
+  const nextStatus = String(rowOut.status || "");
+  if (
+    entity === "appointments" &&
+    nextStatus === "cancelled" &&
+    previousStatus &&
+    previousStatus !== "cancelled"
+  ) {
+    void notifyClinicAppointmentCancelled(rowOut, {
+      previousStatus,
+      reason: "cancelled",
+    });
+  }
+
   return rowOut;
 }
 
 async function deleteEntity(entity, id, tenantId) {
+  const previous =
+    entity === "appointments" ? await getEntityById(entity, id, tenantId) : null;
+
   const path = withTenantFilter(entity, entity, tenantId, `id=eq.${encodeURIComponent(id)}`);
   await supabaseRequest(path, {
     method: "DELETE",
     headers: { Prefer: "return=minimal" },
   });
+
+  if (previous && String(previous.status || "") !== "cancelled") {
+    void notifyClinicAppointmentCancelled(previous, {
+      previousStatus: previous.status || "",
+      reason: "deleted",
+      extraNote: "התור נמחק מהמערכת.",
+    });
+  }
+
   return { ok: true };
 }
 
