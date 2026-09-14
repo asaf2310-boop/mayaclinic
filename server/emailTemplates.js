@@ -164,3 +164,50 @@ export function buildClinicGiftVoucherNotifyEmail({ purchaserName, purchaserPhon
   const bodyHtml = `<p>נרכש שובר מתנה חדש.</p><p><strong>מזמין:</strong> ${escapeHtml(purchaserName)}<br/><strong>טלפון:</strong> ${escapeHtml(purchaserPhone)}<br/><strong>אימייל:</strong> ${escapeHtml(purchaserEmail)}<br/><strong>מטופל:</strong> ${escapeHtml(recipientName || "—")}<br/><strong>אימייל המטופל:</strong> ${escapeHtml(recipientEmail || "לא נבחרה שליחה")}<br/><strong>ברכה:</strong> ${escapeHtml(greeting || "—")}<br/><strong>שובר:</strong> ${escapeHtml(code)}<br/><strong>כמות:</strong> ${quantity}<br/><strong>סכום:</strong> ₪${Number(amountIls).toLocaleString("he-IL")}</p>`;
   return { subject: `רכישת שובר מתנה — ${purchaserName}`, html: baseLayout({ title: "רכישת שובר מתנה", bodyHtml, clinicName }) };
 }
+
+/**
+ * Owner alert when an appointment is declined (pending→cancelled), cancelled, or deleted.
+ * actionLabel examples: "נדחה", "בוטל", "נמחק"
+ */
+export function buildClinicCancellationNotifyEmail({
+  patientName,
+  patientPhone,
+  patientEmail,
+  appointments,
+  clinicName,
+  actionLabel = "בוטל",
+  previousStatus = "",
+  extraNote = "",
+}) {
+  const phone = String(patientPhone || "").trim() || "—";
+  const email = String(patientEmail || "").trim() || "—";
+  const statusNote = previousStatus
+    ? `<p style="font-size:14px;line-height:1.6;color:#666;">סטטוס קודם: ${escapeHtml(previousStatus)}</p>`
+    : "";
+  const noteBlock = extraNote
+    ? `<p style="font-size:15px;line-height:1.6;margin-top:12px;color:#444;">${escapeHtml(extraNote)}</p>`
+    : "";
+
+  const bodyHtml = `
+    <p style="font-size:16px;line-height:1.6;">תור ${escapeHtml(actionLabel)} במערכת.</p>
+    <p style="font-size:15px;line-height:1.7;margin:12px 0;">
+      <strong>שם:</strong> ${escapeHtml(patientName || "—")}<br/>
+      <strong>טלפון:</strong> ${escapeHtml(phone)}<br/>
+      <strong>אימייל:</strong> ${escapeHtml(email)}
+    </p>
+    ${statusNote}
+    ${formatAppointmentsTable(appointments)}
+    ${noteBlock}`;
+
+  const first = appointments?.[0];
+  const when = first
+    ? `${formatDateHe(first.date)} ${first.time || ""}`.trim()
+    : "";
+
+  return {
+    subject: when
+      ? `תור ${actionLabel} — ${patientName || "לקוח"} · ${when}`
+      : `תור ${actionLabel} — ${patientName || "לקוח"} · ${clinicName}`,
+    html: baseLayout({ title: `תור ${actionLabel}`, bodyHtml, clinicName }),
+  };
+}
