@@ -22,11 +22,17 @@ export function applyMeridianVerifiedNotes(existingNotes, meridianId) {
   const id = normalizeMeridianTreatmentId(meridianId);
   const verificationNote = `מזהה טיפול מרידיאן שאומת: ${id}`;
   const cleaned = String(existingNotes || "")
-    .split(/\n+/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .filter((line) => !/ממתין לאימות/.test(line))
-    .filter((line) => !/מזהה טיפול מרידיאן שאומת/.test(line));
+    .split(/\r?\n+/)
+    .map((line) =>
+      String(line || "")
+        // Drop legacy pending Meridian payment lines even if mixed with other text.
+        .replace(/תשלום דרך מרידיאן\s*[—–\-:]?\s*ממתין לאימות מזהה טיפול/g, "")
+        .replace(/מרידיאן\s*[—–\-:]?\s*ממתין לאימות[^\n]*/g, "")
+        .replace(/ממתין לאימות מזהה טיפול/g, "")
+        .replace(/מזהה טיפול מרידיאן שאומת:\s*\d+/g, "")
+        .trim()
+    )
+    .filter(Boolean);
   cleaned.push(verificationNote);
   return cleaned.join("\n");
 }
