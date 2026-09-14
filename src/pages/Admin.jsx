@@ -224,6 +224,7 @@ export default function Admin() {
                   onPaidChange={(id, paid) => updateMutation.mutate({ id, data: { paid } })}
                   onUpdate={(id, data) => updateMutation.mutate({ id, data })}
                   onDelete={(id) => deleteMutation.mutate(id)}
+                  onRefresh={() => queryClient.invalidateQueries({ queryKey: ["appointments"] })}
                   isMutating={updateMutation.isPending || deleteMutation.isPending}
                 />
               )}
