@@ -137,6 +137,26 @@ supabase/pelecard-payments.sql
 אחרי תשלום מוצלח השרת מאמת עם `ValidateByUniqueKey`, יוצר תורים עם `paid=true`, והלקוח מגיע לדף ההצלחה.
 בלי פרטי Pelecard נשארים Bit / PayBox כמו קודם.
 
+## חשבונית מס קבלה — Invoice4U
+
+אחרי תשלום אשראי מוצלח ב־Pelecard (הזמנת תור רגילה), השרת מפיק **חשבונית מס קבלה** (DocumentType 3) דרך [Invoice4U API](https://invoice4u.gitbook.io/invoice4u-docs).
+
+ב־Vercel הגדירו:
+
+```env
+INVOICE4U_TOKEN=your-org-api-guid
+INVOICE4U_ENV=qa
+```
+
+לפני פרודקשן עבדו מול QA (`INVOICE4U_ENV=qa`), ואז הסר / הגדר `INVOICE4U_ENV=production` (או השאירו ריק).
+
+- אם `INVOICE4U_TOKEN` חסר — ההזמנה מסתיימת כרגיל בלי חשבונית.
+- סיכום החשבונית נשמר ב־`result_payload.invoice4u` של סשן התשלום.
+- שליחה למייל הלקוח מתבצעת דרך Invoice4U כשיש `patient_email` בהזמנה.
+- קישור PayBox החיצוני (לא דרך Pelecard) אינו מאשר תשלום בשרת ולכן לא מפיק חשבונית אוטומטית.
+
+
+
 ב-Supabase SQL Editor, ודאו שרצו לפחות:
 
 1. `supabase/schema.sql`
