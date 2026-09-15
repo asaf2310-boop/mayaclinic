@@ -53,14 +53,57 @@ const EMPTY_EDIT_FORM = {
   marketing_consent: false,
 };
 
-function isMeridianPending(appointment) {
-  const notes = String(appointment?.notes || "");
-  return /מרידיאן/.test(notes) && /ממתין לאימות/.test(notes);
-}
-
 function extractVerifiedMeridianId(notes) {
   const match = String(notes || "").match(/מזהה טיפול מרידיאן שאומת:\s*(\d+)/);
   return match?.[1] || "";
+}
+
+/** Prefer verified state when notes still contain a leftover "pending" line. */
+function getMeridianBadge(appointment) {
+  const notes = String(appointment?.notes || "");
+  const verifiedId = extractVerifiedMeridianId(notes);
+  if (verifiedId) {
+    return {
+      kind: "verified",
+      label: `מרידיאן — אומת (${verifiedId})`,
+      className: "text-green-700",
+    };
+  }
+  if (/מרידיאן/.test(notes) && /ממתין לאימות/.test(notes)) {
+    return {
+      kind: "pending",
+      label: "מרידיאן — ממתין לאימות מזהה",
+      className: "text-amber-700",
+    };
+  }
+  if (/מרידיאן/.test(notes)) {
+    return {
+      kind: "info",
+      label: "מרידיאן",
+      className: "text-muted-foreground",
+    };
+  }
+  return null;
+}
+
+/** Hide contradictory pending Meridian lines once a verified ID exists. */
+function formatNotesForDisplay(notes) {
+  const text = String(notes || "");
+  const verifiedId = extractVerifiedMeridianId(text);
+  if (!verifiedId) return text || "-";
+  return (
+    text
+      .split(/\r?\n+/)
+      .map((line) =>
+        String(line || "")
+          .replace(/תשלום דרך מרידיאן\s*[—–\-:]?\s*ממתין לאימות מזהה טיפול/g, "")
+          .replace(/מרידיאן\s*[—–\-:]?\s*ממתין לאימות[^\n]*/g, "")
+          .replace(/ממתין לאימות מזהה טיפול/g, "")
+          .trim()
+      )
+      .filter(Boolean)
+      .join("\n") || `מזהה טיפול מרידיאן שאומת: ${verifiedId}`
+  );
 }
 
 export default function AppointmentTable({
@@ -90,6 +133,8 @@ export default function AppointmentTable({
       return;
     }
 
+    const rawNotes = editingAppointment.notes || "";
+    const cleanedNotes = formatNotesForDisplay(rawNotes);
     setEditForm({
       patient_name: editingAppointment.patient_name || "",
       patient_phone: editingAppointment.patient_phone || "",
@@ -98,12 +143,12 @@ export default function AppointmentTable({
       treatment_price: editingAppointment.treatment_price ?? "",
       date: editingAppointment.date || "",
       time: editingAppointment.time || "",
-      notes: editingAppointment.notes || "",
+      notes: cleanedNotes === "-" ? "" : cleanedNotes,
       status: editingAppointment.status || "pending",
       paid: Boolean(editingAppointment.paid),
       marketing_consent: Boolean(editingAppointment.marketing_consent),
     });
-    setMeridianIdInput(extractVerifiedMeridianId(editingAppointment.notes));
+    setMeridianIdInput(extractVerifiedMeridianId(rawNotes));
     setMeridianError("");
     setMeridianSuccess("");
   }, [editingAppointment]);
@@ -116,6 +161,7 @@ export default function AppointmentTable({
     event.preventDefault();
     if (!editingAppointment) return;
 
+    const notesToSave = formatNotesForDisplay(editForm.notes);
     onUpdate(editingAppointment.id, {
       patient_name: editForm.patient_name,
       patient_phone: editForm.patient_phone,
@@ -124,7 +170,7 @@ export default function AppointmentTable({
       treatment_price: editForm.treatment_price === "" ? null : Number(editForm.treatment_price),
       date: editForm.date,
       time: editForm.time,
-      notes: editForm.notes,
+      notes: notesToSave === "-" ? "" : notesToSave,
       status: editForm.status,
       paid: editForm.paid,
       marketing_consent: editForm.marketing_consent,
@@ -202,11 +248,15 @@ export default function AppointmentTable({
                     <div>
                       <p className="text-xs text-muted-foreground">מטופל</p>
                       <h3 className="text-lg font-bold text-foreground">{apt.patient_name}</h3>
-                      {isMeridianPending(apt) ? (
-                        <p className="mt-1 text-xs font-medium text-amber-700">
-                          מרידיאן — ממתין לאימות מזהה
-                        </p>
-                      ) : null}
+                      {(() => {
+                        const badge = getMeridianBadge(apt);
+                        if (!badge) return null;
+                        return (
+                          <p className={`mt-1 text-xs font-medium ${badge.className}`}>
+                            {badge.label}
+                          </p>
+                        );
+                      })()}
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <button
@@ -260,7 +310,7 @@ export default function AppointmentTable({
                       "tabular-nums"
                     )}
                     {renderField("שעה", apt.time, "tabular-nums")}
-                    {renderField("הערות", apt.notes || "-")}
+                    {renderField("הערות", formatNotesForDisplay(apt.notes))}
                   </div>
                 </div>
 
