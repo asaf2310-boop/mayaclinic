@@ -141,14 +141,13 @@ supabase/pelecard-payments.sql
 
 אחרי תשלום אשראי מוצלח ב־Pelecard (הזמנת תור רגילה), השרת מפיק **חשבונית מס קבלה** (DocumentType 3) דרך [Invoice4U API](https://invoice4u.gitbook.io/invoice4u-docs).
 
-ב־Vercel הגדירו:
+ב־Vercel (Production) הגדירו:
 
 ```env
 INVOICE4U_TOKEN=your-org-api-guid
-INVOICE4U_ENV=qa
 ```
 
-לפני פרודקשן עבדו מול QA (`INVOICE4U_ENV=qa`), ואז הסר / הגדר `INVOICE4U_ENV=production` (או השאירו ריק).
+ברירת המחדל היא **Production** (`https://api.invoice4u.co.il/...`). אין צורך ב־`INVOICE4U_ENV` אלא אם רוצים QA במפורש (`INVOICE4U_ENV=qa`).
 
 - אם `INVOICE4U_TOKEN` חסר — ההזמנה מסתיימת כרגיל בלי חשבונית.
 - סיכום החשבונית נשמר ב־`result_payload.invoice4u` של סשן התשלום.
