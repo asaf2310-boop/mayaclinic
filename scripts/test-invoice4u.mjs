@@ -5,6 +5,7 @@ import {
   maybeIssueBookingInvoiceReceipt,
   resolveInvoice4uPaymentType,
   getInvoice4uConfig,
+  paymentDateJson,
   INVOICE4U_PAYMENT_TYPE,
   INVOICE4U_DOCUMENT_TYPE,
 } from "../server/invoice4u.js";
@@ -18,6 +19,7 @@ assert.equal(getInvoice4uConfig().enabled, false);
 assert.equal(resolveInvoice4uPaymentType({}, "פייבוקס"), INVOICE4U_PAYMENT_TYPE.PayBox);
 assert.equal(resolveInvoice4uPaymentType({}, "ביט"), INVOICE4U_PAYMENT_TYPE.Bit);
 assert.equal(resolveInvoice4uPaymentType({}, ""), INVOICE4U_PAYMENT_TYPE.CreditCard);
+assert.match(paymentDateJson(new Date("2026-09-15T12:00:00Z")), /^\/Date\(\d+\)\/$/);
 
 const doc = buildBookingInvoiceReceiptDoc({
   booking: {
@@ -42,9 +44,10 @@ assert.equal(doc.Items[0].Quantity, 2);
 assert.equal(doc.Items[0].Price, 320);
 assert.equal(doc.Payments[0].Amount, 640);
 assert.equal(doc.AssociatedEmails[0].Mail, "noa@example.com");
+assert.equal(doc.AssociatedEmails[0].IsSendDoc, true);
 assert.equal(doc.GeneralCustomer.Name, "נועה כהן");
 assert.equal(doc.GenerelCustomer, undefined);
-assert.equal(String(doc.Payments[0].Date).includes("Z"), false);
+assert.match(String(doc.Payments[0].Date), /^\/Date\(\d+\)\/$/);
 assert.match(doc.ApiIdentifier, /^booking-abc-123$/);
 
 const skipped = await createBookingInvoiceReceipt({
@@ -89,7 +92,8 @@ globalThis.fetch = async (url, init) => {
     status: 200,
     text: async () =>
       JSON.stringify({
-        CreateDocumentResult: {
+        // Production WCF envelope
+        d: {
           ID: "doc-1",
           DocumentNumber: 2001,
           DocumentType: 3,
@@ -120,6 +124,7 @@ assert.equal(created.summary.documentNumber, 2001);
 assert.equal(created.summary.pdfUrl, "https://example.com/pdf");
 assert.equal(calls[0].body.token, "test-token");
 assert.equal(calls[0].body.doc.DocumentType, 3);
+assert.match(String(calls[0].body.doc.Payments[0].Date), /^\/Date\(\d+\)\/$/);
 assert.match(calls[0].url, /apiqa\.invoice4u/);
 
 let stored = null;
@@ -156,5 +161,36 @@ const again = await maybeIssueBookingInvoiceReceipt({
   },
 });
 assert.equal(again.reason, "already_issued");
+
+// DocumentAlreadyCreated (134) with DocumentNumber must count as success
+calls.length = 0;
+globalThis.fetch = async (url, init) => {
+  calls.push({ url, body: JSON.parse(init.body) });
+  return {
+    ok: true,
+    status: 200,
+    text: async () =>
+      JSON.stringify({
+        d: {
+          ID: "doc-dup",
+          DocumentNumber: 2002,
+          DocumentType: 3,
+          Errors: [{ ID: 134, Error: "DocumentAlreadyCreated", Paramters: null }],
+        },
+      }),
+  };
+};
+const dup = await createBookingInvoiceReceipt({
+  booking: {
+    patient_name: "נועה",
+    patient_email: "noa@example.com",
+    treatment_name: "עיסוי",
+    appointments: [{ date: "2026-10-01", time: "10:00" }],
+  },
+  bookingRef: "ref-dup",
+  totalAgorot: 100,
+});
+assert.equal(dup.ok, true);
+assert.equal(dup.summary.documentNumber, 2002);
 
 console.log("invoice4u helpers ok");
