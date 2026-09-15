@@ -101,6 +101,42 @@ export async function updatePaymentSession(bookingRef, patch) {
   return Array.isArray(rows) ? rows[0] : rows;
 }
 
+/**
+ * Atomically claim a payment session so concurrent Pelecard feedback
+ * callbacks cannot both create appointments / send confirmation emails.
+ * Claims from `pending` or `failed` (failed allows ServerSideGoodFeedback retries).
+ * Returns the claimed row, or null if another worker already claimed it.
+ */
+export async function claimPaymentSessionForFinalize(bookingRef) {
+  const ref = encodeURIComponent(String(bookingRef || "").trim());
+  if (!ref) return null;
+
+  try {
+    const rows = await supabaseRequest(
+      `pelecard_payments?booking_ref=eq.${ref}&status=in.(pending,failed)`,
+      {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({ status: "processing", updated_at: nowIso() }),
+      }
+    );
+    return Array.isArray(rows) && rows[0] ? rows[0] : null;
+  } catch (error) {
+    // DB without 'processing' in the status check — fall back to non-atomic path.
+    if (String(error?.message || "").toLowerCase().includes("processing")) {
+      console.warn(
+        "pelecard_payments status check missing 'processing' — run supabase/pelecard-payments-processing-status.sql before deploy is fully effective"
+      );
+      const session = await getPaymentSessionByRef(bookingRef);
+      if (session?.status === "pending" || session?.status === "failed") {
+        return session;
+      }
+      return null;
+    }
+    throw error;
+  }
+}
+
 async function fetchActiveAppointmentsForDates(dates = [], tenantId = "") {
   const uniqueDates = [...new Set((dates || []).map((d) => String(d || "").trim()).filter(Boolean))];
   if (!uniqueDates.length) return [];
@@ -594,7 +630,14 @@ async function maybeSendClinicBookingNotify(
 ) {
   if (!isEmailConfigured() || !appointments?.length) return;
 
-  const recipients = getBookingNotifyEmails();
+  const patientEmail = String(appointments[0]?.patient_email || "")
+    .trim()
+    .toLowerCase();
+  // Avoid a second "booking confirmation"-looking mail when the patient address
+  // is also listed in BOOKING_NOTIFY_EMAILS / ADMIN_EMAILS (case-insensitive).
+  const recipients = getBookingNotifyEmails().filter(
+    (email) => String(email || "").trim().toLowerCase() !== patientEmail
+  );
   if (!recipients.length) return;
 
   try {
@@ -637,7 +680,7 @@ export async function finalizePaymentFromPelecard({
     throw error;
   }
 
-  if (session.status === "paid") {
+  if (session.status === "paid" || session.status === "processing") {
     return { session, alreadyProcessed: true };
   }
 
@@ -655,7 +698,14 @@ export async function finalizePaymentFromPelecard({
     return { session: updated, alreadyProcessed: false, valid: false };
   }
 
-  const totalAgorot = session.total_agorot;
+  // Claim before validate/create so concurrent Pelecard retries cannot double-send.
+  const claimed = await claimPaymentSessionForFinalize(bookingRef);
+  if (!claimed) {
+    const latest = await getPaymentSessionByRef(bookingRef);
+    return { session: latest || session, alreadyProcessed: true };
+  }
+
+  const totalAgorot = claimed.total_agorot ?? session.total_agorot;
   // Prefer the ConfirmationKey from init (stored on the session). Callback keys
   // can differ; Pelecard binds the init key to UserKey + Total.
   const confirmationCandidates = [

@@ -6,7 +6,7 @@ create table if not exists pelecard_payments (
   booking_ref text not null unique,
   tenant_id text,
   status text not null default 'pending'
-    check (status in ('pending', 'paid', 'failed')),
+    check (status in ('pending', 'processing', 'paid', 'failed')),
   total_agorot integer not null,
   confirmation_key text,
   pelecard_transaction_id text,

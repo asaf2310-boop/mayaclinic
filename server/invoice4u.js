@@ -242,7 +242,10 @@ export function buildBookingInvoiceReceiptDoc({
   };
 
   if (fields.patientEmail) {
-    doc.AssociatedEmails = [{ Mail: fields.patientEmail, IsUserMail: false }];
+    // IsSendDoc=true forces delivery of the PDF email to this address.
+    doc.AssociatedEmails = [
+      { Mail: fields.patientEmail, IsUserMail: false, IsSendDoc: true },
+    ];
   }
 
   return doc;
@@ -325,6 +328,13 @@ export async function createBookingInvoiceReceipt(options = {}) {
     language: config.language,
   });
 
+  const emailTo = Array.isArray(doc?.AssociatedEmails)
+    ? doc.AssociatedEmails.map((item) => item?.Mail).filter(Boolean).join(",")
+    : "";
+  const emailLabel = emailTo
+    ? `email=${emailTo} IsSendDoc=true`
+    : "email=(none)";
+
   try {
     const raw = await postInvoice4u(
       "/CreateDocument",
@@ -335,7 +345,13 @@ export async function createBookingInvoiceReceipt(options = {}) {
     const errors = Array.isArray(document?.Errors) ? document.Errors : [];
     if (errors.length) {
       const message = formatErrors(errors) || "Invoice4U returned Errors";
-      console.error("Invoice4U CreateDocument errors:", message, document);
+      console.error(
+        "Invoice4U CreateDocument errors:",
+        message,
+        options.bookingRef || "",
+        emailLabel,
+        document
+      );
       return {
         ok: false,
         skipped: false,
@@ -349,7 +365,8 @@ export async function createBookingInvoiceReceipt(options = {}) {
     console.info(
       "Invoice4U CreateDocument ok:",
       summary.documentNumber || summary.id,
-      options.bookingRef || ""
+      options.bookingRef || "",
+      emailLabel
     );
     return {
       ok: true,
@@ -358,7 +375,12 @@ export async function createBookingInvoiceReceipt(options = {}) {
       summary,
     };
   } catch (error) {
-    console.error("Invoice4U CreateDocument failed:", error?.message || error);
+    console.error(
+      "Invoice4U CreateDocument failed:",
+      error?.message || error,
+      options.bookingRef || "",
+      emailLabel
+    );
     return {
       ok: false,
       skipped: false,

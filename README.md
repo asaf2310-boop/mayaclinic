@@ -165,6 +165,7 @@ INVOICE4U_TOKEN=your-org-api-guid
 2. `supabase/multi-tenant.sql` (הגרסה המעודכנת בלבד — סוגרת גישה ישירה מהדפדפן לטבלאות tenant)
 3. `supabase/treatments-paybox.sql` — רק אם ה-DB נוצר לפני שהעמודה נוספה ל-schema
 4. `supabase/pelecard-payments.sql` — לסליקת Pelecard (משוב שרת + דפי הצלחה/כישלון, ללא anon select)
+5. `supabase/pelecard-payments-processing-status.sql` — **חובה על DB קיים** לפני שתיקון כפילות האישורים פעיל במלואו (מוסיף status `processing`; בלי זה השרת נופל ל־fallback ומדפיס אזהרה בלוג)
 
 > אם הרצתם בעבר גרסה ישנה של `multi-tenant.sql` / `pelecard-payments.sql`, הריצו שוב את הקבצים המעודכנים כדי להחליף policies פתוחים.
 
