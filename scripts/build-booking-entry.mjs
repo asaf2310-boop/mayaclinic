@@ -7,5 +7,5 @@ const bookingHtml = html
   .replace(/<link[^>]+rel="manifest"[^>]*>/g, "")
   .replace(/((?:src|href)=")\/(?!\/)/g, '$1/booking/')
   .replace(/<title>.*?<\/title>/, "<title>קביעת טיפול | OfirBaby</title>")
-  .replace("</head>", '<meta name="robots" content="noindex, nofollow" /><meta name="ofirbaby-booking-version" content="2" /></head>');
+  .replace("</head>", '<meta name="robots" content="noindex, nofollow" /><meta name="ofirbaby-booking-version" content="3" /></head>');
 await writeFile(new URL("../dist/booking-entry.html", import.meta.url), bookingHtml);

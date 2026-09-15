@@ -7,7 +7,10 @@ import paymentReturn from "../api/pelecard/return.js";
 
 test("booking mount preserves legacy paths and external URLs", () => {
   assert.equal(getBookingBasePath("/booking"), "/booking");
+  assert.equal(getBookingBasePath("/booking/book"), "/booking");
   assert.equal(getBookingBasePath("/booking/payment/success"), "/booking");
+  assert.equal(bookingUrl("/maya-hero.png", "/booking"), "/booking/maya-hero.png");
+  assert.equal(bookingUrl("/book", "/booking"), "/booking/book");
   assert.equal(getBookingBasePath("/book"), "");
   assert.equal(getBookingBasePath("/booking-other"), "");
   assert.equal(bookingUrl("/api/public-data?q=1", "/booking"), "/booking/api/public-data?q=1");

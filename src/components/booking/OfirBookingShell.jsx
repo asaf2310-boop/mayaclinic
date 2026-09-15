@@ -2,14 +2,16 @@ import React, { useEffect } from "react";
 import { bookingBasePath, bookingUrl } from "@/lib/bookingMount";
 import "./ofir-booking.css";
 
+const WEBSITE_HOME = "https://www.ofirbaby.com/";
+
 export function OfirBookingHeader() {
   return (
     <header className="ofir-booking-header" dir="rtl">
-      <a className="ofir-booking-brand" href="/">
+      <a className="ofir-booking-brand" href={WEBSITE_HOME}>
         <img src={bookingUrl("/ofirbaby-logo.png")} width="46" height="48" alt="" />
         <span><strong>אופיר – מרכז טיפול הוליסטי</strong><small>OfirBaby</small></span>
       </a>
-      <a className="ofir-back-home" href="/">חזרה לאתר</a>
+      <a className="ofir-back-home" href={WEBSITE_HOME}>חזרה לאתר</a>
     </header>
   );
 }

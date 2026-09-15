@@ -29,6 +29,7 @@ import {
   clinicTextMuted,
 } from "@/lib/clinicUi";
 import HeroMeridianButton from "../components/home/HeroMeridianButton";
+import { bookingBasePath, bookingUrl } from "@/lib/bookingMount";
 import { BarChart3, CalendarCheck, CheckCircle2, ExternalLink, Flower2, Home as HomeIcon, Leaf, Megaphone, MonitorSmartphone, Users } from "lucide-react";
 
 function HeroPremiumIcon({ icon }) {
@@ -126,7 +127,7 @@ export default function Home() {
                   <div className={`${clinicHeroImageFrame} transition-transform duration-300 hover:scale-[1.01]`}>
                     {!heroImageMissing ? (
                       <img
-                        src={clinicSite.heroImage}
+                        src={bookingUrl(clinicSite.heroImage)}
                         alt={clinicSite.clinicTitle}
                         className="clinic-hero-image block h-full w-full object-cover object-center md:h-auto md:max-h-[440px] md:object-contain"
                         loading="eager"
@@ -161,8 +162,9 @@ export default function Home() {
                         <a
                           key={link.url}
                           href={link.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                          {...(bookingBasePath
+                            ? {}
+                            : { target: "_blank", rel: "noopener noreferrer" })}
                           className={clinicHeroPremiumCard}
                         >
                           <div className={clinicHeroPremiumIconRing}>

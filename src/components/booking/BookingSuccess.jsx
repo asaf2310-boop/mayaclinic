@@ -120,7 +120,7 @@ export default function BookingSuccess({ appointment, onReset, hidePrices = fals
           variant="outline"
           className={`w-full gap-2 sm:w-auto ${clinicSite ? clinicOutlineBtn : "rounded-xl"}`}
         >
-          {bookingBasePath ? <a href="/">
+          {bookingBasePath ? <a href="https://www.ofirbaby.com/">
             <Home className="w-4 h-4" />
             חזרה לעמוד הבית
           </a> : <Link to="/">
@@ -133,7 +133,7 @@ export default function BookingSuccess({ appointment, onReset, hidePrices = fals
           className={`w-full gap-2 sm:w-auto ${clinicSite ? clinicPrimaryBtn : "rounded-xl"}`}
         >
           <Link
-            to="/"
+            to={bookingBasePath ? "/book" : "/"}
             onClick={() => onReset?.()}
           >
             <CalendarPlus className="w-4 h-4" />

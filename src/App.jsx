@@ -44,7 +44,7 @@ const AuthenticatedApp = () => {
   // Render the main app
   return (
     <Routes>
-      <Route path="/" element={bookingBasePath ? <Book /> : <Home />} />
+      <Route path="/" element={<Home />} />
       <Route path="/book" element={<Book />} />
       <Route path="/gift" element={<GiftVoucher />} />
       <Route path="/gift/card" element={<GiftVoucherCard />} />

@@ -118,6 +118,10 @@ const OFIRBABY_BOOKING_SITE = {
   ...CLINIC_SITES["maya-clinic.vercel.app"],
   clinicTitle: "אופיר – מרכז טיפול הוליסטי",
   clinicPhone: "0549003010",
+  heroExternalLinks: [
+    { label: "מידע על טיפולים", url: "https://www.ofirbaby.com/medical-massage", icon: "lotus" },
+    { label: "מידע על מוצרים", url: "https://www.ofirbaby.com/products", icon: "home-leaf" },
+  ],
 };
 
 export function getClinicSite(hostname = typeof window !== "undefined" ? window.location.hostname : "") {
