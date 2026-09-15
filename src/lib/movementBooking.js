@@ -1,9 +1,10 @@
+import { bookingFetch } from "@/lib/bookingMount";
 /**
  * Movement (מובמנט) booking — confirm without credit/PayBox payment.
  */
 
 export async function createMovementBooking(booking) {
-  const response = await fetch("/api/public-data", {
+  const response = await bookingFetch("/api/public-data", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

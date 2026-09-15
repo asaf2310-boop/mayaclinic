@@ -25,12 +25,16 @@ export default function TreatmentSelector({
       <label className={clinicSite ? clinicFormLabel : "text-sm font-semibold text-foreground"}>
         בחרו טיפול *
       </label>
-      <div className="grid gap-3">
+      <div className="grid gap-3" role="radiogroup" aria-label="בחירת טיפול">
         {treatments.map((t) => {
           const isSelected = selectedId === t.id;
           return (
             <Card
               key={t.id}
+              role="radio"
+              aria-checked={isSelected}
+              tabIndex={0}
+              onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onSelect(t); } }}
               onClick={() => onSelect(t)}
               className={
                 clinicSite

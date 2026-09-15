@@ -1,3 +1,4 @@
+import { bookingFetch } from "@/lib/bookingMount";
 import { backendMode } from "@/api/base44Client";
 
 export async function sendBookingConfirmationEmail(appointmentIds = []) {
@@ -5,7 +6,7 @@ export async function sendBookingConfirmationEmail(appointmentIds = []) {
   if (!appointmentIds.length) return;
 
   try {
-    await fetch("/api/send-booking-email", {
+    await bookingFetch("/api/send-booking-email", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ appointmentIds }),

@@ -1,3 +1,4 @@
+import { bookingBasePath } from "@/lib/bookingMount";
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { base44, backendMode } from "@/api/base44Client";
@@ -60,7 +61,7 @@ export default function ClinicBootstrap() {
 
   useEffect(() => {
     const site = getClinicSite();
-    if (!site || ranRef.current) return;
+    if (bookingBasePath || !site || ranRef.current) return;
     if (backendMode === "demo") return;
 
     if (backendMode !== "supabase") {

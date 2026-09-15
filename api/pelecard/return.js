@@ -1,4 +1,4 @@
-import { resolvePublicOrigin } from "../../server/pelecard.js";
+import { resolveBookingPublicBase } from "../../server/bookingMount.js";
 
 /**
  * Pelecard GoodURL / ErrorURL landing page.
@@ -31,7 +31,9 @@ export default async function handler(req, res) {
   const isSuccess = outcome === "good" && (!statusCode || statusCode === "000");
   const bookingRef = String(params.ref || params.ParamX || params.UserKey || "").trim();
   const sessionToken = String(params.token || "").trim();
-  const origin = resolvePublicOrigin(req);
+  let origin;
+  try { origin = resolveBookingPublicBase(req, params.bookingBasePath || ""); }
+  catch { res.status(400).send("Invalid booking return configuration"); return; }
 
   // Token may be empty here (intentionally omitted from GoodURL / stripped by Pelecard).
   // The HTML bridge restores it from sessionStorage before redirecting to the SPA.

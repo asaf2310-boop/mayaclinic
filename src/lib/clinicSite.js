@@ -1,3 +1,4 @@
+import { bookingBasePath } from "./bookingMount";
 export const CLINIC_SITES = {
 
   "maya-clinic.vercel.app": {
@@ -105,10 +106,18 @@ const MAYA_CLINIC_HOSTS = new Set([
   "127.0.0.1",
 ]);
 
+// Match the verified contact and brand in the main site's data/site.ts.
+const OFIRBABY_BOOKING_SITE = {
+  ...CLINIC_SITES["maya-clinic.vercel.app"],
+  clinicTitle: "אופיר – מרכז טיפול הוליסטי",
+  clinicPhone: "0549003010",
+};
+
 export function getClinicSite(hostname = typeof window !== "undefined" ? window.location.hostname : "") {
 
   const host = String(hostname).toLowerCase().split(":")[0];
 
+  if (bookingBasePath) return OFIRBABY_BOOKING_SITE;
   if (MAYA_CLINIC_HOSTS.has(host)) {
     return CLINIC_SITES["maya-clinic.vercel.app"];
   }

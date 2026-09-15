@@ -49,6 +49,9 @@ export default function BookingForm({
   onSubmit,
   isSubmitting,
   requireEmail = false,
+  step = "all",
+  onStepChange,
+  initialData,
 }) {
   const clinicSite = getClinicSite();
   const timeSlotsRef = useRef(null);
@@ -56,10 +59,11 @@ export default function BookingForm({
     patient_name: "",
     patient_phone: "",
     patient_email: "",
-    date: "",
-    time: "",
     notes: "",
     marketing_consent: false,
+    ...initialData,
+    date: initialData?.appointments?.[0]?.date || "",
+    time: initialData?.appointments?.[0]?.time || "",
   });
 
   const {
@@ -181,6 +185,7 @@ export default function BookingForm({
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (step !== "all" && step !== "details") return;
     if (!selectedTreatment || !form.patient_name || !form.patient_phone || !hasCompleteSelection) return;
     onSubmit({
       patient_name: form.patient_name,
@@ -225,54 +230,7 @@ export default function BookingForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="name" className={labelClass}>שם מלא *</Label>
-          <Input
-            id="name"
-            placeholder="הכניסו את שמכם"
-            value={form.patient_name}
-            onChange={(e) => handleChange("patient_name", e.target.value)}
-            required
-            className={inputClass}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="phone" className={labelClass}>טלפון *</Label>
-          <Input
-            id="phone"
-            type="tel"
-            placeholder="050-0000000"
-            value={form.patient_phone}
-            onChange={(e) => handleChange("patient_phone", e.target.value)}
-            required
-            dir="ltr"
-            className={inputClass ? `${inputClass} text-left` : "text-left"}
-          />
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="email" className={labelClass}>
-          {requireEmail ? "אימייל *" : "אימייל"}
-        </Label>
-        <Input
-          id="email"
-          type="email"
-          placeholder="your@email.com"
-          value={form.patient_email}
-          onChange={(e) => handleChange("patient_email", e.target.value)}
-          required={requireEmail}
-          dir="ltr"
-          className={inputClass ? `${inputClass} text-left` : "text-left"}
-        />
-        {requireEmail ? (
-          <p className={clinicSite ? clinicFormHint : "text-xs text-muted-foreground"}>
-            נשלח לכאן אישור הזמנת התור
-          </p>
-        ) : null}
-      </div>
-
+      <div hidden={step !== "all" && step !== "date"} className="space-y-5">
       <div className="space-y-2">
         <Label className={labelClass}>בחרו תאריך *</Label>
         {availabilityLoadError ? (
@@ -310,7 +268,7 @@ export default function BookingForm({
             hasCompleteSelection
               ? clinicSelectionBanner
               : clinicSite
-                ? "border-[#E8ECE8] bg-[#FAFBFA] text-[#6B746F]"
+                ? "border-[var(--ofir-e8ece8,#E8ECE8)] bg-[var(--ofir-fafbfa,#FAFBFA)] text-[var(--ofir-6b746f,#6B746F)]"
                 : "border-border bg-muted/30 text-muted-foreground"
           }`}
           role="status"
@@ -329,6 +287,64 @@ export default function BookingForm({
           </p>
         </div>
       )}
+
+      {step !== "all" && <div className="flex gap-3">
+        <Button type="button" variant="outline" onClick={() => onStepChange("treatment")}>חזרה לטיפולים</Button>
+        <Button type="button" className="ofir-next flex-1" disabled={!hasCompleteSelection || isFetchingAppointments} onClick={() => onStepChange("details")}>המשך לפרטים</Button>
+      </div>}
+      </div>
+      <div hidden={step !== "all" && step !== "details"} className="space-y-5">
+      {step !== "all" && <div className="flex items-center justify-between gap-3 text-sm">
+        <p>{formattedSelectedDate} · {form.time}</p>
+        <Button type="button" variant="outline" onClick={() => onStepChange("date")}>שינוי מועד</Button>
+      </div>}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="name" className={labelClass}>שם מלא *</Label>
+          <Input
+            id="name"
+            placeholder="הכניסו את שמכם"
+            value={form.patient_name}
+            onChange={(e) => handleChange("patient_name", e.target.value)}
+            required={step === "all" || step === "details"}
+            className={inputClass}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="phone" className={labelClass}>טלפון *</Label>
+          <Input
+            id="phone"
+            type="tel"
+            placeholder="050-0000000"
+            value={form.patient_phone}
+            onChange={(e) => handleChange("patient_phone", e.target.value)}
+            required={step === "all" || step === "details"}
+            dir="ltr"
+            className={inputClass ? `${inputClass} text-left` : "text-left"}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="email" className={labelClass}>
+          {requireEmail ? "אימייל *" : "אימייל"}
+        </Label>
+        <Input
+          id="email"
+          type="email"
+          placeholder="your@email.com"
+          value={form.patient_email}
+          onChange={(e) => handleChange("patient_email", e.target.value)}
+          required={requireEmail && (step === "all" || step === "details")}
+          dir="ltr"
+          className={inputClass ? `${inputClass} text-left` : "text-left"}
+        />
+        {requireEmail ? (
+          <p className={clinicSite ? clinicFormHint : "text-xs text-muted-foreground"}>
+            נשלח לכאן אישור הזמנת התור
+          </p>
+        ) : null}
+      </div>
 
       <div className="space-y-2">
         <Label htmlFor="notes" className={labelClass}>הערות נוספות</Label>
@@ -352,7 +368,7 @@ export default function BookingForm({
         <Checkbox
           checked={form.marketing_consent}
           onCheckedChange={(checked) => handleChange("marketing_consent", Boolean(checked))}
-          className="mt-1 border-[#DDE4DD] data-[state=checked]:border-[#5D7F6D] data-[state=checked]:bg-[#5D7F6D]"
+          className="mt-1 border-[var(--ofir-dde4dd,#DDE4DD)] data-[state=checked]:border-[var(--ofir-5d7f6d,#5D7F6D)] data-[state=checked]:bg-[var(--ofir-5d7f6d,#5D7F6D)]"
         />
         <span className={clinicSite ? undefined : "text-muted-foreground"}>
           {`אני מאשר/ת קבלת עדכונים, מבצעים ותזכורות שיווקיות מ${clinicSite?.clinicTitle ?? "הקליניקה"}.`}
@@ -373,7 +389,8 @@ export default function BookingForm({
           !form.patient_name ||
           !form.patient_phone ||
           !hasCompleteSelection ||
-          isSubmitting
+          isSubmitting ||
+          isFetchingAppointments
         }
       >
         {isSubmitting ? (
@@ -383,6 +400,7 @@ export default function BookingForm({
         )}
         {isSubmitting ? "שולח..." : "אישור הזמנה"}
       </Button>
+      </div>
     </form>
   );
 }

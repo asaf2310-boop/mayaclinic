@@ -1,3 +1,5 @@
+import { bookingBasePath } from "@/lib/bookingMount";
+import { bookingFetch } from "@/lib/bookingMount";
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { appParams } from '@/lib/app-params';
@@ -21,7 +23,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const checkAppState = async () => {
-    if (demoModeEnabled) {
+    if (bookingBasePath || demoModeEnabled) {
       setAuthError(null);
       setAppPublicSettings({ id: 'demo', public_settings: {} });
       setIsAuthenticated(false);
@@ -35,7 +37,7 @@ export const AuthProvider = ({ children }) => {
       setAuthError(null);
       setAppPublicSettings({ id: 'supabase', public_settings: {} });
       try {
-        const response = await fetch('/api/admin?action=session');
+        const response = await bookingFetch('/api/admin?action=session');
         const data = await response.json().catch(() => ({}));
         setIsAuthenticated(Boolean(data?.ok));
         setUser(
@@ -158,7 +160,7 @@ export const AuthProvider = ({ children }) => {
     setIsAuthenticated(false);
 
     if (useSupabaseBackend()) {
-      void fetch('/api/admin?action=session', { method: 'DELETE' }).finally(() => {
+      void bookingFetch('/api/admin?action=session', { method: 'DELETE' }).finally(() => {
         if (shouldRedirect) {
           window.location.href = '/admin';
         }

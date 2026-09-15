@@ -1,3 +1,5 @@
+import { bookingBasePath } from "@/lib/bookingMount";
+import { bookingFetch } from "@/lib/bookingMount";
 export const PELECARD_MESSAGE_SOURCE = "pelecard-return";
 const PELECARD_SESSION_TOKEN_KEY = "pelecard-session-token";
 
@@ -10,7 +12,7 @@ export function createBookingRef() {
 
 export async function fetchPelecardStatus() {
   try {
-    const response = await fetch("/api/pelecard/status");
+    const response = await bookingFetch("/api/pelecard/status");
     if (!response.ok) return { configured: false };
     return await response.json();
   } catch {
@@ -19,10 +21,10 @@ export async function fetchPelecardStatus() {
 }
 
 export async function initPelecardSession({ amount, bookingRef, treatmentName, booking }) {
-  const response = await fetch("/api/pelecard/init", {
+  const response = await bookingFetch("/api/pelecard/init", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ amount, bookingRef, treatmentName, booking }),
+    body: JSON.stringify({ amount, bookingRef, treatmentName, booking, bookingBasePath }),
   });
 
   const data = await response.json().catch(() => ({}));
@@ -39,7 +41,7 @@ export async function initPelecardSession({ amount, bookingRef, treatmentName, b
 }
 
 export async function initGiftVoucherSession(payload) {
-  const response = await fetch("/api/pelecard/init", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...payload, kind: "gift_voucher" }) });
+  const response = await bookingFetch("/api/pelecard/init", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...payload, kind: "gift_voucher", bookingBasePath }) });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || "לא ניתן לפתוח את התשלום");
   if (typeof sessionStorage !== "undefined" && data?.bookingRef && data?.sessionToken) sessionStorage.setItem(`${PELECARD_SESSION_TOKEN_KEY}:${data.bookingRef}`, data.sessionToken);
@@ -52,7 +54,7 @@ export async function validatePelecardSession(payload = {}) {
     String(payload.token || payload.sessionToken || "").trim() ||
     getStoredPelecardSessionToken(bookingRef);
 
-  const response = await fetch("/api/pelecard/validate", {
+  const response = await bookingFetch("/api/pelecard/validate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...payload, bookingRef, token }),
@@ -75,7 +77,7 @@ export function getStoredPelecardSessionToken(bookingRef) {
 
 export async function fetchPelecardSession(bookingRef, sessionToken = "") {
   const token = String(sessionToken || getStoredPelecardSessionToken(bookingRef) || "").trim();
-  const response = await fetch(
+  const response = await bookingFetch(
     `/api/pelecard/session?ref=${encodeURIComponent(bookingRef)}&token=${encodeURIComponent(token)}`
   );
   const data = await response.json().catch(() => ({}));

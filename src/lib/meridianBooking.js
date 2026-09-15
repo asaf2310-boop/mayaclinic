@@ -1,9 +1,10 @@
+import { bookingFetch } from "@/lib/bookingMount";
 /**
  * Meridian benefit booking + treatment-ID verification against clinic email.
  */
 
 export async function checkMeridianTreatmentId(treatmentId) {
-  const response = await fetch("/api/public-data", {
+  const response = await bookingFetch("/api/public-data", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -27,7 +28,7 @@ export async function createMeridianBooking(booking) {
     ...rest
   } = booking || {};
 
-  const response = await fetch("/api/public-data", {
+  const response = await bookingFetch("/api/public-data", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -48,7 +49,7 @@ export async function createMeridianBooking(booking) {
 
 /** Admin / legacy: verify pending Meridian appointments against IMAP. */
 export async function verifyMeridianTreatmentId({ appointmentIds, treatmentId }) {
-  const response = await fetch("/api/public-data", {
+  const response = await bookingFetch("/api/public-data", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

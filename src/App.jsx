@@ -1,3 +1,5 @@
+import { bookingBasePath } from "@/lib/bookingMount";
+import OfirBookingShell from "@/components/booking/OfirBookingShell";
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
@@ -42,7 +44,7 @@ const AuthenticatedApp = () => {
   // Render the main app
   return (
     <Routes>
-      <Route path="/" element={<Home />} />
+      <Route path="/" element={bookingBasePath ? <Book /> : <Home />} />
       <Route path="/book" element={<Book />} />
       <Route path="/gift" element={<GiftVoucher />} />
       <Route path="/gift/card" element={<GiftVoucherCard />} />
@@ -65,10 +67,12 @@ function App() {
       <QueryClientProvider client={queryClientInstance}>
         <DemoDocumentTitle />
         <ClinicBootstrap />
-        <Router>
+        <Router basename={bookingBasePath || "/"}>
+          <OfirBookingShell>
           <ScrollToTop />
           <AdminPwaManifest />
           <AuthenticatedApp />
+        </OfirBookingShell>
         </Router>
         <Toaster />
       </QueryClientProvider>

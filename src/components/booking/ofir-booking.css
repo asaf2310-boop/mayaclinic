@@ -1,0 +1,61 @@
+@import url('https://fonts.googleapis.com/css2?family=Bellefair&display=swap');
+
+body.ofirbaby-booking, body.clinic-site.ofirbaby-booking {
+  background: #fbf8f3;
+  color: #2c2724;
+  --background: 38 50% 97%;
+  --foreground: 23 10% 16%;
+  --primary: 29 30% 42%;
+  --primary-foreground: 38 50% 97%;
+  --ring: 29 30% 42%;
+  --border: 36 38% 85%;
+  --muted-foreground: 35 11% 39%;
+  --radius: 0.5rem;
+}
+.ofirbaby-booking .page-background::before { display: none; }
+.ofirbaby-booking h1, .ofirbaby-booking h2, .ofirbaby-booking h3 {
+  font-family: 'Bellefair', Georgia, serif;
+  font-weight: 400;
+}
+.ofirbaby-booking h1 { font-size: clamp(2rem, 5vw, 2.75rem); }
+.ofirbaby-booking main { padding-top: 2.5rem; }
+.ofir-booking-header {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  min-height: 72px; padding: 12px max(16px, calc((100vw - 1152px) / 2));
+  background: #fbf8f3f2; border-bottom: 1px solid #e7dbc9;
+  backdrop-filter: blur(4px);
+}
+.ofir-booking-brand { display: flex; align-items: center; gap: 12px; color: #2c2724; }
+.ofir-booking-brand img { object-fit: contain; }
+.ofir-booking-brand strong { display: block; font: 400 1rem 'Bellefair', Georgia, serif; }
+.ofir-booking-brand small { display: block; font-size: 10px; letter-spacing: .28em; color: #64492f; }
+.ofir-back-home { font-size: 13px; color: #64492f; white-space: nowrap; }
+.ofir-booking-footer { padding: 24px 16px; text-align: center; font-size: 11px; color: #6f6659; }
+.ofir-booking-steps { display: flex; justify-content: center; gap: .6rem; margin-bottom: 2rem; font-size: .8rem; color: #6f6659; }
+.ofir-booking-steps [aria-current="step"] { color: #64492f; font-weight: 700; }
+.ofirbaby-booking :focus-visible { outline: 2px solid #8b6a4b; outline-offset: 3px; }
+@media (max-width: 380px) { .ofir-booking-brand strong { font-size: .85rem; } }
+@media (prefers-reduced-motion: reduce) {
+  .ofirbaby-booking *, .ofirbaby-booking *::before, .ofirbaby-booking *::after {
+    animation-duration: .01ms !important; transition-duration: .01ms !important;
+  }
+}
+
+.ofirbaby-booking {
+  --ofir-2f3b34: #2c2724;
+  --ofir-6b746f: #6f6659;
+  --ofir-5d7f6d: #8b6a4b;
+  --ofir-4f6f5f: #64492f;
+  --ofir-e8ece8: #e7dbc9;
+  --ofir-dde4dd: #d9c6ad;
+  --ofir-f0f4f1: #f1e8db;
+  --ofir-f7f8f6: #fbf8f3;
+  --ofir-f7faf8: #f6efe5;
+  --ofir-fafbfa: #fbf8f3;
+  --ofir-7f9b8a: #97a58f;
+  --ofir-c5ccc8: #c5bbae;
+  --ofir-8a958f: #6f6659;
+  --ofir-9a8470: #6f6659;
+}
+.ofirbaby-booking button[type="submit"], .ofirbaby-booking .ofir-next { border-radius: 6px; }

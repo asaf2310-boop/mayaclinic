@@ -1,7 +1,7 @@
+import { resolveBookingPublicBase } from "../../server/bookingMount.js";
 import {
   getPelecardConfig,
   initPelecardPayment,
-  resolvePublicOrigin,
   shekelsToAgorot,
 } from "../../server/pelecard.js";
 import {
@@ -82,7 +82,8 @@ export default async function handler(req, res) {
       (typeof crypto !== "undefined" && crypto.randomUUID
         ? crypto.randomUUID()
         : `book_${Date.now()}`);
-    const origin = resolvePublicOrigin(req);
+    const origin = resolveBookingPublicBase(req, body.bookingBasePath || "");
+    const mountQuery = body.bookingBasePath === "/booking" ? "&bookingBasePath=/booking" : "";
     if (!origin) {
       res.status(500).json({ error: "Cannot resolve public origin" });
       return;
@@ -92,8 +93,8 @@ export default async function handler(req, res) {
     // Browser lands here (FeedbackOnTop) → redirects to SPA success/failure.
     // Keep Good/Error URLs short: Pelecard may drop long query strings (session token).
     // Token is recovered from sessionStorage on the return page / SPA.
-    const goodUrl = `${origin}/api/pelecard/return?outcome=good&ref=${encodeURIComponent(bookingRef)}`;
-    const errorUrl = `${origin}/api/pelecard/return?outcome=error&ref=${encodeURIComponent(bookingRef)}`;
+    const goodUrl = `${origin}/api/pelecard/return?outcome=good&ref=${encodeURIComponent(bookingRef)}${mountQuery}`;
+    const errorUrl = `${origin}/api/pelecard/return?outcome=error&ref=${encodeURIComponent(bookingRef)}${mountQuery}`;
     // Pelecard server notifies our backend (authoritative).
     const serverSideGoodFeedbackUrl = `${origin}/api/pelecard/feedback?outcome=good&ref=${encodeURIComponent(bookingRef)}`;
     const serverSideErrorFeedbackUrl = `${origin}/api/pelecard/feedback?outcome=error&ref=${encodeURIComponent(bookingRef)}`;

@@ -1,3 +1,5 @@
+import { bookingBasePath } from "@/lib/bookingMount";
+import { OfirBookingHeader } from "@/components/booking/OfirBookingShell";
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X, Shield } from "lucide-react";
@@ -22,6 +24,7 @@ export default function Navbar() {
   const clinicSite = getClinicSite();
 
   useEffect(() => {
+    if (bookingBasePath) return;
     base44.auth.me().then((user) => {
       if (user?.role === "admin") setIsAdmin(true);
     }).catch(() => {});
@@ -81,6 +84,8 @@ export default function Navbar() {
         </button>
   </>
   );
+
+  if (bookingBasePath) return <OfirBookingHeader />;
 
   if (isClinic) {
     return (

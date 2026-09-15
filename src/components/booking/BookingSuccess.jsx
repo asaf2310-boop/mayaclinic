@@ -1,3 +1,4 @@
+import { bookingBasePath } from "@/lib/bookingMount";
 import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -103,7 +104,7 @@ export default function BookingSuccess({ appointment, onReset, hidePrices = fals
           {!hidePrices && (
             <div
               className={`mt-3 flex justify-between border-t pt-3 ${
-                clinicSite ? "border-[#E8ECE8]" : "border-border"
+                clinicSite ? "border-[var(--ofir-e8ece8,#E8ECE8)]" : "border-border"
               }`}
             >
               <span className={clinicSite ? clinicTextMuted : "text-muted-foreground"}>לתשלום:</span>
@@ -119,10 +120,13 @@ export default function BookingSuccess({ appointment, onReset, hidePrices = fals
           variant="outline"
           className={`w-full gap-2 sm:w-auto ${clinicSite ? clinicOutlineBtn : "rounded-xl"}`}
         >
-          <Link to="/">
+          {bookingBasePath ? <a href="/">
             <Home className="w-4 h-4" />
             חזרה לעמוד הבית
-          </Link>
+          </a> : <Link to="/">
+            <Home className="w-4 h-4" />
+            חזרה לעמוד הבית
+          </Link>}
         </Button>
         <Button
           asChild

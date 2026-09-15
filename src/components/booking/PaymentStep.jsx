@@ -1,3 +1,4 @@
+import { bookingUrl } from "@/lib/bookingMount";
 import React, { useEffect, useState } from "react";
 import { ArrowRight, Banknote, CheckCircle2, CreditCard, Gift, Loader2, Lock, ShieldCheck, Wallet } from "lucide-react";
 import { format } from "date-fns";
@@ -31,8 +32,8 @@ import { getClinicTenantId } from "@/lib/tenant";
 import BookingSuccess from "./BookingSuccess";
 import { redeemGiftVoucher } from "@/lib/giftVoucher";
 
-const VISA_LOGO = "/payment/visa-logo.svg";
-const MASTERCARD_LOGO = "/payment/mastercard-logo.svg";
+const VISA_LOGO = bookingUrl("/payment/visa-logo.svg");
+const MASTERCARD_LOGO = bookingUrl("/payment/mastercard-logo.svg");
 
 /**
  * Always embed Pelecard in an iframe (not a top-level redirect).
@@ -102,7 +103,7 @@ export default function PaymentStep({
   const valueClass = clinicSite ? clinicTextHeading : "text-foreground";
   const primaryClass = clinicSite ? clinicTextPrimary : "text-foreground";
   const ctaClass = clinicSite
-    ? "rounded-2xl bg-[#5D7F6D] text-white shadow-[0_8px_24px_rgba(93,127,109,0.22)] hover:bg-[#4F6F5F]"
+    ? "rounded-2xl bg-[var(--ofir-5d7f6d,#5D7F6D)] text-white shadow-[0_8px_24px_rgba(93,127,109,0.22)] hover:bg-[var(--ofir-4f6f5f,#4F6F5F)]"
     : "rounded-xl bg-primary text-primary-foreground";
   const payboxDetails = getPayboxPaymentDetails(
     resolvePayboxLink(treatment, clinicSite),
@@ -439,7 +440,7 @@ export default function PaymentStep({
         showCheckout
           ? "overflow-visible p-0"
           : clinicSite
-            ? "overflow-hidden rounded-2xl border border-[#D5E0D8]/80 bg-gradient-to-b from-[#F3F7F4]/95 via-[#EAF1EC]/90 to-[#F7F8F6]/95 p-4 shadow-[0_12px_36px_rgba(93,127,109,0.1)] backdrop-blur-[18px] sm:rounded-[28px] sm:p-6 md:p-8"
+            ? "overflow-hidden rounded-2xl border border-[#D5E0D8]/80 bg-gradient-to-b from-[#F3F7F4]/95 via-[#EAF1EC]/90 to-[var(--ofir-f7f8f6,#F7F8F6)]/95 p-4 shadow-[0_12px_36px_rgba(93,127,109,0.1)] backdrop-blur-[18px] sm:rounded-[28px] sm:p-6 md:p-8"
             : "overflow-hidden py-4"
       }`}
       dir="rtl"
@@ -448,7 +449,7 @@ export default function PaymentStep({
         <>
           <div
             aria-hidden
-            className="pointer-events-none absolute -left-20 top-6 hidden h-40 w-40 rounded-full bg-[#5D7F6D]/10 blur-3xl sm:block"
+            className="pointer-events-none absolute -left-20 top-6 hidden h-40 w-40 rounded-full bg-[var(--ofir-5d7f6d,#5D7F6D)]/10 blur-3xl sm:block"
           />
           <div
             aria-hidden
@@ -462,7 +463,7 @@ export default function PaymentStep({
           <div
             className={`mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl sm:mb-4 sm:h-16 sm:w-16 ${
               clinicSite
-                ? "border border-[#D5E0D8] bg-[#F0F4F1]/90 shadow-[0_8px_24px_rgba(93,127,109,0.1)]"
+                ? "border border-[#D5E0D8] bg-[var(--ofir-f0f4f1,#F0F4F1)]/90 shadow-[0_8px_24px_rgba(93,127,109,0.1)]"
                 : "bg-primary/10"
             }`}
           >
@@ -499,7 +500,7 @@ export default function PaymentStep({
         <div
           className={`relative mb-5 space-y-3 rounded-2xl p-4 text-sm sm:mb-6 sm:p-5 ${
             clinicSite
-              ? "border border-[#D5E0D8]/90 bg-[#F7FAF8]/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]"
+              ? "border border-[#D5E0D8]/90 bg-[var(--ofir-f7faf8,#F7FAF8)]/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]"
               : "bg-muted/50"
           }`}
         >
@@ -541,7 +542,7 @@ export default function PaymentStep({
           {!hidePrices && (
             <div
               className={`flex items-center justify-between gap-3 border-t pt-3 ${
-                clinicSite ? "border-[#E8ECE8]" : "border-border"
+                clinicSite ? "border-[var(--ofir-e8ece8,#E8ECE8)]" : "border-border"
               }`}
             >
               <span className={mutedClass}>לתשלום</span>
@@ -553,7 +554,7 @@ export default function PaymentStep({
           {isMovement && (
             <div
               className={`border-t pt-3 text-sm ${
-                clinicSite ? "border-[#E8ECE8]" : "border-border"
+                clinicSite ? "border-[var(--ofir-e8ece8,#E8ECE8)]" : "border-border"
               } ${mutedClass}`}
             >
               לקוחות מובמנט — ללא הצגת מחיר באתר · כל תור 60 דקות
@@ -602,7 +603,7 @@ export default function PaymentStep({
               <div
                 className={`rounded-2xl border p-4 text-center text-sm leading-6 ${
                   clinicSite
-                    ? "border-[#D5E0D8] bg-[#F7FAF8]/90 text-[#2F3E35]"
+                    ? "border-[#D5E0D8] bg-[var(--ofir-f7faf8,#F7FAF8)]/90 text-[#2F3E35]"
                     : "border-border bg-muted/40 text-foreground"
                 }`}
               >
@@ -666,7 +667,7 @@ export default function PaymentStep({
                 disabled={!payboxDetails.isConfigured}
                 className={`mb-2.5 flex w-full items-center justify-center gap-2.5 border px-4 py-3.5 text-[15px] font-semibold transition-transform active:scale-[0.99] disabled:opacity-60 sm:gap-3 sm:px-6 sm:py-4 sm:text-base ${
                   clinicSite
-                    ? "rounded-2xl border-[#D5E0D8] bg-white/90 text-[#2F3E35] hover:bg-[#F7FAF8]"
+                    ? "rounded-2xl border-[#D5E0D8] bg-white/90 text-[#2F3E35] hover:bg-[var(--ofir-f7faf8,#F7FAF8)]"
                     : "rounded-xl border-border bg-background text-foreground"
                 }`}
                 aria-label={`תשלום בפייבוקס על סך ${payboxDetails.amountDisplay}`}
@@ -722,7 +723,7 @@ export default function PaymentStep({
               )}
               <div className="my-5 flex items-center gap-3"><div className="h-px flex-1 bg-[#D5E0D8]"/><span className={mutedClass}>או</span><div className="h-px flex-1 bg-[#D5E0D8]"/></div>
               <form onSubmit={handleRedeemVoucher} className="space-y-3">
-                <label className="block text-right"><span className={`mb-2 block text-sm font-medium ${valueClass}`}>מספר שובר מתנה</span><input value={voucherCode} onChange={(event)=>{setVoucherCode(event.target.value.toUpperCase());setVoucherError("");}} placeholder="OFIR-XXXXXX" autoComplete="off" className="w-full rounded-2xl border border-[#D5E0D8] bg-white px-4 py-3 text-left font-mono uppercase tracking-wider outline-none focus:ring-2 focus:ring-[#5D7F6D]/25" dir="ltr" /></label>
+                <label className="block text-right"><span className={`mb-2 block text-sm font-medium ${valueClass}`}>מספר שובר מתנה</span><input value={voucherCode} onChange={(event)=>{setVoucherCode(event.target.value.toUpperCase());setVoucherError("");}} placeholder="OFIR-XXXXXX" autoComplete="off" className="w-full rounded-2xl border border-[#D5E0D8] bg-white px-4 py-3 text-left font-mono uppercase tracking-wider outline-none focus:ring-2 focus:ring-[var(--ofir-5d7f6d,#5D7F6D)]/25" dir="ltr" /></label>
                 {voucherError && <p className="text-center text-sm text-[#9B2C2C]">{voucherError}</p>}
                 <button type="submit" disabled={voucherLoading || voucherCode.replace(/[\s-]/g, "").length < 10} className={`flex w-full items-center justify-center gap-2 px-4 py-3.5 font-semibold disabled:opacity-50 ${ctaClass}`}>{voucherLoading?<Loader2 className="h-5 w-5 animate-spin"/>:<Gift className="h-5 w-5"/>}מימוש שובר ואישור התור</button>
               </form>
@@ -788,7 +789,7 @@ export default function PaymentStep({
         }}
         className={`relative flex w-full items-center justify-center gap-1 py-2.5 text-sm transition-colors ${
           clinicSite
-            ? `${clinicTextMuted} hover:text-[#5D7F6D]`
+            ? `${clinicTextMuted} hover:text-[var(--ofir-5d7f6d,#5D7F6D)]`
             : "text-muted-foreground hover:text-foreground"
         }`}
       >

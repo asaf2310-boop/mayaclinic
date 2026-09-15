@@ -1,3 +1,4 @@
+import { bookingFetch, bookingBasePath } from "@/lib/bookingMount";
 import { cleanEnvValue, supabaseAnonKey, supabaseConfigured, supabaseUrl } from "./supabase";
 import { getClinicTenantId } from "@/lib/tenant";
 import {
@@ -57,7 +58,7 @@ function withTenantId(row = {}) {
 }
 
 async function requestJson(url, options = {}) {
-  const response = await fetch(url, {
+  const response = await bookingFetch(url, {
     ...options,
     headers: requestHeaders(options.headers),
   });
@@ -212,7 +213,7 @@ async function fetchPublicEntity(tableName, filters = {}, order = "", limit = 10
     params.set("order", String(order));
   }
 
-  const response = await fetch(`/api/public-data?${params.toString()}`);
+  const response = await bookingFetch(`/api/public-data?${params.toString()}`);
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     throw new Error(data?.error || "Failed to load public clinic data");
@@ -250,7 +251,7 @@ async function requestAdminEntity(action, entity, { id = "", row, filters = {}, 
   params.set("limit", String(limit));
   params.set("offset", String(offset));
 
-  const response = await fetch(`/api/admin?${params.toString()}`, {
+  const response = await bookingFetch(`/api/admin?${params.toString()}`, {
     method:
       action === "create" ? "POST" : action === "update" ? "PATCH" : action === "delete" ? "DELETE" : "GET",
     headers: row ? { "Content-Type": "application/json" } : undefined,
@@ -271,8 +272,12 @@ function createSupabasePublicEntity(tableName) {
 
   return {
     async filter(filters = {}) {
-      // Anonymous booking: go straight to public-data after we know admin is locked.
-      if (preferPublicReads && skipAdminReadsForPublicTables) {
+      // Mounted /booking always uses public-data. Anonymous clinic booking
+      // also skips admin after we know it is locked.
+      if (
+        (bookingBasePath && preferPublicReads) ||
+        (preferPublicReads && skipAdminReadsForPublicTables)
+      ) {
         return fetchPublicEntity(tableName, filters);
       }
       try {
@@ -288,7 +293,10 @@ function createSupabasePublicEntity(tableName) {
     },
 
     async list(order = "-created_at", limit = 100, offset = 0) {
-      if (preferPublicReads && skipAdminReadsForPublicTables) {
+      if (
+        (bookingBasePath && preferPublicReads) ||
+        (preferPublicReads && skipAdminReadsForPublicTables)
+      ) {
         return fetchPublicEntity(tableName, {}, order, limit, offset);
       }
       try {

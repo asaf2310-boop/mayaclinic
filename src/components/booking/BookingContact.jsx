@@ -13,7 +13,7 @@ export default function BookingContact() {
   const whatsappUrl = buildWhatsAppUrl(clinicPhone);
 
   return (
-    <div className="space-y-3 border-t border-[#E8ECE8] pt-5">
+    <div className="space-y-3 border-t border-[var(--ofir-e8ece8,#E8ECE8)] pt-5">
       <p className={`text-center text-sm ${clinicSite ? clinicTextMuted : "text-muted-foreground"}`}>
         צריכים עזרה? צרו קשר
       </p>
