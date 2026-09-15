@@ -2,13 +2,39 @@
  * Meridian benefit booking + treatment-ID verification against clinic email.
  */
 
+export async function checkMeridianTreatmentId(treatmentId) {
+  const response = await fetch("/api/public-data", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "checkMeridianTreatmentId",
+      treatmentId,
+    }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data?.error || "לא ניתן לאשר את המזהה. בדקו את המספר ונסו שוב.");
+  }
+
+  return data;
+}
+
 export async function createMeridianBooking(booking) {
+  const {
+    meridianTreatmentId,
+    meridianVerificationToken,
+    ...rest
+  } = booking || {};
+
   const response = await fetch("/api/public-data", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       action: "createMeridianBooking",
-      booking,
+      booking: rest,
+      meridianTreatmentId,
+      meridianVerificationToken,
     }),
   });
 
@@ -20,6 +46,7 @@ export async function createMeridianBooking(booking) {
   return data;
 }
 
+/** Admin / legacy: verify pending Meridian appointments against IMAP. */
 export async function verifyMeridianTreatmentId({ appointmentIds, treatmentId }) {
   const response = await fetch("/api/public-data", {
     method: "POST",

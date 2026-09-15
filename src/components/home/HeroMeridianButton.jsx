@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { ShieldCheck } from "lucide-react";
 import { clinicHeroMeridianBtn, clinicHeroMeridianIconRing } from "@/lib/clinicUi";
 
-/** Meridian hero CTA → regular booking with Meridian payment step. */
+/** Meridian hero CTA → booking with verify-ID-first Meridian flow. */
 export default function HeroMeridianButton({ link }) {
   if (!link) return null;
 
