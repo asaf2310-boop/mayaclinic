@@ -66,17 +66,15 @@ function roundMoney(value) {
 }
 
 /**
- * Invoice4U / WCF accepts local datetime without timezone suffix, e.g. 2026-07-05T00:00:00
- * (docs CreateDocument example). Avoid ISO "Z" which some endpoints reject.
+ * WCF DataContractJsonSerializer requires Microsoft JSON dates:
+ * `/Date(<epoch-ms>)/` — ISO-8601 (even without Z) returns HTTP 500:
+ * "DateTime content '...' does not start with '/Date(' ..."
+ * (GitBook CreateDocument examples show ISO; production API rejects them.)
  */
-function paymentDateIso(date = new Date()) {
+export function paymentDateJson(date = new Date()) {
   const d = date instanceof Date ? date : new Date(date);
   const safe = Number.isNaN(d.getTime()) ? new Date() : d;
-  const pad = (n) => String(n).padStart(2, "0");
-  return (
-    `${safe.getFullYear()}-${pad(safe.getMonth() + 1)}-${pad(safe.getDate())}` +
-    `T${pad(safe.getHours())}:${pad(safe.getMinutes())}:${pad(safe.getSeconds())}`
-  );
+  return `/Date(${safe.getTime()})/`;
 }
 
 /**
@@ -103,11 +101,26 @@ export function resolveInvoice4uPaymentType(resultPayload = {}, hint = "") {
 
 function unwrapCreateDocumentResult(payload) {
   if (!payload || typeof payload !== "object") return payload;
+  // Production WCF REST wraps the Document in `{ d: {...} }`.
+  // Some docs / SOAP-style clients use CreateDocumentResult instead.
   return (
+    payload.d ||
     payload.CreateDocumentResult ||
     payload.CreateDocumentWithIdentifierValidationResult ||
     payload
   );
+}
+
+function isDocumentAlreadyCreatedSuccess(document, errors) {
+  if (!document || typeof document !== "object") return false;
+  const hasNumber =
+    Number(document.DocumentNumber) > 0 || Boolean(document.ID || document.Id);
+  if (!hasNumber) return false;
+  return (errors || []).some((item) => {
+    const id = Number(item?.ID ?? item?.Id);
+    const name = String(item?.Error || item?.error || "");
+    return id === 134 || name === "DocumentAlreadyCreated";
+  });
 }
 
 function formatErrors(errors) {
@@ -142,9 +155,13 @@ async function postInvoice4u(path, body, { token, baseUrl }) {
   }
 
   if (!response.ok) {
-    const err = new Error(
-      `Invoice4U HTTP ${response.status}: ${text?.slice(0, 300) || response.statusText}`
-    );
+    const detail =
+      json?.ExceptionDetail?.InnerException?.InnerException?.Message ||
+      json?.ExceptionDetail?.InnerException?.Message ||
+      json?.Message ||
+      text?.slice(0, 300) ||
+      response.statusText;
+    const err = new Error(`Invoice4U HTTP ${response.status}: ${detail}`);
     err.status = response.status;
     err.body = json || text;
     throw err;
@@ -231,7 +248,7 @@ export function buildBookingInvoiceReceiptDoc({
       {
         PaymentType: Number(paymentType) || INVOICE4U_PAYMENT_TYPE.CreditCard,
         Amount: itemsTotal,
-        Date: paymentDateIso(issueDate),
+        Date: paymentDateJson(issueDate),
         NumberOfPayments: 1,
         PaymentNumber:
           String(approvalNo || pelecardTransactionId || "").slice(-4) ||
@@ -343,7 +360,7 @@ export async function createBookingInvoiceReceipt(options = {}) {
     );
     const document = unwrapCreateDocumentResult(raw);
     const errors = Array.isArray(document?.Errors) ? document.Errors : [];
-    if (errors.length) {
+    if (errors.length && !isDocumentAlreadyCreatedSuccess(document, errors)) {
       const message = formatErrors(errors) || "Invoice4U returned Errors";
       console.error(
         "Invoice4U CreateDocument errors:",
@@ -359,6 +376,15 @@ export async function createBookingInvoiceReceipt(options = {}) {
         document,
         summary: summarizeInvoiceDocument(document, { error: message }),
       };
+    }
+
+    if (errors.length && isDocumentAlreadyCreatedSuccess(document, errors)) {
+      console.info(
+        "Invoice4U CreateDocument already_exists (134):",
+        document.DocumentNumber || document.ID,
+        options.bookingRef || "",
+        emailLabel
+      );
     }
 
     const summary = summarizeInvoiceDocument(document);
@@ -379,7 +405,8 @@ export async function createBookingInvoiceReceipt(options = {}) {
       "Invoice4U CreateDocument failed:",
       error?.message || error,
       options.bookingRef || "",
-      emailLabel
+      emailLabel,
+      error?.body ? JSON.stringify(error.body).slice(0, 500) : ""
     );
     return {
       ok: false,

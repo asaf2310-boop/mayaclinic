@@ -681,7 +681,34 @@ export async function finalizePaymentFromPelecard({
   }
 
   if (session.status === "paid" || session.status === "processing") {
-    return { session, alreadyProcessed: true };
+    // Retries / concurrent callbacks must still attempt Invoice4U when the
+    // first finalize path skipped or failed before a document was stored.
+    let invoice = null;
+    if (
+      session.status === "paid" &&
+      session.booking_payload?.kind !== "gift_voucher"
+    ) {
+      try {
+        const booking = normalizeBookingPayload(session.booking_payload || {});
+        invoice = await maybeIssueBookingInvoiceReceipt({
+          bookingRef,
+          booking,
+          totalAgorot: session.total_agorot,
+          resultPayload: resultPayload || session.result_payload,
+          pelecardTransactionId:
+            pelecardTransactionId || session.pelecard_transaction_id,
+          approvalNo: approvalNo || session.approval_no,
+          paymentHint: "credit card",
+          updateSession: (patch) => updatePaymentSession(bookingRef, patch),
+        });
+      } catch (error) {
+        console.error(
+          "Invoice4U retry on already-paid session failed:",
+          error?.message || error
+        );
+      }
+    }
+    return { session, alreadyProcessed: true, invoice };
   }
 
   const isGoodOutcome = outcome === "good";
@@ -835,7 +862,7 @@ export async function finalizePaymentFromPelecard({
     invoice = await maybeIssueBookingInvoiceReceipt({
       bookingRef,
       booking,
-      totalAgorot: session.total_agorot,
+      totalAgorot: totalAgorot,
       resultPayload,
       pelecardTransactionId,
       approvalNo,

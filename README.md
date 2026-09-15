@@ -151,7 +151,9 @@ INVOICE4U_TOKEN=your-org-api-guid
 
 - אם `INVOICE4U_TOKEN` חסר — ההזמנה מסתיימת כרגיל בלי חשבונית (בלוגים יופיע `Invoice4U skipped: not_configured`).
 - סיכום החשבונית (או סיבת דילוג/שגיאה) נשמר ב־`result_payload.invoice4u` של סשן התשלום.
-- שליחה למייל הלקוח מתבצעת דרך Invoice4U כשיש `patient_email` בהזמנה (`AssociatedEmails`).
+- שליחה למייל הלקוח מתבצעת דרך Invoice4U כשיש `patient_email` בהזמנה (`AssociatedEmails` + `IsSendDoc: true`).
+- תאריכי תשלום נשלחים בפורמט WCF `/Date(<ms>)/` (ISO מתוך הדוקומנטציה נדחה ע״י ה־API עם HTTP 500).
+- בדיקת ₪1 ידנית: `INVOICE4U_TOKEN=... node scripts/live-test-invoice4u.mjs`
 - קישור PayBox החיצוני (לא דרך Pelecard) אינו מאשר תשלום בשרת ולכן לא מפיק חשבונית אוטומטית.
 - שובר מתנה / מרידיאן / מזומן בהגעה — לא מפיקים חשבונית בנתיב הזה.
 
