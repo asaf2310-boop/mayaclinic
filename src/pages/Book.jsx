@@ -17,7 +17,9 @@ import {
   filterTreatmentsForClinic,
   getClinicSite,
   getTreatmentsForBookingChannel,
+  isBookableTreatment,
   isMomentBookingChannel,
+  pickPublicBookingTreatment,
   sortTreatmentsForPublicBooking,
 } from "@/lib/clinicSite";
 import {
@@ -81,25 +83,10 @@ export default function Book() {
   useEffect(() => {
     if (!visibleTreatments.length || selectedTreatment) return;
     if (isMeridian && !meridianVerified) return;
+    if (isMoment && visibleTreatments.length !== 1) return;
 
-    if (visibleTreatments.length === 1) {
-      setSelectedTreatment(visibleTreatments[0]);
-      return;
-    }
-
-    if (!isMoment && clinicSite?.defaultTreatmentName) {
-      const preferred = visibleTreatments.find(
-        (treatment) => String(treatment?.name || "").trim() === clinicSite.defaultTreatmentName
-      );
-      if (preferred) {
-        setSelectedTreatment(preferred);
-        return;
-      }
-    }
-
-    if (!isMoment) {
-      setSelectedTreatment(visibleTreatments[0]);
-    }
+    const nextTreatment = pickPublicBookingTreatment(visibleTreatments, clinicSite);
+    if (nextTreatment) setSelectedTreatment(nextTreatment);
   }, [clinicSite, isMoment, isMeridian, meridianVerified, selectedTreatment, visibleTreatments]);
 
   const handleFormSubmit = (formData) => {
@@ -233,7 +220,7 @@ export default function Book() {
                         {bookingBasePath ? (
                           <Button
                             className="ofir-next mt-6 w-full bg-[var(--ofir-5d7f6d)] text-white"
-                            disabled={!selectedTreatment}
+                            disabled={!isBookableTreatment(selectedTreatment)}
                             onClick={() => setStage("date")}
                           >
                             המשך לבחירת מועד
@@ -241,13 +228,15 @@ export default function Book() {
                         ) : null}
                       </div>
 
-                      <div hidden={Boolean(bookingBasePath && stage === "treatment")}>
+                      {(!bookingBasePath || stage !== "treatment") && isBookableTreatment(selectedTreatment) ? (
+                      <div>
                         <div className={`h-px ${clinicSite ? "bg-[#E8ECE8]" : "bg-border"}`} />
 
                         <BookingErrorBoundary
+                          key={selectedTreatment.id}
                           onReset={() => {
-                            setSelectedTreatment(null);
                             setPendingFormData(null);
+                            setStage("treatment");
                           }}
                         >
                           <BookingForm
@@ -261,6 +250,7 @@ export default function Book() {
                           />
                         </BookingErrorBoundary>
                       </div>
+                      ) : null}
                     </>
                   )}
 

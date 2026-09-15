@@ -200,7 +200,9 @@ export default function BookingForm({
   };
 
   const today = startOfDay(new Date());
-  const [viewMonth, setViewMonth] = useState(new Date());
+  const [viewMonth, setViewMonth] = useState(() => new Date());
+  const calendarMonth =
+    viewMonth instanceof Date && Number.isFinite(viewMonth.getTime()) ? viewMonth : new Date();
 
   const isDateAvailable = (date) => {
     if (isBefore(date, today)) return false;
@@ -239,7 +241,7 @@ export default function BookingForm({
           </p>
         ) : null}
         <BookingCalendar
-          viewMonth={viewMonth}
+          viewMonth={calendarMonth}
           onViewMonthChange={setViewMonth}
           selectedDate={selectedDate}
           onDateSelect={handleDateSelect}
@@ -290,7 +292,7 @@ export default function BookingForm({
 
       {step !== "all" && <div className="flex gap-3">
         <Button type="button" variant="outline" onClick={() => onStepChange("treatment")}>חזרה לטיפולים</Button>
-        <Button type="button" className="ofir-next flex-1" disabled={!hasCompleteSelection || isFetchingAppointments} onClick={() => onStepChange("details")}>המשך לפרטים</Button>
+        <Button type="button" className="ofir-next flex-1" disabled={!hasCompleteSelection} onClick={() => onStepChange("details")}>המשך לפרטים</Button>
       </div>}
       </div>
       <div hidden={step !== "all" && step !== "details"} className="space-y-5">
@@ -389,8 +391,7 @@ export default function BookingForm({
           !form.patient_name ||
           !form.patient_phone ||
           !hasCompleteSelection ||
-          isSubmitting ||
-          isFetchingAppointments
+          isSubmitting
         }
       >
         {isSubmitting ? (

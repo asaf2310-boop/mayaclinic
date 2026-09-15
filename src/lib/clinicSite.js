@@ -279,6 +279,24 @@ export function filterTreatmentsForClinic(treatments = [], site = getClinicSite(
   return filtered;
 }
 
+export function isBookableTreatment(treatment) {
+  return Boolean(treatment && treatment.id && String(treatment.name || "").trim());
+}
+
+/** Same catalog row a user click would pass into booking state. */
+export function pickPublicBookingTreatment(treatments = [], site = getClinicSite()) {
+  const catalog = Array.isArray(treatments) ? treatments.filter(isBookableTreatment) : [];
+  if (!catalog.length) return null;
+
+  const preferredName = String(site?.defaultTreatmentName || "").trim();
+  if (preferredName) {
+    const preferred = catalog.find((treatment) => String(treatment.name || "").trim() === preferredName);
+    if (preferred) return preferred;
+  }
+
+  return catalog[0];
+}
+
 /** Public booking list order. Admin/DB order is left unchanged. */
 export function sortTreatmentsForPublicBooking(treatments = [], site = getClinicSite()) {
   const order = Array.isArray(site?.bookingTreatmentOrder) ? site.bookingTreatmentOrder : [];
