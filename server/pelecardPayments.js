@@ -20,7 +20,12 @@ import {
 } from "./paymentSessionToken.js";
 import { hasAppointmentTimeConflict } from "../src/lib/bookingSlots.js";
 import { activateGiftVoucher, appendVoucherAppointments, redeemVoucherAtomic, restoreVoucherBalance } from "./giftVouchers.js";
-import { maybeIssueBookingInvoiceReceipt } from "./invoice4u.js";
+import {
+  hasSuccessfulInvoice4u,
+  isInvoice4uIssuing,
+  maybeIssueBookingInvoiceReceipt,
+  mergePaymentResultPayload,
+} from "./invoice4u.js";
 
 function nowIso() {
   return new Date().toISOString();
@@ -99,6 +104,72 @@ export async function updatePaymentSession(bookingRef, patch) {
     body: JSON.stringify({ ...patch, updated_at: nowIso() }),
   });
   return Array.isArray(rows) ? rows[0] : rows;
+}
+
+/**
+ * Optimistic claim before Invoice4U CreateDocument so concurrent Pelecard
+ * feedback cannot both mint invoices. Uses updated_at compare-and-swap.
+ * Returns { claimed, session, reason }.
+ */
+export async function claimInvoiceIssuance(bookingRef, claimSummary) {
+  const session = await getPaymentSessionByRef(bookingRef);
+  if (!session) {
+    return { claimed: false, reason: "missing_session", session: null };
+  }
+
+  const existing = session.result_payload?.invoice4u;
+  if (hasSuccessfulInvoice4u(existing)) {
+    return { claimed: false, reason: "already_issued", session };
+  }
+  if (isInvoice4uIssuing(existing)) {
+    return { claimed: false, reason: "issuing_in_progress", session };
+  }
+
+  const basePayload =
+    session.result_payload &&
+    typeof session.result_payload === "object" &&
+    !Array.isArray(session.result_payload)
+      ? { ...session.result_payload }
+      : {};
+  const nextPayload = {
+    ...basePayload,
+    invoice4u: claimSummary,
+  };
+
+  const ref = encodeURIComponent(String(bookingRef || "").trim());
+  const updatedAt = encodeURIComponent(String(session.updated_at || "").trim());
+  const filter = updatedAt
+    ? `pelecard_payments?booking_ref=eq.${ref}&updated_at=eq.${updatedAt}`
+    : `pelecard_payments?booking_ref=eq.${ref}`;
+
+  try {
+    const rows = await supabaseRequest(filter, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        result_payload: nextPayload,
+        updated_at: nowIso(),
+      }),
+    });
+    const updated = Array.isArray(rows) && rows[0] ? rows[0] : null;
+    if (updated) {
+      return { claimed: true, reason: "claimed", session: updated };
+    }
+  } catch (error) {
+    console.error(
+      "Invoice4U issuance claim failed:",
+      error?.message || error
+    );
+  }
+
+  const latest = await getPaymentSessionByRef(bookingRef);
+  if (hasSuccessfulInvoice4u(latest?.result_payload?.invoice4u)) {
+    return { claimed: false, reason: "already_issued", session: latest };
+  }
+  if (isInvoice4uIssuing(latest?.result_payload?.invoice4u)) {
+    return { claimed: false, reason: "issuing_in_progress", session: latest };
+  }
+  return { claimed: false, reason: "lost_race", session: latest };
 }
 
 /**
@@ -683,29 +754,47 @@ export async function finalizePaymentFromPelecard({
   if (session.status === "paid" || session.status === "processing") {
     // Retries / concurrent callbacks must still attempt Invoice4U when the
     // first finalize path skipped or failed before a document was stored.
+    // Never re-issue when result_payload.invoice4u is already ok — a fresh
+    // Pelecard resultPayload must not wipe / ignore the stored summary.
     let invoice = null;
     if (
       session.status === "paid" &&
       session.booking_payload?.kind !== "gift_voucher"
     ) {
-      try {
-        const booking = normalizeBookingPayload(session.booking_payload || {});
-        invoice = await maybeIssueBookingInvoiceReceipt({
-          bookingRef,
-          booking,
-          totalAgorot: session.total_agorot,
-          resultPayload: resultPayload || session.result_payload,
-          pelecardTransactionId:
-            pelecardTransactionId || session.pelecard_transaction_id,
-          approvalNo: approvalNo || session.approval_no,
-          paymentHint: "credit card",
-          updateSession: (patch) => updatePaymentSession(bookingRef, patch),
-        });
-      } catch (error) {
-        console.error(
-          "Invoice4U retry on already-paid session failed:",
-          error?.message || error
-        );
+      const mergedPayload = mergePaymentResultPayload(
+        session.result_payload,
+        resultPayload
+      );
+      if (!hasSuccessfulInvoice4u(mergedPayload?.invoice4u)) {
+        try {
+          const booking = normalizeBookingPayload(session.booking_payload || {});
+          invoice = await maybeIssueBookingInvoiceReceipt({
+            bookingRef,
+            booking,
+            totalAgorot: session.total_agorot,
+            resultPayload: mergedPayload,
+            pelecardTransactionId:
+              pelecardTransactionId || session.pelecard_transaction_id,
+            approvalNo: approvalNo || session.approval_no,
+            paymentHint: "credit card",
+            loadSession: () => getPaymentSessionByRef(bookingRef),
+            claimIssuance: (claimSummary) =>
+              claimInvoiceIssuance(bookingRef, claimSummary),
+            updateSession: (patch) => updatePaymentSession(bookingRef, patch),
+          });
+        } catch (error) {
+          console.error(
+            "Invoice4U retry on already-paid session failed:",
+            error?.message || error
+          );
+        }
+      } else {
+        invoice = {
+          ok: true,
+          skipped: true,
+          reason: "already_issued",
+          summary: mergedPayload.invoice4u,
+        };
       }
     }
     return { session, alreadyProcessed: true, invoice };
@@ -863,10 +952,13 @@ export async function finalizePaymentFromPelecard({
       bookingRef,
       booking,
       totalAgorot: totalAgorot,
-      resultPayload,
+      resultPayload: mergePaymentResultPayload(updated?.result_payload, resultPayload),
       pelecardTransactionId,
       approvalNo,
       paymentHint: "credit card",
+      loadSession: () => getPaymentSessionByRef(bookingRef),
+      claimIssuance: (claimSummary) =>
+        claimInvoiceIssuance(bookingRef, claimSummary),
       updateSession: (patch) => updatePaymentSession(bookingRef, patch),
     });
   } catch (error) {

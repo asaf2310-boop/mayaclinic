@@ -57,5 +57,28 @@ const invoiceSrc = readFileSync(
   "utf8"
 );
 assert.match(invoiceSrc, /IsSendDoc:\s*true/);
+assert.match(
+  invoiceSrc,
+  /CreateDocumentWithIdentifierValidation/,
+  "must use identifier-validated create for ApiIdentifier idempotency"
+);
+assert.match(invoiceSrc, /already_issued/);
+assert.match(invoiceSrc, /status:\s*"issuing"/);
+
+assert.match(
+  pelecardSrc,
+  /mergePaymentResultPayload/,
+  "paid retry must merge stored invoice4u with fresh Pelecard payload"
+);
+assert.match(
+  pelecardSrc,
+  /claimInvoiceIssuance/,
+  "finalize must claim invoice issuance before CreateDocument"
+);
+assert.match(
+  pelecardSrc,
+  /hasSuccessfulInvoice4u/,
+  "paid retry must skip when invoice already ok"
+);
 
 console.log("double-confirm guards ok");

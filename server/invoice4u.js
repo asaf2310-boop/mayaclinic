@@ -105,8 +105,8 @@ function unwrapCreateDocumentResult(payload) {
   // Some docs / SOAP-style clients use CreateDocumentResult instead.
   return (
     payload.d ||
-    payload.CreateDocumentResult ||
     payload.CreateDocumentWithIdentifierValidationResult ||
+    payload.CreateDocumentResult ||
     payload
   );
 }
@@ -121,6 +121,63 @@ function isDocumentAlreadyCreatedSuccess(document, errors) {
     const name = String(item?.Error || item?.error || "");
     return id === 134 || name === "DocumentAlreadyCreated";
   });
+}
+
+/** Successful Invoice4U summary already stored on a payment session. */
+export function hasSuccessfulInvoice4u(invoiceSummary) {
+  const inv =
+    invoiceSummary && typeof invoiceSummary === "object" ? invoiceSummary : null;
+  return Boolean(inv?.ok && (inv.documentNumber || inv.id));
+}
+
+/**
+ * Another worker claimed CreateDocument and has not finished yet.
+ * Stale claims (default 2 min) are ignored so a crashed worker can retry.
+ */
+export function isInvoice4uIssuing(invoiceSummary, { staleMs = 120_000 } = {}) {
+  const inv =
+    invoiceSummary && typeof invoiceSummary === "object" ? invoiceSummary : null;
+  if (!inv || inv.ok || inv.status !== "issuing") return false;
+  const at = Date.parse(String(inv.at || ""));
+  if (!Number.isFinite(at)) return true;
+  return Date.now() - at < staleMs;
+}
+
+export function mergePaymentResultPayload(storedPayload, incomingPayload) {
+  const stored =
+    storedPayload && typeof storedPayload === "object" && !Array.isArray(storedPayload)
+      ? storedPayload
+      : null;
+  const incoming =
+    incomingPayload &&
+    typeof incomingPayload === "object" &&
+    !Array.isArray(incomingPayload)
+      ? incomingPayload
+      : null;
+
+  if (!stored && !incoming) {
+    return incomingPayload == null ? {} : { pelecard: incomingPayload };
+  }
+  if (!stored) return { ...incoming };
+  if (!incoming) return { ...stored };
+
+  const merged = { ...stored, ...incoming };
+  // Never let a fresh Pelecard callback wipe a stored invoice summary.
+  if (hasSuccessfulInvoice4u(stored.invoice4u)) {
+    merged.invoice4u = stored.invoice4u;
+  } else if (
+    isInvoice4uIssuing(stored.invoice4u) &&
+    !hasSuccessfulInvoice4u(incoming.invoice4u)
+  ) {
+    merged.invoice4u = stored.invoice4u;
+  } else if (stored.invoice4u && !incoming.invoice4u) {
+    merged.invoice4u = stored.invoice4u;
+  }
+  return merged;
+}
+
+function newInvoiceClaimToken() {
+  return `inv-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 function formatErrors(errors) {
@@ -353,8 +410,10 @@ export async function createBookingInvoiceReceipt(options = {}) {
     : "email=(none)";
 
   try {
+    // Strict ApiIdentifier idempotency — plain /CreateDocument can still mint
+    // a second document on retries (ApiDuplicityTimeValidation is only a soft window).
     const raw = await postInvoice4u(
-      "/CreateDocument",
+      "/CreateDocumentWithIdentifierValidation",
       { doc },
       { token: config.token, baseUrl: config.baseUrl }
     );
@@ -424,6 +483,11 @@ export async function createBookingInvoiceReceipt(options = {}) {
 /**
  * Issue invoice if configured; merge summary into payment session result_payload.
  * Name imported by server/pelecardPayments.js
+ *
+ * Idempotency layers:
+ * 1. Skip when stored result_payload.invoice4u is already ok (reload via loadSession).
+ * 2. Optional claimIssuance (optimistic CAS) or in-payload "issuing" claim.
+ * 3. Invoice4U CreateDocumentWithIdentifierValidation + stable ApiIdentifier booking-{ref}.
  */
 export async function maybeIssueBookingInvoiceReceipt({
   bookingRef,
@@ -434,12 +498,29 @@ export async function maybeIssueBookingInvoiceReceipt({
   approvalNo,
   paymentHint = "",
   updateSession,
+  loadSession,
+  claimIssuance,
 }) {
-  const existing =
-    resultPayload && typeof resultPayload === "object"
-      ? resultPayload.invoice4u
-      : null;
-  if (existing?.ok && (existing.documentNumber || existing.id)) {
+  const readLatestPayload = async () => {
+    if (typeof loadSession === "function") {
+      try {
+        const latest = await loadSession();
+        const stored = latest?.result_payload;
+        return mergePaymentResultPayload(stored, resultPayload);
+      } catch (error) {
+        console.error(
+          "Invoice4U loadSession failed; using provided payload:",
+          error?.message || error
+        );
+      }
+    }
+    return mergePaymentResultPayload(null, resultPayload);
+  };
+
+  let workingPayload = await readLatestPayload();
+  let existing = workingPayload?.invoice4u || null;
+
+  if (hasSuccessfulInvoice4u(existing)) {
     console.info(
       "Invoice4U skipped: already_issued",
       existing.documentNumber || existing.id,
@@ -453,27 +534,134 @@ export async function maybeIssueBookingInvoiceReceipt({
     };
   }
 
+  if (isInvoice4uIssuing(existing)) {
+    console.info("Invoice4U skipped: issuing_in_progress", bookingRef || "");
+    return {
+      ok: false,
+      skipped: true,
+      reason: "issuing_in_progress",
+      summary: existing,
+    };
+  }
+
+  const claimToken = newInvoiceClaimToken();
+  const claimSummary = {
+    ok: false,
+    status: "issuing",
+    claimToken,
+    at: new Date().toISOString(),
+  };
+
+  if (typeof claimIssuance === "function") {
+    try {
+      const claim = await claimIssuance(claimSummary);
+      if (!claim?.claimed) {
+        const reason = claim?.reason || "issuing_in_progress";
+        const summary =
+          claim?.session?.result_payload?.invoice4u ||
+          existing ||
+          claimSummary;
+        if (hasSuccessfulInvoice4u(summary) || reason === "already_issued") {
+          return {
+            ok: true,
+            skipped: true,
+            reason: "already_issued",
+            summary,
+          };
+        }
+        console.info("Invoice4U skipped:", reason, bookingRef || "");
+        return {
+          ok: false,
+          skipped: true,
+          reason:
+            reason === "lost_race" ? "issuing_in_progress" : reason,
+          summary,
+        };
+      }
+      workingPayload = mergePaymentResultPayload(
+        claim.session?.result_payload,
+        resultPayload
+      );
+    } catch (error) {
+      console.error(
+        "Invoice4U claimIssuance failed:",
+        error?.message || error
+      );
+    }
+  } else if (typeof updateSession === "function") {
+    try {
+      await updateSession({
+        result_payload: {
+          ...workingPayload,
+          invoice4u: claimSummary,
+        },
+      });
+    } catch (error) {
+      console.error(
+        "Failed to claim Invoice4U issuance on payment session:",
+        error?.message || error
+      );
+    }
+
+    // Re-read after claim — another worker may have finished or claimed first.
+    workingPayload = await readLatestPayload();
+    existing = workingPayload?.invoice4u || null;
+    if (hasSuccessfulInvoice4u(existing)) {
+      console.info(
+        "Invoice4U skipped: already_issued_after_claim",
+        existing.documentNumber || existing.id,
+        bookingRef || ""
+      );
+      return {
+        ok: true,
+        skipped: true,
+        reason: "already_issued",
+        summary: existing,
+      };
+    }
+    if (
+      isInvoice4uIssuing(existing) &&
+      existing.claimToken &&
+      existing.claimToken !== claimToken
+    ) {
+      console.info(
+        "Invoice4U skipped: lost_issuing_claim",
+        bookingRef || ""
+      );
+      return {
+        ok: false,
+        skipped: true,
+        reason: "issuing_in_progress",
+        summary: existing,
+      };
+    }
+  }
+
   const result = await createBookingInvoiceReceipt({
     bookingRef,
     booking,
     totalAgorot,
-    resultPayload,
+    resultPayload: workingPayload,
     pelecardTransactionId,
     approvalNo,
     paymentHint,
   });
 
   if (typeof updateSession === "function" && result.summary) {
-    const basePayload =
-      resultPayload &&
-      typeof resultPayload === "object" &&
-      !Array.isArray(resultPayload)
-        ? { ...resultPayload }
-        : { pelecard: resultPayload || null };
     try {
+      const latestPayload = await readLatestPayload();
+      // If another path already stored a successful invoice, keep it.
+      if (hasSuccessfulInvoice4u(latestPayload?.invoice4u)) {
+        return {
+          ok: true,
+          skipped: true,
+          reason: "already_issued",
+          summary: latestPayload.invoice4u,
+        };
+      }
       await updateSession({
         result_payload: {
-          ...basePayload,
+          ...latestPayload,
           invoice4u: result.summary,
         },
       });
