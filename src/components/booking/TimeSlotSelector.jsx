@@ -14,6 +14,8 @@ export default function TimeSlotSelector({
   onSelect,
   isLoading = false,
 }) {
+  const slotList = Array.isArray(slots) ? slots : [];
+
   return (
     <div className="space-y-3">
       <Label className={`text-base font-bold ${clinicTextHeading}`}>בחרו שעה *</Label>
@@ -23,11 +25,11 @@ export default function TimeSlotSelector({
           <Loader2 className="h-4 w-4 animate-spin" />
           בודק שעות זמינות...
         </div>
-      ) : slots.length > 0 ? (
+      ) : slotList.length > 0 ? (
         <div className="grid grid-cols-3 gap-3">
-          {slots.map((slot) => (
+          {slotList.map((slot) => (
             <button
-              key={slot}
+              key={String(slot)}
               type="button"
               onClick={() => onSelect(slot)}
               aria-pressed={selectedSlot === slot}

@@ -18,7 +18,9 @@ export const timeToMinutes = (time) => {
 };
 
 export const getActiveAppointments = (appointments = []) =>
-  appointments.filter((appointment) => appointment.status !== "cancelled");
+  (Array.isArray(appointments) ? appointments : []).filter(
+    (appointment) => appointment.status !== "cancelled"
+  );
 
 /**
  * True when `slot` must not be offered because of an existing booking at `appointment.time`.
@@ -63,8 +65,9 @@ export const filterAvailableSlots = (
   appointments,
   { bookingDurationMinutes = 60 } = {}
 ) => {
+  const slotList = Array.isArray(slots) ? slots : [];
   const active = getActiveAppointments(appointments);
-  return (slots || []).filter(
+  return slotList.filter(
     (slot) =>
       !active.some((appointment) =>
         isSlotBlockedByAppointment(slot, appointment, { bookingDurationMinutes })
@@ -78,9 +81,9 @@ export const countAvailableSlotsByDate = (
   { bookingDurationMinutes = 60 } = {}
 ) => {
   const counts = {};
-  for (const record of availabilityRecords || []) {
-    if (!record.is_active || !record.slots?.length) continue;
-    const dayAppointments = appointmentsByDate[record.date] || [];
+  for (const record of Array.isArray(availabilityRecords) ? availabilityRecords : []) {
+    if (!record.is_active || !Array.isArray(record.slots) || !record.slots.length) continue;
+    const dayAppointments = appointmentsByDate?.[record.date] || [];
     counts[record.date] = filterAvailableSlots(record.slots, dayAppointments, {
       bookingDurationMinutes,
     }).length;

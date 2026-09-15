@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CalendarPlus, CalendarCheck, Loader2 } from "lucide-react";
-import { format, isBefore, startOfDay } from "date-fns";
+import { format, isBefore, isValid, parseISO, startOfDay } from "date-fns";
 import {
   filterAppointmentsForClinic,
   filterByClinicTenant,
@@ -29,6 +29,21 @@ import {
   filterAvailableSlots,
 } from "@/lib/bookingSlots";
 
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function safeDateLabel(isoDate) {
+  if (!isoDate) return "";
+  try {
+    const parsed = parseISO(String(isoDate));
+    if (!isValid(parsed)) return String(isoDate);
+    return format(parsed, "dd/MM/yyyy");
+  } catch {
+    return String(isoDate);
+  }
+}
+
 export default function BookingForm({
   selectedTreatment,
   onSubmit,
@@ -36,6 +51,7 @@ export default function BookingForm({
   requireEmail = false,
 }) {
   const clinicSite = getClinicSite();
+  const timeSlotsRef = useRef(null);
   const [form, setForm] = useState({
     patient_name: "",
     patient_phone: "",
@@ -47,23 +63,30 @@ export default function BookingForm({
   });
 
   const {
-    data: availabilityRecords = [],
+    data: availabilityRecordsRaw = [],
     isError: availabilityLoadError,
   } = useQuery({
     queryKey: ["availability"],
     queryFn: () => base44.entities.Availability.listAll("date"),
+    staleTime: 60_000,
   });
 
-  const { data: allAppointments = [] } = useQuery({
+  const { data: allAppointmentsRaw = [], isLoading: loadingAppointments } = useQuery({
     queryKey: ["appointments-for-booking"],
     queryFn: () => base44.entities.Appointment.list("date", 1000),
+    staleTime: 30_000,
   });
 
-  const { data: existingAppointments = [], isFetching: isFetchingAppointments } = useQuery({
+  // Soft refresh for the selected day only — never block the UI on this request.
+  const { data: freshAppointmentsRaw, isSuccess: hasFreshAppointments } = useQuery({
     queryKey: ["appointments-for-date", form.date],
     queryFn: () => base44.entities.Appointment.filter({ date: form.date }),
     enabled: !!form.date,
+    staleTime: 15_000,
   });
+
+  const availabilityRecords = asArray(availabilityRecordsRaw);
+  const allAppointments = asArray(allAppointmentsRaw);
 
   const bookingDurationMinutes = selectedTreatment?.duration_minutes ?? 60;
 
@@ -77,11 +100,6 @@ export default function BookingForm({
     [allAppointments, clinicSite]
   );
 
-  const clinicAppointmentsForDate = useMemo(
-    () => filterAppointmentsForClinic(existingAppointments, clinicSite),
-    [existingAppointments, clinicSite]
-  );
-
   const appointmentsByDate = useMemo(() => {
     const byDate = {};
     for (const appointment of clinicAppointments) {
@@ -92,9 +110,26 @@ export default function BookingForm({
     return byDate;
   }, [clinicAppointments]);
 
+  // Show times immediately from the preloaded list; swap in fresh day data when it arrives.
+  const clinicAppointmentsForDate = useMemo(() => {
+    if (!form.date) return [];
+    if (hasFreshAppointments) {
+      return filterAppointmentsForClinic(asArray(freshAppointmentsRaw), clinicSite);
+    }
+    return appointmentsByDate[form.date] || [];
+  }, [
+    form.date,
+    hasFreshAppointments,
+    freshAppointmentsRaw,
+    appointmentsByDate,
+    clinicSite,
+  ]);
+
   const activeDates = useMemo(() => {
     return new Set(
-      clinicAvailability.filter((r) => r.is_active && r.slots?.length > 0).map((r) => r.date)
+      clinicAvailability
+        .filter((r) => r.is_active && Array.isArray(r.slots) && r.slots.length > 0)
+        .map((r) => r.date)
     );
   }, [clinicAvailability]);
 
@@ -124,10 +159,23 @@ export default function BookingForm({
   };
 
   useEffect(() => {
-    if (form.time && !isFetchingAppointments && !availableSlots.includes(form.time)) {
+    if (form.time && !availableSlots.includes(form.time)) {
       handleChange("time", "");
     }
-  }, [form.time, isFetchingAppointments, availableSlots]);
+  }, [form.time, availableSlots]);
+
+  // On phones, times sit below the fold after tapping a date — scroll them into view.
+  useEffect(() => {
+    if (!form.date || !timeSlotsRef.current) return;
+    const node = timeSlotsRef.current;
+    const id = window.requestAnimationFrame(() => {
+      const rect = node.getBoundingClientRect();
+      const fullyVisible = rect.top >= 0 && rect.bottom <= window.innerHeight;
+      if (fullyVisible) return;
+      node.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [form.date]);
 
   const hasCompleteSelection = Boolean(form.date && form.time);
 
@@ -161,10 +209,16 @@ export default function BookingForm({
     handleChange("date", format(date, "yyyy-MM-dd"));
   };
 
-  const selectedDate = form.date ? new Date(form.date + "T00:00:00") : null;
-  const formattedSelectedDate = form.date
-    ? format(new Date(form.date + "T00:00:00"), "dd/MM/yyyy")
-    : null;
+  const selectedDate = useMemo(() => {
+    if (!form.date) return null;
+    try {
+      const parsed = parseISO(String(form.date));
+      return isValid(parsed) ? parsed : null;
+    } catch {
+      return null;
+    }
+  }, [form.date]);
+  const formattedSelectedDate = form.date ? safeDateLabel(form.date) : null;
 
   const labelClass = clinicSite ? clinicFormLabel : undefined;
   const inputClass = clinicSite ? clinicFormInput : undefined;
@@ -237,16 +291,18 @@ export default function BookingForm({
         />
       </div>
 
-      {form.date && (
-        <TimeSlotSelector
-          slots={availableSlots}
-          selectedSlot={form.time}
-          onSelect={(slot) => handleChange("time", slot)}
-          isLoading={isFetchingAppointments}
-          durationMinutes={selectedTreatment?.duration_minutes}
-          hoursHint={clinicSite?.bookingHoursHint}
-        />
-      )}
+      {form.date ? (
+        <div ref={timeSlotsRef} className="scroll-mt-24">
+          <TimeSlotSelector
+            slots={availableSlots}
+            selectedSlot={form.time}
+            onSelect={(slot) => handleChange("time", slot)}
+            isLoading={loadingAppointments && availableSlots.length === 0}
+            durationMinutes={selectedTreatment?.duration_minutes}
+            hoursHint={clinicSite?.bookingHoursHint}
+          />
+        </div>
+      ) : null}
 
       {form.date && (
         <div

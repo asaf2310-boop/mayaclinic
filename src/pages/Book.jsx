@@ -5,6 +5,7 @@ import { base44 } from "@/api/base44Client";
 import Navbar from "../components/layout/Navbar";
 import TreatmentSelector from "../components/booking/TreatmentSelector";
 import BookingForm from "../components/booking/BookingForm";
+import BookingErrorBoundary from "../components/booking/BookingErrorBoundary";
 import BookingContact from "../components/booking/BookingContact";
 import PaymentStep from "../components/booking/PaymentStep";
 import MeridianVerifyStep from "../components/booking/MeridianVerifyStep";
@@ -217,12 +218,19 @@ export default function Book() {
 
                       <div className={`h-px ${clinicSite ? "bg-[#E8ECE8]" : "bg-border"}`} />
 
-                      <BookingForm
-                        selectedTreatment={selectedTreatment}
-                        onSubmit={handleFormSubmit}
-                        isSubmitting={false}
-                        requireEmail
-                      />
+                      <BookingErrorBoundary
+                        onReset={() => {
+                          setSelectedTreatment(null);
+                          setPendingFormData(null);
+                        }}
+                      >
+                        <BookingForm
+                          selectedTreatment={selectedTreatment}
+                          onSubmit={handleFormSubmit}
+                          isSubmitting={false}
+                          requireEmail
+                        />
+                      </BookingErrorBoundary>
                     </>
                   )}
 
