@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { bookingBasePath, bookingUrl } from "@/lib/bookingMount";
+import { bookingUrl, isPublicBookingMount } from "@/lib/bookingMount";
 import "./ofir-booking.css";
 
 const WEBSITE_HOME = "https://www.ofirbaby.com/";
@@ -17,11 +17,12 @@ export function OfirBookingHeader() {
 }
 
 export default function OfirBookingShell({ children }) {
+  const publicMount = isPublicBookingMount();
   useEffect(() => {
-    if (!bookingBasePath) return;
+    if (!publicMount) return;
     document.body.classList.add("ofirbaby-booking");
     return () => document.body.classList.remove("ofirbaby-booking");
-  }, []);
-  if (!bookingBasePath) return children;
+  }, [publicMount]);
+  if (!publicMount) return children;
   return <>{children}<footer className="ofir-booking-footer" dir="ltr">Powered by AllInCenter</footer></>;
 }

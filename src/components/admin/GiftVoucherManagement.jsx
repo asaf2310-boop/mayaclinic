@@ -2,10 +2,11 @@ import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { bookingFetch } from "@/lib/bookingMount";
 
 const statusLabels = { pending_payment: "ממתין לתשלום", active: "פעיל", exhausted: "מומש", cancelled: "מבוטל" };
 async function loadGiftVouchers() {
-  const response = await fetch("/api/admin?action=list&entity=gift_vouchers&order=-created_at&limit=500", { credentials: "include" });
+  const response = await bookingFetch("/api/admin?action=list&entity=gift_vouchers&order=-created_at&limit=500");
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || "לא ניתן לטעון את השוברים");
   return data;

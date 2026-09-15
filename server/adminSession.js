@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { isGoogleAdminAuthConfigured } from "./googleAdminAuth.js";
+import { getRequestBookingBasePath } from "./bookingMount.js";
 
 const ADMIN_COOKIE = "admin_session";
 
@@ -110,10 +111,15 @@ export function getAdminAuthOptions() {
   };
 }
 
-export function setAdminSessionCookie(res, { email = null, method = "password" } = {}) {
+export function getAdminCookiePath(req) {
+  return getRequestBookingBasePath(req) === "/booking" ? "/booking" : "/";
+}
+
+export function setAdminSessionCookie(res, { email = null, method = "password", cookiePath = "/" } = {}) {
+  const path = cookiePath === "/booking" ? "/booking" : "/";
   const cookie = [
     `${ADMIN_COOKIE}=${createCookieValue({ email, method })}`,
-    "Path=/",
+    `Path=${path}`,
     "HttpOnly",
     "SameSite=Lax",
     "Secure",
@@ -122,9 +128,10 @@ export function setAdminSessionCookie(res, { email = null, method = "password" }
   res.setHeader("Set-Cookie", cookie);
 }
 
-export function clearAdminSessionCookie(res) {
+export function clearAdminSessionCookie(res, { cookiePath = "/" } = {}) {
+  const path = cookiePath === "/booking" ? "/booking" : "/";
   res.setHeader(
     "Set-Cookie",
-    `${ADMIN_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=0`
+    `${ADMIN_COOKIE}=; Path=${path}; HttpOnly; SameSite=Lax; Secure; Max-Age=0`
   );
 }

@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { getBookingBasePath, bookingUrl } from "../src/lib/bookingMount.js";
-import { resolveBookingPublicBase } from "../server/bookingMount.js";
+import { getBookingBasePath, bookingUrl, isBookingAdminPath, isPublicBookingMount } from "../src/lib/bookingMount.js";
+import { getRequestBookingBasePath, resolveAdminAppOrigin, resolveAdminFrontPath, resolveBookingPublicBase } from "../server/bookingMount.js";
 import paymentReturn from "../api/pelecard/return.js";
 
 test("booking mount preserves legacy paths and external URLs", () => {
@@ -18,6 +18,42 @@ test("booking mount preserves legacy paths and external URLs", () => {
   assert.equal(bookingUrl("/api/public-data", ""), "/api/public-data");
   assert.equal(bookingUrl("https://db.example/rest/v1/items", "/booking"), "https://db.example/rest/v1/items");
   assert.equal(bookingUrl("//example.com/path", "/booking"), "//example.com/path");
+});
+
+test("public booking mount does not include admin routes", () => {
+  assert.equal(isPublicBookingMount("/booking"), true);
+  assert.equal(isPublicBookingMount("/booking/book"), true);
+  assert.equal(isBookingAdminPath("/booking/admin"), true);
+  assert.equal(isBookingAdminPath("/booking/admin/patient/abc"), true);
+  assert.equal(isPublicBookingMount("/booking/admin"), false);
+  assert.equal(isPublicBookingMount("/booking/admin/patient/abc"), false);
+  assert.equal(isBookingAdminPath("/admin"), true);
+  assert.equal(isBookingAdminPath("/admin/patient/abc"), true);
+  assert.equal(isPublicBookingMount("/admin"), false);
+  assert.equal(bookingUrl("/admin", "/booking"), "/booking/admin");
+  assert.equal(bookingUrl("/admin/patient/x", "/booking"), "/booking/admin/patient/x");
+  assert.equal(bookingUrl("/api/admin?action=session", "/booking"), "/booking/api/admin?action=session");
+});
+
+test("mounted admin origin and OAuth front path stay on the main domain", () => {
+  const previous = process.env.OFIRBABY_BOOKING_ORIGIN;
+  const legacy = process.env.PELECARD_PUBLIC_ORIGIN;
+  try {
+    process.env.OFIRBABY_BOOKING_ORIGIN = "https://www.ofirbaby.com";
+    process.env.PELECARD_PUBLIC_ORIGIN = "https://ofirbaby.vercel.app";
+    const req = {
+      headers: { host: "ofirbaby.vercel.app", "x-forwarded-uri": "/booking/api/admin?action=google-start" },
+      query: { bookingBasePath: "/booking" },
+    };
+    assert.equal(getRequestBookingBasePath(req), "/booking");
+    assert.equal(resolveAdminAppOrigin(req, "/booking"), "https://www.ofirbaby.com");
+    assert.equal(resolveAdminFrontPath("/booking", "/admin"), "/booking/admin");
+    assert.equal(resolveAdminFrontPath("", "/admin"), "/admin");
+    assert.equal(getRequestBookingBasePath({ headers: { host: "ofirbaby.vercel.app" }, query: {} }), "");
+  } finally {
+    if (previous === undefined) delete process.env.OFIRBABY_BOOKING_ORIGIN; else process.env.OFIRBABY_BOOKING_ORIGIN = previous;
+    if (legacy === undefined) delete process.env.PELECARD_PUBLIC_ORIGIN; else process.env.PELECARD_PUBLIC_ORIGIN = legacy;
+  }
 });
 
 test("payment callbacks remain on a configured origin and preserve legacy checkout", async () => {

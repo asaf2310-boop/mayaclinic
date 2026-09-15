@@ -1,4 +1,4 @@
-import { bookingFetch, bookingBasePath } from "@/lib/bookingMount";
+import { bookingFetch, isPublicBookingMount } from "@/lib/bookingMount";
 import { cleanEnvValue, supabaseAnonKey, supabaseConfigured, supabaseUrl } from "./supabase";
 import { getClinicTenantId } from "@/lib/tenant";
 import {
@@ -272,10 +272,10 @@ function createSupabasePublicEntity(tableName) {
 
   return {
     async filter(filters = {}) {
-      // Mounted /booking always uses public-data. Anonymous clinic booking
+      // Mounted public booking uses public-data. Anonymous clinic booking
       // also skips admin after we know it is locked.
       if (
-        (bookingBasePath && preferPublicReads) ||
+        (isPublicBookingMount() && preferPublicReads) ||
         (preferPublicReads && skipAdminReadsForPublicTables)
       ) {
         return fetchPublicEntity(tableName, filters);
@@ -294,7 +294,7 @@ function createSupabasePublicEntity(tableName) {
 
     async list(order = "-created_at", limit = 100, offset = 0) {
       if (
-        (bookingBasePath && preferPublicReads) ||
+        (isPublicBookingMount() && preferPublicReads) ||
         (preferPublicReads && skipAdminReadsForPublicTables)
       ) {
         return fetchPublicEntity(tableName, {}, order, limit, offset);

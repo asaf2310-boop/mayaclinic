@@ -1,8 +1,10 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import { bookingBasePath, bookingUrl } from "@/lib/bookingMount";
 
 const DEFAULT_MANIFEST = "/manifest.json";
 const ADMIN_MANIFEST = "/admin-manifest.json";
+const BOOKING_ADMIN_MANIFEST = "/booking-admin-manifest.json";
 
 /**
  * When the user is on /admin, point the web app manifest at an admin-specific
@@ -13,10 +15,22 @@ export default function AdminPwaManifest() {
   const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
 
   useEffect(() => {
-    const link = document.querySelector('link[rel="manifest"]');
-    if (!link) return;
+    let link = document.querySelector('link[rel="manifest"]');
+    if (!isAdminRoute) {
+      if (link && bookingBasePath) link.remove();
+      return;
+    }
 
-    link.setAttribute("href", isAdminRoute ? ADMIN_MANIFEST : DEFAULT_MANIFEST);
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "manifest";
+      document.head.appendChild(link);
+    }
+
+    link.setAttribute(
+      "href",
+      bookingBasePath ? bookingUrl(BOOKING_ADMIN_MANIFEST) : ADMIN_MANIFEST
+    );
   }, [isAdminRoute]);
 
   return null;

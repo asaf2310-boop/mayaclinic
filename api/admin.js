@@ -1,6 +1,7 @@
 import {
   clearAdminSessionCookie,
   getAdminAuthOptions,
+  getAdminCookiePath,
   getAdminSession,
   hasAdminSession,
   isAdminPasswordConfigured,
@@ -15,11 +16,11 @@ import {
 import {
   buildGoogleAuthUrl,
   exchangeGoogleCode,
-  getPublicOrigin,
   isAllowedAdminEmail,
   isGoogleAdminAuthConfigured,
-  verifyOAuthState,
+  parseOAuthState,
 } from "../server/googleAdminAuth.js";
+import { getRequestBookingBasePath, resolveAdminAppOrigin, resolveAdminFrontPath } from "../server/bookingMount.js";
 import { resolveClinicTenantFromHost } from "../server/clinicTenant.js";
 import { supabaseRequest } from "../server/supabaseServer.js";
 import { probeMeridianMailbox } from "../server/meridianEmail.js";
@@ -71,51 +72,54 @@ function withTenantFilter(basePath, entity, tenantId, extra = "") {
   return query ? `${basePath}?${query}` : basePath;
 }
 
+function adminOrigin(req, basePath = getRequestBookingBasePath(req)) {
+  return resolveAdminAppOrigin(req, basePath);
+}
+
+function adminLoginLocation(req, basePath, errorMessage) {
+  const origin = adminOrigin(req, basePath);
+  const path = resolveAdminFrontPath(basePath, "/admin");
+  if (!errorMessage) return `${origin}${path}`;
+  return `${origin}${path}?admin_error=${encodeURIComponent(errorMessage)}`;
+}
+
 async function handleGoogleCallback(req, res) {
-  const origin = getPublicOrigin(req);
+  const parsedState = parseOAuthState(String(req.query?.state || "").trim());
+  const basePath = parsedState?.bookingBasePath === "/booking" ? "/booking" : getRequestBookingBasePath(req);
+  const cookiePath = basePath === "/booking" ? "/booking" : "/";
   const errorParam = String(req.query?.error || "").trim();
   if (errorParam) {
-    clearAdminSessionCookie(res);
-    redirect(res, `${origin}/admin?admin_error=${encodeURIComponent("ההתחברות עם Google בוטלה")}`);
+    clearAdminSessionCookie(res, { cookiePath });
+    redirect(res, adminLoginLocation(req, basePath, "ההתחברות עם Google בוטלה"));
     return;
   }
 
   const code = String(req.query?.code || "").trim();
-  const state = String(req.query?.state || "").trim();
-  if (!code || !verifyOAuthState(state)) {
-    clearAdminSessionCookie(res);
-    redirect(res, `${origin}/admin?admin_error=${encodeURIComponent("בקשת התחברות לא תקינה")}`);
+  if (!code || !parsedState) {
+    clearAdminSessionCookie(res, { cookiePath });
+    redirect(res, adminLoginLocation(req, basePath, "בקשת התחברות לא תקינה"));
     return;
   }
 
   try {
-    const profile = await exchangeGoogleCode(req, code);
+    const profile = await exchangeGoogleCode(req, code, basePath);
     if (!profile.emailVerified) {
-      clearAdminSessionCookie(res);
-      redirect(
-        res,
-        `${origin}/admin?admin_error=${encodeURIComponent("יש לאמת את כתובת ה-Gmail לפני כניסה")}`
-      );
+      clearAdminSessionCookie(res, { cookiePath });
+      redirect(res, adminLoginLocation(req, basePath, "יש לאמת את כתובת ה-Gmail לפני כניסה"));
       return;
     }
 
     if (!isAllowedAdminEmail(profile.email)) {
-      clearAdminSessionCookie(res);
-      redirect(
-        res,
-        `${origin}/admin?admin_error=${encodeURIComponent("החשבון לא מורשה לניהול הקליניקה")}`
-      );
+      clearAdminSessionCookie(res, { cookiePath });
+      redirect(res, adminLoginLocation(req, basePath, "החשבון לא מורשה לניהול הקליניקה"));
       return;
     }
 
-    setAdminSessionCookie(res, { email: profile.email, method: "google" });
-    redirect(res, `${origin}/admin`);
+    setAdminSessionCookie(res, { email: profile.email, method: "google", cookiePath });
+    redirect(res, adminLoginLocation(req, basePath));
   } catch (error) {
-    clearAdminSessionCookie(res);
-    redirect(
-      res,
-      `${origin}/admin?admin_error=${encodeURIComponent(error?.message || "התחברות Google נכשלה")}`
-    );
+    clearAdminSessionCookie(res, { cookiePath });
+    redirect(res, adminLoginLocation(req, basePath, error?.message || "התחברות Google נכשלה"));
   }
 }
 
@@ -324,21 +328,15 @@ export default async function handler(req, res) {
   }
 
   if (req.method === "GET" && action === "google-start") {
-    const origin = getPublicOrigin(req);
+    const basePath = getRequestBookingBasePath(req);
     if (!isGoogleAdminAuthConfigured()) {
-      redirect(
-        res,
-        `${origin}/admin?admin_error=${encodeURIComponent("התחברות Google עדיין לא הוגדרה בשרת")}`
-      );
+      redirect(res, adminLoginLocation(req, basePath, "התחברות Google עדיין לא הוגדרה בשרת"));
       return;
     }
     try {
-      redirect(res, buildGoogleAuthUrl(req));
+      redirect(res, buildGoogleAuthUrl(req, basePath));
     } catch (error) {
-      redirect(
-        res,
-        `${origin}/admin?admin_error=${encodeURIComponent(error?.message || "לא ניתן להתחיל התחברות Google")}`
-      );
+      redirect(res, adminLoginLocation(req, basePath, error?.message || "לא ניתן להתחיל התחברות Google"));
     }
     return;
   }
@@ -368,18 +366,18 @@ export default async function handler(req, res) {
     const body = readBody(req);
     if (!isAdminPasswordValid(body.password)) {
       recordAdminLoginFailure(req);
-      clearAdminSessionCookie(res);
+      clearAdminSessionCookie(res, { cookiePath: getAdminCookiePath(req) });
       res.status(401).json({ error: "סיסמת אדמין שגויה" });
       return;
     }
     clearAdminLoginFailures(req);
-    setAdminSessionCookie(res, { method: "password" });
+    setAdminSessionCookie(res, { method: "password", cookiePath: getAdminCookiePath(req) });
     res.status(200).json({ ok: true });
     return;
   }
 
   if (req.method === "DELETE" && action === "session") {
-    clearAdminSessionCookie(res);
+    clearAdminSessionCookie(res, { cookiePath: getAdminCookiePath(req) });
     res.status(200).json({ ok: true });
     return;
   }

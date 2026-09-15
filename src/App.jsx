@@ -63,20 +63,20 @@ const AuthenticatedApp = () => {
 function App() {
 
   return (
-    <AuthProvider>
-      <QueryClientProvider client={queryClientInstance}>
-        <DemoDocumentTitle />
-        <ClinicBootstrap />
-        <Router basename={bookingBasePath || "/"}>
+    <QueryClientProvider client={queryClientInstance}>
+      <Router basename={bookingBasePath || "/"}>
+        <AuthProvider>
+          <DemoDocumentTitle />
+          <ClinicBootstrap />
           <OfirBookingShell>
           <ScrollToTop />
           <AdminPwaManifest />
           <AuthenticatedApp />
         </OfirBookingShell>
-        </Router>
-        <Toaster />
-      </QueryClientProvider>
-    </AuthProvider>
+        </AuthProvider>
+      </Router>
+      <Toaster />
+    </QueryClientProvider>
   )
 }
 

@@ -1,4 +1,4 @@
-import { bookingBasePath } from "@/lib/bookingMount";
+import { bookingBasePath, isPublicBookingMount } from "@/lib/bookingMount";
 import { OfirBookingHeader } from "@/components/booking/OfirBookingShell";
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
@@ -7,6 +7,7 @@ import { base44 } from "@/api/base44Client";
 import { demoModeEnabled } from "@/api/demoClient";
 import { getDemoBrand } from "@/lib/demoBrand";
 import { getClinicSite } from "@/lib/clinicSite";
+import { useAuth } from "@/lib/AuthContext";
 import {
   clinicNavGlass,
   clinicNavLink,
@@ -20,15 +21,20 @@ export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const location = useLocation();
+  const { isAuthenticated } = useAuth();
   const demoBrand = getDemoBrand();
   const clinicSite = getClinicSite();
 
   useEffect(() => {
-    if (bookingBasePath) return;
+    if (isPublicBookingMount()) return;
+    if (bookingBasePath) {
+      setIsAdmin(isAuthenticated);
+      return;
+    }
     base44.auth.me().then((user) => {
       if (user?.role === "admin") setIsAdmin(true);
     }).catch(() => {});
-  }, []);
+  }, [isAuthenticated]);
 
   const isClinic = Boolean(clinicSite);
 
@@ -85,7 +91,7 @@ export default function Navbar() {
   </>
   );
 
-  if (bookingBasePath) return <OfirBookingHeader />;
+  if (isPublicBookingMount()) return <OfirBookingHeader />;
 
   if (isClinic) {
     return (

@@ -1,6 +1,6 @@
-import { bookingBasePath } from "@/lib/bookingMount";
-import { bookingFetch } from "@/lib/bookingMount";
+import { bookingFetch, bookingUrl, isPublicBookingMount } from "@/lib/bookingMount";
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { appParams } from '@/lib/app-params';
 import { useSupabaseBackend } from '@/api/dataClient';
@@ -10,6 +10,7 @@ import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
+  const { pathname } = useLocation();
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
@@ -20,10 +21,10 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     checkAppState();
-  }, []);
+  }, [pathname]);
 
   const checkAppState = async () => {
-    if (bookingBasePath || demoModeEnabled) {
+    if (isPublicBookingMount() || demoModeEnabled) {
       setAuthError(null);
       setAppPublicSettings({ id: 'demo', public_settings: {} });
       setIsAuthenticated(false);
@@ -162,7 +163,7 @@ export const AuthProvider = ({ children }) => {
     if (useSupabaseBackend()) {
       void bookingFetch('/api/admin?action=session', { method: 'DELETE' }).finally(() => {
         if (shouldRedirect) {
-          window.location.href = '/admin';
+          window.location.href = bookingUrl("/admin");
         }
       });
       return;

@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { resolveAdminAppOrigin } from "./bookingMount.js";
 
 const DEFAULT_ADMIN_EMAILS = ["ofirbabyinfo@gmail.com", "asaf2310@gmail.com"];
 
@@ -60,56 +61,65 @@ export function getPublicOrigin(req) {
   return `${proto}://${host}`.replace(/\/$/, "");
 }
 
-export function getGoogleCallbackUrl(req) {
-  // Kept inside /api/admin to stay within Vercel Hobby's 12-function limit.
-  return `${getPublicOrigin(req)}/api/admin?action=google-callback`;
+export function getGoogleCallbackUrl(req, bookingBasePath = "") {
+  const origin = resolveAdminAppOrigin(req, bookingBasePath);
+  if (bookingBasePath === "/booking") {
+    return `${origin}/booking/api/admin?action=google-callback`;
+  }
+  return `${origin}/api/admin?action=google-callback`;
 }
 
-export function createOAuthState() {
+export function createOAuthState(bookingBasePath = "") {
   const payload = JSON.stringify({
     nonce: crypto.randomBytes(16).toString("base64url"),
     exp: Math.floor(Date.now() / 1000) + 60 * 10,
+    bookingBasePath: bookingBasePath === "/booking" ? "/booking" : "",
   });
   const encoded = Buffer.from(payload).toString("base64url");
   return `${encoded}.${sign(encoded)}`;
 }
 
-export function verifyOAuthState(state) {
+export function parseOAuthState(state) {
   const value = String(state || "");
-  if (!value.includes(".")) return false;
+  if (!value.includes(".")) return null;
   const [encoded, signature] = value.split(".", 2);
   const expected = sign(encoded);
   const a = Buffer.from(signature);
   const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
-  if (!crypto.timingSafeEqual(a, b)) return false;
+  if (a.length !== b.length) return null;
+  if (!crypto.timingSafeEqual(a, b)) return null;
 
   try {
     const payload = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8"));
-    return Number(payload?.exp || 0) > Math.floor(Date.now() / 1000);
+    if (Number(payload?.exp || 0) <= Math.floor(Date.now() / 1000)) return null;
+    return payload;
   } catch {
-    return false;
+    return null;
   }
 }
 
-export function buildGoogleAuthUrl(req) {
+export function verifyOAuthState(state) {
+  return Boolean(parseOAuthState(state));
+}
+
+export function buildGoogleAuthUrl(req, bookingBasePath = "") {
   const clientId = String(process.env.GOOGLE_CLIENT_ID || "").trim();
   if (!clientId) throw new Error("Missing GOOGLE_CLIENT_ID");
 
   const params = new URLSearchParams({
     client_id: clientId,
-    redirect_uri: getGoogleCallbackUrl(req),
+    redirect_uri: getGoogleCallbackUrl(req, bookingBasePath),
     response_type: "code",
     scope: "openid email profile",
     access_type: "online",
     prompt: "select_account",
-    state: createOAuthState(),
+    state: createOAuthState(bookingBasePath),
   });
 
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 }
 
-export async function exchangeGoogleCode(req, code) {
+export async function exchangeGoogleCode(req, code, bookingBasePath = "") {
   const clientId = String(process.env.GOOGLE_CLIENT_ID || "").trim();
   const clientSecret = String(process.env.GOOGLE_CLIENT_SECRET || "").trim();
   if (!clientId || !clientSecret) {
@@ -123,7 +133,7 @@ export async function exchangeGoogleCode(req, code) {
       code: String(code || ""),
       client_id: clientId,
       client_secret: clientSecret,
-      redirect_uri: getGoogleCallbackUrl(req),
+      redirect_uri: getGoogleCallbackUrl(req, bookingBasePath),
       grant_type: "authorization_code",
     }),
   });

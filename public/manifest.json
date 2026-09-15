@@ -27,12 +27,6 @@
       "short_name": "תור",
       "description": "קביעת תור לקליניקה",
       "url": "/book"
-    },
-    {
-      "name": "ניהול",
-      "short_name": "ניהול",
-      "description": "ניהול קליניקה",
-      "url": "/admin"
     }
   ]
 }

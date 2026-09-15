@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { LockKeyhole } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { bookingBasePath, bookingFetch, bookingUrl } from "@/lib/bookingMount";
 import { useAuth } from "@/lib/AuthContext";
 
 function GoogleGlyph() {
@@ -43,7 +44,7 @@ export default function AdminLoginRequired() {
     let cancelled = false;
     (async () => {
       try {
-        const response = await fetch("/api/admin?action=session");
+        const response = await bookingFetch("/api/admin?action=session");
         const data = await response.json().catch(() => ({}));
         if (!cancelled) {
           setAuthOptions({
@@ -76,7 +77,7 @@ export default function AdminLoginRequired() {
     setLoading(true);
     setError("");
     try {
-      const response = await fetch("/api/admin?action=login", {
+      const response = await bookingFetch("/api/admin?action=login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),
@@ -134,7 +135,11 @@ export default function AdminLoginRequired() {
         {authOptions.googleConfigured ? (
           <div className="mt-6 border-t border-slate-100 pt-6">
             <Button asChild className="w-full gap-2 border border-slate-200 bg-white text-slate-800 hover:bg-slate-50">
-              <a href="/api/admin?action=google-start">
+              <a
+                href={bookingUrl(
+                  `/api/admin?action=google-start${bookingBasePath ? "&bookingBasePath=/booking" : ""}`
+                )}
+              >
                 <GoogleGlyph />
                 התחברות עם Gmail
               </a>
