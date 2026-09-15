@@ -42,6 +42,8 @@ assert.equal(doc.Items[0].Quantity, 2);
 assert.equal(doc.Items[0].Price, 320);
 assert.equal(doc.Payments[0].Amount, 640);
 assert.equal(doc.AssociatedEmails[0].Mail, "noa@example.com");
+assert.equal(doc.GeneralCustomer.Name, "נועה כהן");
+assert.equal(doc.GenerelCustomer, undefined);
 assert.equal(String(doc.Payments[0].Date).includes("Z"), false);
 assert.match(doc.ApiIdentifier, /^booking-abc-123$/);
 
@@ -56,6 +58,25 @@ const skipped = await createBookingInvoiceReceipt({
 });
 assert.equal(skipped.skipped, true);
 assert.equal(skipped.reason, "not_configured");
+assert.equal(skipped.summary?.reason, "not_configured");
+
+let skippedStored = null;
+const skippedIssue = await maybeIssueBookingInvoiceReceipt({
+  bookingRef: "ref-skip",
+  booking: {
+    patient_name: "x",
+    treatment_name: "y",
+    appointments: [{ date: "2026-01-01", time: "09:00" }],
+  },
+  totalAgorot: 10000,
+  resultPayload: { pelecardStatus: "000" },
+  updateSession: async (patch) => {
+    skippedStored = patch;
+  },
+});
+assert.equal(skippedIssue.reason, "not_configured");
+assert.equal(skippedStored.result_payload.invoice4u.reason, "not_configured");
+assert.equal(skippedStored.result_payload.pelecardStatus, "000");
 
 process.env.INVOICE4U_TOKEN = "test-token";
 process.env.INVOICE4U_ENV = "qa";

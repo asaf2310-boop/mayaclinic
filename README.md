@@ -149,10 +149,13 @@ INVOICE4U_TOKEN=your-org-api-guid
 
 ברירת המחדל היא **Production** (`https://api.invoice4u.co.il/...`). אין צורך ב־`INVOICE4U_ENV` אלא אם רוצים QA במפורש (`INVOICE4U_ENV=qa`).
 
-- אם `INVOICE4U_TOKEN` חסר — ההזמנה מסתיימת כרגיל בלי חשבונית.
-- סיכום החשבונית נשמר ב־`result_payload.invoice4u` של סשן התשלום.
-- שליחה למייל הלקוח מתבצעת דרך Invoice4U כשיש `patient_email` בהזמנה.
+- אם `INVOICE4U_TOKEN` חסר — ההזמנה מסתיימת כרגיל בלי חשבונית (בלוגים יופיע `Invoice4U skipped: not_configured`).
+- סיכום החשבונית (או סיבת דילוג/שגיאה) נשמר ב־`result_payload.invoice4u` של סשן התשלום.
+- שליחה למייל הלקוח מתבצעת דרך Invoice4U כשיש `patient_email` בהזמנה (`AssociatedEmails`).
 - קישור PayBox החיצוני (לא דרך Pelecard) אינו מאשר תשלום בשרת ולכן לא מפיק חשבונית אוטומטית.
+- שובר מתנה / מרידיאן / מזומן בהגעה — לא מפיקים חשבונית בנתיב הזה.
+
+איפה להגדיר: Vercel → Project `mayaclinic` → Settings → Environment Variables → **Production** → `INVOICE4U_TOKEN` = ה־API GUID מ־Invoice4U (Settings → API). אחרי שמירה: **Redeploy** ל־Production.
 
 
 

@@ -29,7 +29,7 @@ export const CLINIC_SITES = {
 
     heroMeridianLink: {
       title: "תור למילואימניקים ונפגעי פעולות איבה",
-      subtitle: "אימות מזהה טיפול במרידיאן",
+      subtitle: "אמתו מזהה מרידיאן ואז בחרו מועד",
       url: "/book?payment=meridian",
     },
 

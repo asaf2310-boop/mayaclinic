@@ -14,6 +14,10 @@ import {
   isValidMeridianTreatmentId,
   normalizeMeridianTreatmentId,
 } from "./meridianEmail.js";
+import {
+  createMeridianVerificationToken,
+  verifyMeridianVerificationToken,
+} from "./paymentSessionToken.js";
 import { hasAppointmentTimeConflict } from "../src/lib/bookingSlots.js";
 import { activateGiftVoucher, appendVoucherAppointments, redeemVoucherAtomic, restoreVoucherBalance } from "./giftVouchers.js";
 import { maybeIssueBookingInvoiceReceipt } from "./invoice4u.js";
@@ -203,9 +207,78 @@ export async function createAppointmentsFromBooking(
 }
 
 /**
- * Create appointments for Meridian benefit flow.
- * Reserves the slot; client then submits Meridian treatment ID for email verification.
- * Clinic notify is sent after verification (so the email matches the real status).
+ * IMAP-only check that a Meridian treatment ID exists in the clinic inbox.
+ * Returns a short-lived signed token so createMeridianBooking can skip a second IMAP hit.
+ */
+export async function checkMeridianTreatmentId({ treatmentId = "" } = {}) {
+  const meridianId = normalizeMeridianTreatmentId(treatmentId);
+  if (!isValidMeridianTreatmentId(meridianId)) {
+    const error = new Error("מזהה טיפול לא תקין");
+    error.status = 400;
+    throw error;
+  }
+
+  const match = await findMeridianTreatmentEmail(meridianId);
+  if (!match) {
+    return {
+      ok: false,
+      found: false,
+      treatmentId: meridianId,
+      message:
+        "מזהה הטיפול לא אושר. בדקו את המספר ונסו שוב בעוד רגע.",
+    };
+  }
+
+  let verificationToken = "";
+  try {
+    verificationToken = createMeridianVerificationToken(meridianId);
+  } catch (error) {
+    console.error("Meridian verification token create failed:", error?.message || error);
+  }
+
+  return {
+    ok: true,
+    found: true,
+    treatmentId: meridianId,
+    verificationToken: verificationToken || undefined,
+    email: {
+      from: match.from,
+      subject: match.subject,
+      date: match.date,
+    },
+  };
+}
+
+async function assertMeridianTreatmentVerified({
+  treatmentId = "",
+  verificationToken = "",
+} = {}) {
+  const meridianId = normalizeMeridianTreatmentId(treatmentId);
+  if (!isValidMeridianTreatmentId(meridianId)) {
+    const error = new Error("מזהה טיפול לא תקין");
+    error.status = 400;
+    throw error;
+  }
+
+  if (verifyMeridianVerificationToken(meridianId, verificationToken)) {
+    return { meridianId, via: "token" };
+  }
+
+  const match = await findMeridianTreatmentEmail(meridianId);
+  if (!match) {
+    const error = new Error(
+      "מזהה הטיפול לא אושר. בדקו את המספר ונסו שוב בעוד רגע."
+    );
+    error.status = 404;
+    throw error;
+  }
+
+  return { meridianId, via: "imap", match };
+}
+
+/**
+ * Create appointments for Meridian benefit flow after treatment-ID verification.
+ * Appointments are marked paid; patient + clinic emails are sent immediately.
  */
 export async function createMeridianBooking(rawBooking = {}) {
   const booking = normalizeBookingPayload(rawBooking);
@@ -215,14 +288,48 @@ export async function createMeridianBooking(rawBooking = {}) {
     throw error;
   }
 
-  const { createdIds, createdRows } = await createAppointmentsFromBooking(booking, {
-    paymentNote: "תשלום דרך מרידיאן — ממתין לאימות מזהה טיפול",
-    paid: false,
+  if (!booking.patient_email) {
+    const error = new Error("נדרש אימייל לאישור התור");
+    error.status = 400;
+    throw error;
+  }
+
+  const meridianTreatmentId =
+    rawBooking.meridian_treatment_id ||
+    rawBooking.meridianTreatmentId ||
+    rawBooking.treatmentId ||
+    "";
+  const meridianVerificationToken =
+    rawBooking.meridian_verification_token ||
+    rawBooking.meridianVerificationToken ||
+    rawBooking.verificationToken ||
+    "";
+
+  const { meridianId } = await assertMeridianTreatmentVerified({
+    treatmentId: meridianTreatmentId,
+    verificationToken: meridianVerificationToken,
+  });
+
+  const verifiedNotes = applyMeridianVerifiedNotes(booking.notes, meridianId);
+  const bookingWithNotes = { ...booking, notes: verifiedNotes };
+
+  const { createdIds, createdRows } = await createAppointmentsFromBooking(bookingWithNotes, {
+    paymentNote: "",
+    paid: true,
     status: "confirmed",
   });
 
-  // Patient confirmation + clinic notify happen after treatment-ID verification.
-  return { createdIds, appointments: createdRows };
+  await maybeSendConfirmationEmail(createdRows);
+  await maybeSendClinicBookingNotify(createdRows, {
+    sourceLabel: "מרידיאן",
+    extraNote: `מזהה טיפול מרידיאן שאומת: ${meridianId}`,
+  });
+
+  return {
+    createdIds,
+    appointments: createdRows,
+    treatmentId: meridianId,
+  };
 }
 
 /**

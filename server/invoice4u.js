@@ -214,8 +214,8 @@ export function buildBookingInvoiceReceiptDoc({
     ApiIdentifier: ref ? `booking-${ref}` : undefined,
     ApiDuplicityTimeValidation: 86400,
     AutoFixPaymentsMismatchItems: true,
-    // Official API spelling.
-    GenerelCustomer: {
+    // Document property is GeneralCustomer; schema type is misspelled GenerelCustomer.
+    GeneralCustomer: {
       Name: fields.patientName,
     },
     Items: [
@@ -278,12 +278,36 @@ export function summarizeInvoiceDocument(document, extras = {}) {
 export async function createBookingInvoiceReceipt(options = {}) {
   const config = getInvoice4uConfig();
   if (!config.enabled) {
-    return { ok: false, skipped: true, reason: "not_configured" };
+    console.warn(
+      "Invoice4U skipped: not_configured (set INVOICE4U_TOKEN on Vercel Production and redeploy)"
+    );
+    return {
+      ok: false,
+      skipped: true,
+      reason: "not_configured",
+      summary: {
+        ok: false,
+        skipped: true,
+        reason: "not_configured",
+        at: new Date().toISOString(),
+      },
+    };
   }
 
   const totalAgorot = Math.round(Number(options.totalAgorot) || 0);
   if (totalAgorot <= 0) {
-    return { ok: false, skipped: true, reason: "zero_amount" };
+    console.warn("Invoice4U skipped: zero_amount");
+    return {
+      ok: false,
+      skipped: true,
+      reason: "zero_amount",
+      summary: {
+        ok: false,
+        skipped: true,
+        reason: "zero_amount",
+        at: new Date().toISOString(),
+      },
+    };
   }
 
   const paymentType =
@@ -321,11 +345,17 @@ export async function createBookingInvoiceReceipt(options = {}) {
       };
     }
 
+    const summary = summarizeInvoiceDocument(document);
+    console.info(
+      "Invoice4U CreateDocument ok:",
+      summary.documentNumber || summary.id,
+      options.bookingRef || ""
+    );
     return {
       ok: true,
       skipped: false,
       document,
-      summary: summarizeInvoiceDocument(document),
+      summary,
     };
   } catch (error) {
     console.error("Invoice4U CreateDocument failed:", error?.message || error);
@@ -356,15 +386,16 @@ export async function maybeIssueBookingInvoiceReceipt({
   paymentHint = "",
   updateSession,
 }) {
-  if (!isInvoice4uConfigured()) {
-    return { ok: false, skipped: true, reason: "not_configured" };
-  }
-
   const existing =
     resultPayload && typeof resultPayload === "object"
       ? resultPayload.invoice4u
       : null;
   if (existing?.ok && (existing.documentNumber || existing.id)) {
+    console.info(
+      "Invoice4U skipped: already_issued",
+      existing.documentNumber || existing.id,
+      bookingRef || ""
+    );
     return {
       ok: true,
       skipped: true,

@@ -22,7 +22,6 @@ import {
 } from "@/lib/paymentLinks";
 import {
   createMeridianBooking,
-  verifyMeridianTreatmentId,
 } from "@/lib/meridianBooking";
 import { createMovementBooking } from "@/lib/movementBooking";
 import { createCashBooking } from "@/lib/cashBooking";
@@ -82,10 +81,8 @@ export default function PaymentStep({
   const [initError, setInitError] = useState("");
   const [isInitLoading, setIsInitLoading] = useState(false);
   const [paymentDone, setPaymentDone] = useState(false);
-  const [meridianTreatmentId, setMeridianTreatmentId] = useState("");
-  const [isMeridianVerifying, setIsMeridianVerifying] = useState(false);
-  const [meridianVerifyError, setMeridianVerifyError] = useState("");
-  const [meridianAppointmentIds, setMeridianAppointmentIds] = useState([]);
+  const [isMeridianConfirming, setIsMeridianConfirming] = useState(false);
+  const [meridianConfirmError, setMeridianConfirmError] = useState("");
   const [meridianSuccess, setMeridianSuccess] = useState(null);
   const [isMovementConfirming, setIsMovementConfirming] = useState(false);
   const [movementError, setMovementError] = useState("");
@@ -257,59 +254,51 @@ export default function PaymentStep({
     }
   };
 
-  const handleVerifyMeridianTreatmentId = async (event) => {
+  const handleConfirmMeridianBooking = async (event) => {
     event?.preventDefault?.();
 
-    const digits = String(meridianTreatmentId || "").replace(/\D/g, "");
-    if (digits.length < 6) {
-      setMeridianVerifyError("נא להזין מזהה טיפול תקין ממרידיאן");
+    const meridianTreatmentId = String(
+      formData.meridianTreatmentId || formData.meridian_treatment_id || ""
+    ).replace(/\D/g, "");
+    if (meridianTreatmentId.length < 6) {
+      setMeridianConfirmError("חסר מזהה מרידיאן מאומת. חזרו לשלב האימות.");
       return;
     }
 
-    setIsMeridianVerifying(true);
-    setMeridianVerifyError("");
+    setIsMeridianConfirming(true);
+    setMeridianConfirmError("");
     try {
-      let appointmentIds = meridianAppointmentIds;
-      let createdAppointments = [];
-
-      if (!appointmentIds.length) {
-        const created = await createMeridianBooking({
-          patient_name: formData.patient_name,
-          patient_phone: formData.patient_phone,
-          patient_email: formData.patient_email,
-          notes: formData.notes,
-          marketing_consent: formData.marketing_consent,
-          treatment_id: formData.treatment_id || treatment?.id,
-          treatment_name: formData.treatment_name || treatment?.name,
-          treatment_price: treatment?.price ?? formData.treatment_price ?? null,
-          tenant_id: getClinicTenantId() || clinicSite?.id || "maya",
-          appointments: formData.appointments || [],
-        });
-        appointmentIds = created.appointmentIds || [];
-        createdAppointments = created.appointments || [];
-        setMeridianAppointmentIds(appointmentIds);
-      }
-
-      if (!appointmentIds.length) {
-        throw new Error("לא ניתן לשמור את התור לאימות");
-      }
-
-      const result = await verifyMeridianTreatmentId({
-        appointmentIds,
-        treatmentId: digits,
+      const created = await createMeridianBooking({
+        patient_name: formData.patient_name,
+        patient_phone: formData.patient_phone,
+        patient_email: formData.patient_email,
+        notes: formData.notes,
+        marketing_consent: formData.marketing_consent,
+        treatment_id: formData.treatment_id || treatment?.id,
+        treatment_name: formData.treatment_name || treatment?.name,
+        treatment_price: treatment?.price ?? formData.treatment_price ?? null,
+        tenant_id: getClinicTenantId() || clinicSite?.id || "maya",
+        appointments: formData.appointments || [],
+        meridianTreatmentId,
+        meridianVerificationToken:
+          formData.meridianVerificationToken ||
+          formData.meridian_verification_token ||
+          "",
       });
 
       setMeridianSuccess({
-        appointments: result.appointments || createdAppointments,
+        appointments: created.appointments || [],
         treatment_name: treatment?.name || formData.treatment_name,
         treatment_price: treatment?.price ?? formData.treatment_price ?? null,
+        hide_price: true,
+        patient_email: formData.patient_email,
       });
     } catch (error) {
-      setMeridianVerifyError(
-        error?.message || "לא ניתן לאשר את המזהה. בדקו את המספר ונסו שוב."
+      setMeridianConfirmError(
+        error?.message || "לא ניתן לאשר את התור. נסו שוב."
       );
     } finally {
-      setIsMeridianVerifying(false);
+      setIsMeridianConfirming(false);
     }
   };
 
@@ -491,7 +480,7 @@ export default function PaymentStep({
             }`}
           >
             {isMeridian
-              ? "אימות מזהה מרידיאן"
+              ? "אישור תור — מרידיאן"
               : isMovement
                 ? "אישור תור — לקוחות מובמנט"
                 : "תשלום על התור"}
@@ -499,7 +488,7 @@ export default function PaymentStep({
           {!isMovement && (
             <p className={`mx-auto max-w-sm text-sm leading-relaxed sm:text-base ${mutedClass}`}>
               {isMeridian
-                ? "הזינו את מזהה הטיפול מאתר מרידיאן לאישור התור"
+                ? "אשרו את פרטי התור. מזהה מרידיאן כבר אומת."
                 : "לפני אישור התור, יש לשלם את עלות הטיפול בכרטיס אשראי"}
             </p>
           )}
@@ -576,52 +565,38 @@ export default function PaymentStep({
       {!showCheckout ? (
         <div className="mb-4 sm:mb-6">
           {isMeridian ? (
-            <form onSubmit={handleVerifyMeridianTreatmentId} className="space-y-4">
-              <label className="block space-y-2 text-right">
-                <span className={`text-sm font-medium ${valueClass}`}>מזהה טיפול מאתר מרידיאן</span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  value={meridianTreatmentId}
-                  onChange={(event) => {
-                    setMeridianTreatmentId(event.target.value.replace(/[^\d]/g, ""));
-                    if (meridianVerifyError) setMeridianVerifyError("");
-                  }}
-                  placeholder=""
-                  className={`w-full rounded-2xl border px-4 py-3 text-base tabular-nums outline-none transition focus:ring-2 ${
-                    clinicSite
-                      ? "border-[#D5E0D8] bg-white/90 text-[#2F3E35] placeholder:text-[#8A9A90] focus:border-[#5D7F6D] focus:ring-[#5D7F6D]/25"
-                      : "border-border bg-background focus:ring-primary/30"
-                  }`}
-                  disabled={isMeridianVerifying}
-                  aria-label="מזהה טיפול מאתר מרידיאן"
-                />
-              </label>
+            <div className="space-y-4">
+              <div
+                className={`rounded-2xl border p-4 text-center text-sm leading-6 ${
+                  clinicSite
+                    ? "border-[#D5E0D8] bg-[#F7FAF8]/90 text-[#2F3E35]"
+                    : "border-border bg-muted/40 text-foreground"
+                }`}
+              >
+                מזהה מרידיאן אומת. לאחר אישור התור יישלח סיכום למייל שלכם ולקליניקה.
+              </div>
 
-              {meridianVerifyError && (
-                <p className="text-center text-sm text-[#9B2C2C]">{meridianVerifyError}</p>
+              {meridianConfirmError && (
+                <p className="text-center text-sm text-[#9B2C2C]">{meridianConfirmError}</p>
               )}
 
               <button
-                type="submit"
-                disabled={
-                  isMeridianVerifying ||
-                  String(meridianTreatmentId).replace(/\D/g, "").length < 6
-                }
+                type="button"
+                onClick={handleConfirmMeridianBooking}
+                disabled={isMeridianConfirming}
                 className={`flex w-full items-center justify-center gap-2.5 px-4 py-3.5 text-[15px] font-semibold transition-transform active:scale-[0.99] disabled:opacity-60 sm:gap-3 sm:px-6 sm:py-4 sm:text-base ${ctaClass}`}
-                aria-label="אישור התור"
+                aria-label="אשר את התור"
               >
-                {isMeridianVerifying ? (
+                {isMeridianConfirming ? (
                   <Loader2 className="h-5 w-5 shrink-0 animate-spin" />
                 ) : (
-                  <ShieldCheck className="h-5 w-5 shrink-0" />
+                  <CheckCircle2 className="h-5 w-5 shrink-0" />
                 )}
                 <span className="leading-none">
-                  {isMeridianVerifying ? "מאשרים…" : "אישור התור"}
+                  {isMeridianConfirming ? "מאשרים תור..." : "אשר את התור"}
                 </span>
               </button>
-            </form>
+            </div>
           ) : isMovement ? (
             <div className="space-y-4">
               <div

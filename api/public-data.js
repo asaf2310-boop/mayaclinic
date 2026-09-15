@@ -2,6 +2,7 @@ import { supabaseRequest } from "../server/supabaseServer.js";
 import { resolveClinicTenantFromHost } from "../server/clinicTenant.js";
 import {
   createCashBooking,
+  checkMeridianTreatmentId,
   createMeridianBooking,
   createMovementBooking,
   normalizeBookingPayload,
@@ -114,17 +115,55 @@ export default async function handler(req, res) {
         return;
       }
 
+      if (action === "checkMeridianTreatmentId") {
+        const treatmentId = body.treatmentId || body.treatment_id || "";
+        const result = await checkMeridianTreatmentId({ treatmentId });
+
+        if (!result.ok) {
+          res.status(404).json({
+            ok: false,
+            found: false,
+            error: result.message || "מזהה הטיפול לא נמצא במייל",
+            treatmentId: result.treatmentId,
+          });
+          return;
+        }
+
+        res.status(200).json(result);
+        return;
+      }
+
       if (action === "createMeridianBooking") {
         const booking = normalizeBookingPayload({
           ...(body.booking || {}),
           tenant_id: tenantId,
         });
+        const meridianTreatmentId =
+          body.meridianTreatmentId ||
+          body.meridian_treatment_id ||
+          body.treatmentId ||
+          body.treatment_id ||
+          body.booking?.meridianTreatmentId ||
+          body.booking?.meridian_treatment_id ||
+          "";
+        const meridianVerificationToken =
+          body.meridianVerificationToken ||
+          body.meridian_verification_token ||
+          body.verificationToken ||
+          body.booking?.meridianVerificationToken ||
+          body.booking?.meridian_verification_token ||
+          "";
 
-        const result = await createMeridianBooking(booking);
+        const result = await createMeridianBooking({
+          ...booking,
+          meridianTreatmentId,
+          meridianVerificationToken,
+        });
         res.status(200).json({
           ok: true,
           appointmentIds: result.createdIds,
           appointments: result.appointments,
+          treatmentId: result.treatmentId,
         });
         return;
       }

@@ -7,6 +7,7 @@ import TreatmentSelector from "../components/booking/TreatmentSelector";
 import BookingForm from "../components/booking/BookingForm";
 import BookingContact from "../components/booking/BookingContact";
 import PaymentStep from "../components/booking/PaymentStep";
+import MeridianVerifyStep from "../components/booking/MeridianVerifyStep";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
 import {
@@ -41,12 +42,14 @@ export default function Book() {
   const [searchParams] = useSearchParams();
   const paymentMethod = resolvePaymentMethod(searchParams);
   const isMoment = paymentMethod === "movement";
+  const isMeridian = paymentMethod === "meridian";
   const bookingChannel = isMoment
     ? getClinicSite()?.momentBooking?.channel || "movement"
     : "";
 
   const [selectedTreatment, setSelectedTreatment] = useState(null);
   const [pendingFormData, setPendingFormData] = useState(null);
+  const [meridianVerified, setMeridianVerified] = useState(null);
   const clinicSite = getClinicSite();
 
   const { data: treatments = [], isLoading } = useQuery({
@@ -64,10 +67,12 @@ export default function Book() {
   useEffect(() => {
     setSelectedTreatment(null);
     setPendingFormData(null);
+    setMeridianVerified(null);
   }, [paymentMethod]);
 
   useEffect(() => {
     if (!visibleTreatments.length || selectedTreatment) return;
+    if (isMeridian && !meridianVerified) return;
 
     if (visibleTreatments.length === 1) {
       setSelectedTreatment(visibleTreatments[0]);
@@ -87,29 +92,37 @@ export default function Book() {
     if (!isMoment) {
       setSelectedTreatment(visibleTreatments[0]);
     }
-  }, [clinicSite, isMoment, selectedTreatment, visibleTreatments]);
+  }, [clinicSite, isMoment, isMeridian, meridianVerified, selectedTreatment, visibleTreatments]);
 
   const handleFormSubmit = (formData) => {
     setPendingFormData({
       ...formData,
-      hide_price: isMoment,
-      booking_channel: isMoment ? bookingChannel : "standard",
+      hide_price: isMoment || isMeridian,
+      booking_channel: isMoment ? bookingChannel : isMeridian ? "meridian" : "standard",
       treatment_price: isMoment ? null : formData.treatment_price,
+      meridianTreatmentId: meridianVerified?.treatmentId || "",
+      meridianVerificationToken: meridianVerified?.verificationToken || "",
     });
   };
 
   const pageTitle = isMoment
     ? clinicSite?.momentBooking?.pageTitle || "קביעת תור — לקוחות מובמנט"
-    : "קביעת תור";
+    : isMeridian
+      ? "קביעת תור — מרידיאן"
+      : "קביעת תור";
   const pageSubtitle = isMoment
     ? clinicSite?.momentBooking?.pageSubtitle || ""
-    : paymentMethod === "meridian"
-      ? "בחרו תאריך ושעה · לאחר ההזמנה הזינו מזהה טיפול ממרידיאן"
+    : isMeridian
+      ? meridianVerified
+        ? "בחרו תאריך ושעה · מזהה מרידיאן אומת"
+        : "תחילה אמתו את מזהה הטיפול ממרידיאן, ואז בחרו מועד"
       : clinicSite
         ? "בחרו תאריך ושעה נוחים לטיפול"
         : "בחרו טיפול, תאריך ושעה נוחים";
 
-  const hidePrices = isMoment || paymentMethod === "meridian";
+  const hidePrices = isMoment || isMeridian;
+  const showMeridianGate = isMeridian && !meridianVerified;
+  const showBookingForm = !pendingFormData && !showMeridianGate;
 
   return (
     <div
@@ -138,66 +151,84 @@ export default function Book() {
                 ) : null}
               </div>
 
-              <div
-                className={`space-y-8 ${
-                  clinicSite ? clinicGlassPanel : ""
-                }`}
-              >
-                {isLoading ? (
-                  <div className="space-y-3">
-                    {[1, 2, 3].map((i) => (
-                      <Skeleton key={i} className="h-20 rounded-2xl" />
-                    ))}
-                  </div>
-                ) : visibleTreatments.length === 0 ? (
-                  <div className={`py-12 text-center ${clinicSite ? clinicTextMuted : "text-muted-foreground"}`}>
-                    אין טיפולים זמינים כרגע
-                  </div>
-                ) : (
-                  <>
-                    {visibleTreatments.length === 1 ? (
-                      <Card
-                        className={`p-5 ${
-                          clinicSite
-                            ? clinicGlassCard
-                            : ""
-                        }`}
-                      >
-                        <p className={`text-sm ${clinicTextMuted}`}>הטיפול שלך</p>
-                        <p className={`mt-1 text-xl font-bold ${clinicTextHeading}`}>{visibleTreatments[0].name}</p>
-                        <p className={`mt-2 text-sm ${clinicTextMuted}`}>
-                          {hidePrices
-                            ? `${visibleTreatments[0].duration_minutes} דקות`
-                            : `${visibleTreatments[0].duration_minutes} דקות · ₪${visibleTreatments[0].price}`}
-                        </p>
-                        {visibleTreatments[0].description ? (
-                          <p className={`mt-3 text-sm leading-relaxed ${clinicTextMuted}`}>
-                            {visibleTreatments[0].description}
+              {showMeridianGate ? (
+                <MeridianVerifyStep onVerified={setMeridianVerified} />
+              ) : null}
+
+              {showBookingForm ? (
+                <div
+                  className={`space-y-8 ${
+                    clinicSite ? clinicGlassPanel : ""
+                  }`}
+                >
+                  {isMeridian && meridianVerified ? (
+                    <div
+                      className={`rounded-2xl border px-4 py-3 text-center text-sm ${
+                        clinicSite
+                          ? "border-[#D5E0D8] bg-[#F7FAF8]/90 text-[#2F3E35]"
+                          : "border-border bg-muted/40 text-foreground"
+                      }`}
+                    >
+                      מזהה מרידיאן אומת · ניתן לבחור מועד
+                    </div>
+                  ) : null}
+
+                  {isLoading ? (
+                    <div className="space-y-3">
+                      {[1, 2, 3].map((i) => (
+                        <Skeleton key={i} className="h-20 rounded-2xl" />
+                      ))}
+                    </div>
+                  ) : visibleTreatments.length === 0 ? (
+                    <div className={`py-12 text-center ${clinicSite ? clinicTextMuted : "text-muted-foreground"}`}>
+                      אין טיפולים זמינים כרגע
+                    </div>
+                  ) : (
+                    <>
+                      {visibleTreatments.length === 1 ? (
+                        <Card
+                          className={`p-5 ${
+                            clinicSite
+                              ? clinicGlassCard
+                              : ""
+                          }`}
+                        >
+                          <p className={`text-sm ${clinicTextMuted}`}>הטיפול שלך</p>
+                          <p className={`mt-1 text-xl font-bold ${clinicTextHeading}`}>{visibleTreatments[0].name}</p>
+                          <p className={`mt-2 text-sm ${clinicTextMuted}`}>
+                            {hidePrices
+                              ? `${visibleTreatments[0].duration_minutes} דקות`
+                              : `${visibleTreatments[0].duration_minutes} דקות · ₪${visibleTreatments[0].price}`}
                           </p>
-                        ) : null}
-                      </Card>
-                    ) : (
-                      <TreatmentSelector
-                        treatments={visibleTreatments}
-                        selectedId={selectedTreatment?.id}
-                        onSelect={setSelectedTreatment}
-                        hidePrices={hidePrices}
+                          {visibleTreatments[0].description ? (
+                            <p className={`mt-3 text-sm leading-relaxed ${clinicTextMuted}`}>
+                              {visibleTreatments[0].description}
+                            </p>
+                          ) : null}
+                        </Card>
+                      ) : (
+                        <TreatmentSelector
+                          treatments={visibleTreatments}
+                          selectedId={selectedTreatment?.id}
+                          onSelect={setSelectedTreatment}
+                          hidePrices={hidePrices}
+                        />
+                      )}
+
+                      <div className={`h-px ${clinicSite ? "bg-[#E8ECE8]" : "bg-border"}`} />
+
+                      <BookingForm
+                        selectedTreatment={selectedTreatment}
+                        onSubmit={handleFormSubmit}
+                        isSubmitting={false}
+                        requireEmail
                       />
-                    )}
+                    </>
+                  )}
 
-                    <div className={`h-px ${clinicSite ? "bg-[#E8ECE8]" : "bg-border"}`} />
-
-                    <BookingForm
-                      selectedTreatment={selectedTreatment}
-                      onSubmit={handleFormSubmit}
-                      isSubmitting={false}
-                      requireEmail
-                    />
-                  </>
-                )}
-
-                {!isLoading && <BookingContact />}
-              </div>
+                  {!isLoading && <BookingContact />}
+                </div>
+              ) : null}
             </>
           )}
         </div>

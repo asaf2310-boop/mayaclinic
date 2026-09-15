@@ -40,6 +40,26 @@ function sign(payload) {
   return crypto.createHmac("sha256", getSessionSecret()).update(payload).digest("base64url");
 }
 
+function parseSignedToken(token) {
+  const raw = String(token || "").trim();
+  if (!raw.includes(".")) return null;
+
+  const [encoded, signature] = raw.split(".", 2);
+  if (!encoded || !signature) return null;
+
+  const expected = sign(encoded);
+  const expectedBuf = Buffer.from(expected);
+  const actualBuf = Buffer.from(signature);
+  if (expectedBuf.length !== actualBuf.length) return null;
+  if (!crypto.timingSafeEqual(expectedBuf, actualBuf)) return null;
+
+  try {
+    return JSON.parse(base64UrlDecode(encoded));
+  } catch {
+    return null;
+  }
+}
+
 export function createPaymentSessionToken(bookingRef, ttlSeconds = 60 * 60 * 6) {
   const payload = JSON.stringify({
     ref: String(bookingRef || "").trim(),
@@ -50,28 +70,45 @@ export function createPaymentSessionToken(bookingRef, ttlSeconds = 60 * 60 * 6) 
 }
 
 export function verifyPaymentSessionToken(bookingRef, token) {
-  const raw = String(token || "").trim();
-  if (!raw.includes(".")) return false;
-
-  const [encoded, signature] = raw.split(".", 2);
-  if (!encoded || !signature) return false;
-
-  const expected = sign(encoded);
-  const expectedBuf = Buffer.from(expected);
-  const actualBuf = Buffer.from(signature);
-  if (expectedBuf.length !== actualBuf.length) return false;
-  if (!crypto.timingSafeEqual(expectedBuf, actualBuf)) return false;
-
-  let payload = null;
-  try {
-    payload = JSON.parse(base64UrlDecode(encoded));
-  } catch {
-    return false;
-  }
+  const payload = parseSignedToken(token);
+  if (!payload) return false;
 
   const ref = String(payload?.ref || "").trim();
   const exp = Number(payload?.exp || 0);
   if (!ref || ref !== String(bookingRef || "").trim()) return false;
+  if (!Number.isFinite(exp) || exp < Math.floor(Date.now() / 1000)) return false;
+  return true;
+}
+
+const MERIDIAN_TOKEN_PURPOSE = "meridian_treatment_id";
+const DEFAULT_MERIDIAN_TOKEN_TTL_SECONDS = 30 * 60;
+
+/** Short-lived proof that a Meridian treatment ID was verified via IMAP. */
+export function createMeridianVerificationToken(
+  treatmentId,
+  ttlSeconds = DEFAULT_MERIDIAN_TOKEN_TTL_SECONDS
+) {
+  const tid = String(treatmentId || "").trim();
+  if (!tid) {
+    throw new Error("treatmentId is required for Meridian verification token");
+  }
+  const payload = JSON.stringify({
+    purpose: MERIDIAN_TOKEN_PURPOSE,
+    tid,
+    exp: Math.floor(Date.now() / 1000) + Number(ttlSeconds || DEFAULT_MERIDIAN_TOKEN_TTL_SECONDS),
+  });
+  const encoded = base64UrlEncode(payload);
+  return `${encoded}.${sign(encoded)}`;
+}
+
+export function verifyMeridianVerificationToken(treatmentId, token) {
+  const payload = parseSignedToken(token);
+  if (!payload) return false;
+  if (String(payload?.purpose || "") !== MERIDIAN_TOKEN_PURPOSE) return false;
+
+  const tid = String(payload?.tid || "").trim();
+  const exp = Number(payload?.exp || 0);
+  if (!tid || tid !== String(treatmentId || "").trim()) return false;
   if (!Number.isFinite(exp) || exp < Math.floor(Date.now() / 1000)) return false;
   return true;
 }
