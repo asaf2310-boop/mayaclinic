@@ -18,6 +18,7 @@ import {
   getClinicSite,
   getTreatmentsForBookingChannel,
   isMomentBookingChannel,
+  sortTreatmentsForPublicBooking,
 } from "@/lib/clinicSite";
 import {
   clinicBookPageSubtitle,
@@ -63,10 +64,10 @@ export default function Book() {
   });
 
   const visibleTreatments = useMemo(() => {
-    if (isMoment) {
-      return getTreatmentsForBookingChannel(treatments, bookingChannel, clinicSite);
-    }
-    return filterTreatmentsForClinic(treatments, clinicSite);
+    const catalog = isMoment
+      ? getTreatmentsForBookingChannel(treatments, bookingChannel, clinicSite)
+      : filterTreatmentsForClinic(treatments, clinicSite);
+    return sortTreatmentsForPublicBooking(catalog, clinicSite);
   }, [treatments, clinicSite, isMoment, bookingChannel]);
 
   useEffect(() => {
@@ -85,8 +86,6 @@ export default function Book() {
       setSelectedTreatment(visibleTreatments[0]);
       return;
     }
-
-    if (bookingBasePath) return;
 
     if (!isMoment && clinicSite?.defaultTreatmentName) {
       const preferred = visibleTreatments.find(

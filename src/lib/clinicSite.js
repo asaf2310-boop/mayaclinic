@@ -46,6 +46,13 @@ export const CLINIC_SITES = {
 
     defaultTreatmentName: "מגע שיקומי",
 
+    bookingTreatmentOrder: [
+      "מגע שיקומי",
+      "עיסוי נשים בהריון ואחרי לידה",
+      "עיסוי ספורטאים",
+      "מפגש הדרכה התפתחותית לתינוקות וילדים (פתח תקווה והסביבה)",
+    ],
+
     seedTreatments: [
 
       {
@@ -270,6 +277,23 @@ export function filterTreatmentsForClinic(treatments = [], site = getClinicSite(
   }
 
   return filtered;
+}
+
+/** Public booking list order. Admin/DB order is left unchanged. */
+export function sortTreatmentsForPublicBooking(treatments = [], site = getClinicSite()) {
+  const order = Array.isArray(site?.bookingTreatmentOrder) ? site.bookingTreatmentOrder : [];
+  if (!order.length) return treatments;
+
+  const rank = new Map(order.map((name, index) => [String(name).trim(), index]));
+  return [...treatments].sort((left, right) => {
+    const leftRank = rank.has(String(left?.name || "").trim())
+      ? rank.get(String(left.name).trim())
+      : order.length;
+    const rightRank = rank.has(String(right?.name || "").trim())
+      ? rank.get(String(right.name).trim())
+      : order.length;
+    return leftRank - rightRank;
+  });
 }
 
 export function resolveClinicPayboxOverride(treatment, site = getClinicSite()) {

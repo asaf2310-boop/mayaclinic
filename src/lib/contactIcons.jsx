@@ -1,25 +1,41 @@
-export const WHATSAPP_LOGO = "/icons/whatsapp-logo.svg";
-export const PHONE_LOGO = "/icons/phone-logo.svg";
-
 const sizeClasses = {
   sm: "h-8 w-8",
   md: "h-10 w-10",
   lg: "h-12 w-12",
 };
 
+function WhatsAppMark({ className, ...props }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className={className} {...props}>
+      <rect width="48" height="48" rx="12" fill="#25D366" />
+      <path
+        fill="#fff"
+        transform="translate(24 24) scale(0.72) translate(-24 -24)"
+        d="M34.944 28.764c-.594-.297-3.516-1.734-4.06-1.934-.546-.198-.942-.297-1.34.297-.396.594-1.534 1.932-1.88 2.328-.346.398-.692.446-1.288.148-.594-.297-2.51-.926-4.78-2.95-1.766-1.576-2.96-3.522-3.306-4.118-.346-.594-.036-.916.26-1.212.268-.268.594-.694.892-1.04.298-.348.396-.594.594-.992.198-.396.099-.694-.05-.992-.148-.298-1.338-3.224-1.832-4.414-.494-1.158-.988-.992-1.338-1.02-.346-.016-.744-.02-1.14-.02-.396 0-1.04.148-1.584.744-.544.594-2.08 2.032-2.08 4.958 0 2.924 2.13 5.75 2.426 6.148.296.396 4.192 6.4 10.154 8.974 1.418.612 2.524.978 3.388 1.25 1.424.454 2.72.39 3.742.236 1.142-.17 3.516-.718 4.012-1.826.496-1.108.496-2.078.346-2.413-.148-.248-.544-.396-1.14-.694m-10.842 14.806h-.008a19.74 19.74 0 01-10.062-2.756l-.722-.428-7.482 1.964 1.996-7.296-.47-.748a19.72 19.72 0 01-3.02-10.52c.002-10.9 8.872-19.768 19.776-19.768 5.28 0 10.244 2.06 13.976 5.796a19.65 19.65 0 015.786 13.988c-.006 10.9-8.87 19.768-19.764 19.768M40.826 11.594A23.63 23.63 0 0024.1 2C12.99 2 3.32 11.67 3.314 22.784c0 4.192 1.094 8.284 3.176 11.89L2.114 48l13.61-3.708a23.764 23.764 0 0011.378 2.896h.01c11.11 0 20.78-9.67 20.786-20.784a23.642 23.642 0 00-7.058-16.81z"
+      />
+    </svg>
+  );
+}
+
+function PhoneMark({ className, ...props }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className={className} {...props}>
+      <rect width="48" height="48" rx="12" fill="#5D7F6D" />
+      <path fill="#fff" d="M18.2 14.5c-.5 0-1 .2-1.4.6l-2.1 2.1c-.8.8-1 2-.5 3 1.2 2.5 3.1 4.8 5.6 7.3s4.8 4.4 7.3 5.6c1 .5 2.2.3 3-.5l2.1-2.1c.8-.8.8-2 0-2.8l-2.4-2.4c-.8-.8-2-.8-2.8 0l-1.1 1.1c-.4.4-1 .4-1.4 0-1.2-1.1-2.4-2.4-3.5-3.5-.4-.4-.4-1 0-1.4l1.1-1.1c.8-.8.8-2 0-2.8l-2.4-2.4c-.4-.4-.9-.6-1.4-.6z" />
+    </svg>
+  );
+}
+
 export function ContactChannelIcon({ channel, size = "md", className = "", decorative = false }) {
-  const src = channel === "whatsapp" ? WHATSAPP_LOGO : PHONE_LOGO;
   const label = channel === "whatsapp" ? "וואטסאפ" : "טלפון";
+  const Icon = channel === "whatsapp" ? WhatsAppMark : PhoneMark;
 
   return (
-    <img
-      src={src}
-      alt={decorative ? "" : label}
-      aria-hidden={decorative || undefined}
-      className={`block shrink-0 object-contain ${sizeClasses[size]} ${className}`}
-      width={size === "lg" ? 48 : size === "md" ? 40 : 32}
-      height={size === "lg" ? 48 : size === "md" ? 40 : 32}
-      draggable={false}
+    <Icon
+      className={`block shrink-0 ${sizeClasses[size]} ${className}`}
+      aria-hidden={decorative ? true : undefined}
+      aria-label={decorative ? undefined : label}
+      role={decorative ? undefined : "img"}
     />
   );
 }
