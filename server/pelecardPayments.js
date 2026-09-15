@@ -16,6 +16,7 @@ import {
 } from "./meridianEmail.js";
 import { hasAppointmentTimeConflict } from "../src/lib/bookingSlots.js";
 import { activateGiftVoucher, appendVoucherAppointments, redeemVoucherAtomic, restoreVoucherBalance } from "./giftVouchers.js";
+import { maybeIssueBookingInvoiceReceipt } from "./invoice4u.js";
 
 function nowIso() {
   return new Date().toISOString();
@@ -671,9 +672,27 @@ export async function finalizePaymentFromPelecard({
     extraNote: paymentNote,
   });
 
+  // חשבונית מס קבלה (Invoice4U) — לא חוסם את סיום ההזמנה אם נכשל.
+  let invoice = null;
+  try {
+    invoice = await maybeIssueBookingInvoiceReceipt({
+      bookingRef,
+      booking,
+      totalAgorot: session.total_agorot,
+      resultPayload,
+      pelecardTransactionId,
+      approvalNo,
+      paymentHint: "credit card",
+      updateSession: (patch) => updatePaymentSession(bookingRef, patch),
+    });
+  } catch (error) {
+    console.error("Invoice4U booking receipt failed:", error?.message || error);
+  }
+
   return {
     session: updated,
     appointments: createdRows,
+    invoice,
     alreadyProcessed: false,
     valid: true,
   };
