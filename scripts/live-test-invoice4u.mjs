@@ -47,7 +47,7 @@ const doc = buildBookingInvoiceReceiptDoc({
 doc.ApiIdentifier = apiIdentifier;
 doc.ApiDuplicityTimeValidation = 60;
 
-const url = `${config.baseUrl}/CreateDocument`;
+const url = `${config.baseUrl}/CreateDocumentWithIdentifierValidation`;
 const body = { doc, token: config.token };
 
 console.log("POST", url);
