@@ -25,6 +25,7 @@ import { resolveClinicTenantFromHost } from "../server/clinicTenant.js";
 import { supabaseRequest } from "../server/supabaseServer.js";
 import { probeMeridianMailbox } from "../server/meridianEmail.js";
 import { notifyClinicAppointmentCancelled } from "../server/clinicCancellationNotify.js";
+import { syncClinicCalendarForAppointment } from "../server/syncClinicCalendar.js";
 
 const TENANT_ENTITIES = new Set([
   "appointments",
@@ -197,7 +198,11 @@ async function createEntity(entity, row, tenantId) {
       headers: { Prefer: "return=representation" },
       body: JSON.stringify(payload),
     });
-    return Array.isArray(created) ? created[0] : created;
+    const row = Array.isArray(created) ? created[0] : created;
+    if (entity === "appointments" && row) {
+      await syncClinicCalendarForAppointment(row, { action: "create" });
+    }
+    return row;
   } catch (error) {
     const message = String(error?.message || "");
     if (!message.includes("23505")) throw error;
@@ -253,9 +258,7 @@ async function updateEntity(entity, id, row, tenantId) {
   delete payload.id;
 
   const previous =
-    entity === "appointments" && payload.status !== undefined
-      ? await getEntityById(entity, id, tenantId)
-      : null;
+    entity === "appointments" ? await getEntityById(entity, id, tenantId) : null;
 
   const path = withTenantFilter(
     `${entity}`,
@@ -288,6 +291,27 @@ async function updateEntity(entity, id, row, tenantId) {
     });
   }
 
+  if (entity === "appointments" && rowOut) {
+    const merged = {
+      ...(previous || {}),
+      ...rowOut,
+      google_event_id: rowOut.google_event_id || previous?.google_event_id,
+    };
+    const dateTimeChanged =
+      previous &&
+      (String(previous.date || "") !== String(rowOut.date || "") ||
+        String(previous.time || "") !== String(rowOut.time || ""));
+    await syncClinicCalendarForAppointment(merged, {
+      action:
+        nextStatus === "cancelled"
+          ? "delete"
+          : dateTimeChanged
+            ? "reschedule"
+            : "sync",
+      previous: dateTimeChanged ? previous : null,
+    });
+  }
+
   return rowOut;
 }
 
@@ -307,6 +331,10 @@ async function deleteEntity(entity, id, tenantId) {
       reason: "deleted",
       extraNote: "התור נמחק מהמערכת.",
     });
+  }
+
+  if (previous) {
+    await syncClinicCalendarForAppointment(previous, { action: "delete" });
   }
 
   return { ok: true };

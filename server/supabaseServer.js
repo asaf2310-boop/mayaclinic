@@ -91,3 +91,19 @@ export async function markReminderSent(id) {
     body: JSON.stringify({ reminder_sent_at: new Date().toISOString() }),
   });
 }
+
+export async function patchAppointmentById(id, patch) {
+  const data = await supabaseRequest(
+    `appointments?id=eq.${encodeURIComponent(id)}&select=*`,
+    {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(patch),
+    }
+  );
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) {
+    throw new Error("appointment_update_failed");
+  }
+  return row;
+}

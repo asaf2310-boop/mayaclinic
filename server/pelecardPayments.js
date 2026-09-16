@@ -20,6 +20,7 @@ import {
 } from "./paymentSessionToken.js";
 import { hasAppointmentTimeConflict } from "../src/lib/bookingSlots.js";
 import { activateGiftVoucher, appendVoucherAppointments, redeemVoucherAtomic, restoreVoucherBalance } from "./giftVouchers.js";
+import { syncClinicCalendarForAppointments } from "./syncClinicCalendar.js";
 import {
   hasSuccessfulInvoice4u,
   isInvoice4uIssuing,
@@ -308,6 +309,13 @@ export async function createAppointmentsFromBooking(
       createdIds.push(record.id);
       createdRows.push(record);
     }
+  }
+
+  if (createdRows.length) {
+    await syncClinicCalendarForAppointments(
+      createdRows.map((row) => ({ ...row, duration_minutes: bookingDurationMinutes })),
+      { action: "create" }
+    );
   }
 
   await recordConversion(analytics, createdIds);
