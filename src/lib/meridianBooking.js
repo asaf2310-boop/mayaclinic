@@ -1,4 +1,5 @@
 import { bookingFetch } from "@/lib/bookingMount";
+import { getBookingAnalyticsContext } from "@/lib/ofirbabyAnalytics";
 /**
  * Meridian benefit booking + treatment-ID verification against clinic email.
  */
@@ -33,7 +34,7 @@ export async function createMeridianBooking(booking) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       action: "createMeridianBooking",
-      booking: rest,
+      booking: { ...rest, analytics: getBookingAnalyticsContext() },
       meridianTreatmentId,
       meridianVerificationToken,
     }),

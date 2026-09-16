@@ -9,6 +9,7 @@ import {
   isBookingPayloadValid,
   normalizeBookingPayload,
 } from "../../server/pelecardPayments.js";
+import { pickAnalyticsContext } from "../../server/websiteAnalytics.js";
 import { createPaymentSessionToken } from "../../server/paymentSessionToken.js";
 import { createPendingGiftVoucher, GIFT_VOUCHER_UNIT_ILS } from "../../server/giftVouchers.js";
 
@@ -61,6 +62,7 @@ export default async function handler(req, res) {
     const giftValid = Number.isInteger(quantity) && quantity >= 1 && quantity <= 10 &&
       String(body.purchaser_name || "").trim() && String(body.purchaser_phone || "").trim() && String(body.recipient_name || "").trim() &&
       /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(giftEmail) && (!sendToRecipient || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail)) && (!sendToWhatsapp || recipientPhone.replace(/\D/g, "").length >= 9);
+    const analytics = pickAnalyticsContext(body.booking || {});
     const booking = isGiftVoucher ? {
       kind: "gift_voucher", quantity, unit_price: GIFT_VOUCHER_UNIT_ILS,
       purchaser_name: String(body.purchaser_name).trim(), purchaser_phone: String(body.purchaser_phone).trim(),
@@ -69,7 +71,7 @@ export default async function handler(req, res) {
       send_to_recipient: sendToRecipient, greeting: String(body.greeting || "").trim(),
       recipient_phone: recipientPhone, send_to_whatsapp: sendToWhatsapp,
       treatment_name: "שובר מתנה לטיפול",
-    } : normalizeBookingPayload(body.booking || {});
+    } : { ...normalizeBookingPayload(body.booking || {}), analytics };
     if ((isGiftVoucher && !giftValid) || (!isGiftVoucher && !isBookingPayloadValid(booking))) {
       res.status(400).json({
         error: "booking payload is required (patient, treatment, appointments)",

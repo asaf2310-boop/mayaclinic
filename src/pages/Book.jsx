@@ -1,4 +1,5 @@
 import { bookingBasePath } from "@/lib/bookingMount";
+import { emitBookingFunnelEvent } from "@/lib/ofirbabyAnalytics";
 import { Button } from "@/components/ui/button";
 import React, { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -59,6 +60,15 @@ export default function Book() {
   const [savedFormData, setSavedFormData] = useState(null);
   const [stage, setStage] = useState("treatment");
   const clinicSite = getClinicSite();
+
+  useEffect(() => {
+    emitBookingFunnelEvent("booking_started");
+  }, []);
+
+  useEffect(() => {
+    if (!selectedTreatment?.id) return;
+    emitBookingFunnelEvent("treatment_selected", { contentKey: `/booking/book` });
+  }, [selectedTreatment?.id]);
 
   const { data: treatments = [], isLoading } = useQuery({
     queryKey: ["treatments"],

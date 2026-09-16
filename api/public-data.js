@@ -5,7 +5,6 @@ import {
   checkMeridianTreatmentId,
   createMeridianBooking,
   createMovementBooking,
-  normalizeBookingPayload,
   verifyMeridianTreatmentId,
   redeemGiftVoucher,
 } from "../server/pelecardPayments.js";
@@ -134,10 +133,6 @@ export default async function handler(req, res) {
       }
 
       if (action === "createMeridianBooking") {
-        const booking = normalizeBookingPayload({
-          ...(body.booking || {}),
-          tenant_id: tenantId,
-        });
         const meridianTreatmentId =
           body.meridianTreatmentId ||
           body.meridian_treatment_id ||
@@ -155,7 +150,8 @@ export default async function handler(req, res) {
           "";
 
         const result = await createMeridianBooking({
-          ...booking,
+          ...(body.booking || {}),
+          tenant_id: tenantId,
           meridianTreatmentId,
           meridianVerificationToken,
         });
@@ -169,12 +165,10 @@ export default async function handler(req, res) {
       }
 
       if (action === "createMovementBooking") {
-        const booking = normalizeBookingPayload({
+        const result = await createMovementBooking({
           ...(body.booking || {}),
           tenant_id: tenantId,
         });
-
-        const result = await createMovementBooking(booking);
         res.status(200).json({
           ok: true,
           appointmentIds: result.createdIds,
@@ -184,12 +178,10 @@ export default async function handler(req, res) {
       }
 
       if (action === "createCashBooking") {
-        const booking = normalizeBookingPayload({
+        const result = await createCashBooking({
           ...(body.booking || {}),
           tenant_id: tenantId,
         });
-
-        const result = await createCashBooking(booking);
         res.status(200).json({
           ok: true,
           appointmentIds: result.createdIds,

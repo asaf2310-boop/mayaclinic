@@ -1,4 +1,5 @@
 import { bookingFetch } from "@/lib/bookingMount";
+import { getBookingAnalyticsContext } from "@/lib/ofirbabyAnalytics";
 /**
  * Movement (מובמנט) booking — confirm without credit/PayBox payment.
  */
@@ -9,7 +10,7 @@ export async function createMovementBooking(booking) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       action: "createMovementBooking",
-      booking,
+      booking: { ...booking, analytics: getBookingAnalyticsContext() },
     }),
   });
 

@@ -1,4 +1,5 @@
 import { bookingBasePath } from "@/lib/bookingMount";
+import { markBookingJourneyComplete } from "@/lib/ofirbabyAnalytics";
 import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,9 @@ const STATUS_MAP = {
 
 export default function BookingSuccess({ appointment, onReset, hidePrices = false }) {
   const clinicSite = getClinicSite();
+  React.useEffect(() => {
+    markBookingJourneyComplete();
+  }, []);
   const appointments = appointment.appointments || [appointment];
   const price = (appointment.treatment_price ?? DEFAULT_PRICE) * appointments.length;
   const status = STATUS_MAP[appointments[0]?.status] || STATUS_MAP.pending;

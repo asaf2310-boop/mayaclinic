@@ -31,6 +31,7 @@ import { useNavigate } from "react-router-dom";
 import { getClinicTenantId } from "@/lib/tenant";
 import BookingSuccess from "./BookingSuccess";
 import { redeemGiftVoucher } from "@/lib/giftVoucher";
+import { getBookingAnalyticsContext } from "@/lib/ofirbabyAnalytics";
 
 const VISA_LOGO = bookingUrl("/payment/visa-logo.svg");
 const MASTERCARD_LOGO = bookingUrl("/payment/mastercard-logo.svg");
@@ -151,6 +152,7 @@ export default function PaymentStep({
             treatment_price: treatment?.price ?? formData.treatment_price ?? null,
             tenant_id: getClinicTenantId() || clinicSite?.id || "maya",
             appointments: formData.appointments || [],
+            analytics: getBookingAnalyticsContext(),
           },
         });
         if (cancelled) return;

@@ -1,4 +1,4 @@
-import { supabaseRequest } from "./supabaseServer.js";
+import { pickAnalyticsContext, recordBookingCompleted } from "./websiteAnalytics.js";
 import { getPelecardTransaction, validatePelecardPayment } from "./pelecard.js";
 import {
   buildClinicBookingNotifyEmail,
@@ -258,7 +258,7 @@ export async function assertBookingSlotsAvailable(booking, { bookingDurationMinu
 
 export async function createAppointmentsFromBooking(
   booking,
-  { paymentNote = "", paid = true, status = "confirmed", bookingDurationMinutes = 60 } = {}
+  { paymentNote = "", paid = true, status = "confirmed", bookingDurationMinutes = 60, analytics } = {}
 ) {
   await assertBookingSlotsAvailable(booking, { bookingDurationMinutes });
 
@@ -310,7 +310,17 @@ export async function createAppointmentsFromBooking(
     }
   }
 
+  await recordConversion(analytics, createdIds);
   return { createdIds, createdRows };
+}
+
+async function recordConversion(rawAnalytics, createdIds) {
+  if (!createdIds?.length) return;
+  try {
+    await recordBookingCompleted(rawAnalytics, createdIds);
+  } catch (error) {
+    console.error("booking conversion analytics failed:", error?.message || error);
+  }
 }
 
 /**
@@ -424,6 +434,7 @@ export async function createMeridianBooking(rawBooking = {}) {
     paymentNote: "",
     paid: true,
     status: "confirmed",
+    analytics: rawBooking,
   });
 
   await maybeSendConfirmationEmail(createdRows);
@@ -468,6 +479,7 @@ export async function createMovementBooking(rawBooking = {}) {
     paid: false,
     status: "confirmed",
     bookingDurationMinutes: 60,
+    analytics: rawBooking,
   });
 
   await maybeSendConfirmationEmail(createdRows);
@@ -501,6 +513,7 @@ export async function createCashBooking(rawBooking = {}) {
     paymentNote: "תשלום במזומן בהגעה לקליניקה",
     paid: false,
     status: "confirmed",
+    analytics: rawBooking,
   });
 
   await maybeSendConfirmationEmail(createdRows);
@@ -519,7 +532,7 @@ export async function redeemGiftVoucher({ rawBooking, code, tenantId }) {
   const redeemed = await redeemVoucherAtomic({ code, count: booking.appointments.length, tenantId });
   const voucher = Array.isArray(redeemed) ? redeemed[0] : redeemed;
   try {
-    const { createdIds, createdRows } = await createAppointmentsFromBooking(booking, { paymentNote: `שולם בשובר מתנה ${voucher.code}`, paid: true, status: "confirmed" });
+    const { createdIds, createdRows } = await createAppointmentsFromBooking(booking, { paymentNote: `שולם בשובר מתנה ${voucher.code}`, paid: true, status: "confirmed", analytics: rawBooking });
     await appendVoucherAppointments(voucher.id, createdIds);
     await maybeSendConfirmationEmail(createdRows);
     await maybeSendClinicBookingNotify(createdRows, { sourceLabel: "שובר מתנה", extraNote: `שובר: ${voucher.code}` });
@@ -797,6 +810,9 @@ export async function finalizePaymentFromPelecard({
         };
       }
     }
+    if (session.booking_payload?.kind !== "gift_voucher") {
+      await recordConversion(session.booking_payload, []);
+    }
     return { session, alreadyProcessed: true, invoice };
   }
 
@@ -818,6 +834,9 @@ export async function finalizePaymentFromPelecard({
   const claimed = await claimPaymentSessionForFinalize(bookingRef);
   if (!claimed) {
     const latest = await getPaymentSessionByRef(bookingRef);
+    if ((latest || session)?.booking_payload?.kind !== "gift_voucher") {
+      await recordConversion((latest || session)?.booking_payload, []);
+    }
     return { session: latest || session, alreadyProcessed: true };
   }
 
@@ -927,6 +946,7 @@ export async function finalizePaymentFromPelecard({
     paymentNote,
     paid: true,
     status: "confirmed",
+    analytics: session.booking_payload,
   });
 
   const updated = await updatePaymentSession(bookingRef, {

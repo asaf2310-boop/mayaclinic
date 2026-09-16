@@ -28,6 +28,7 @@ import {
   countAvailableSlotsByDate,
   filterAvailableSlots,
 } from "@/lib/bookingSlots";
+import { emitBookingFunnelEvent } from "@/lib/ofirbabyAnalytics";
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -182,6 +183,11 @@ export default function BookingForm({
   }, [form.date]);
 
   const hasCompleteSelection = Boolean(form.date && form.time);
+
+  useEffect(() => {
+    if (!hasCompleteSelection) return;
+    emitBookingFunnelEvent("timeslot_selected");
+  }, [hasCompleteSelection, form.date, form.time]);
 
   const handleSubmit = (e) => {
     e.preventDefault();

@@ -3,13 +3,16 @@
  * Patient pays at the clinic; confirmation emails are sent immediately.
  */
 
+import { bookingFetch } from "@/lib/bookingMount";
+import { getBookingAnalyticsContext } from "@/lib/ofirbabyAnalytics";
+
 export async function createCashBooking(booking) {
-  const response = await fetch("/api/public-data", {
+  const response = await bookingFetch("/api/public-data", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       action: "createCashBooking",
-      booking,
+      booking: { ...booking, analytics: getBookingAnalyticsContext() },
     }),
   });
 
