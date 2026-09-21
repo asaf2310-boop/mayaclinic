@@ -28,6 +28,7 @@ import {
   clinicHeroPremiumLabel,
   clinicTextMuted,
 } from "@/lib/clinicUi";
+import AllInCenterAttribution from "@/components/AllInCenterAttribution";
 import HeroMeridianButton from "../components/home/HeroMeridianButton";
 import { bookingBasePath, bookingUrl } from "@/lib/bookingMount";
 import { BarChart3, CalendarCheck, CheckCircle2, ExternalLink, Flower2, Home as HomeIcon, Leaf, Megaphone, MonitorSmartphone, Users } from "lucide-react";
@@ -185,6 +186,12 @@ export default function Home() {
             </div>
           </section>
         </main>
+        {/* Attribution for clinic public site; /booking mount uses OfirBookingShell footer */}
+        {!bookingBasePath ? (
+          <footer className="overflow-x-hidden px-4 pb-8 pt-2 sm:pb-10" dir="rtl">
+            <AllInCenterAttribution />
+          </footer>
+        ) : null}
       </div>
     );
   }

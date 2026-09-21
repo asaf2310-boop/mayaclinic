@@ -5,6 +5,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
+import AllInCenterAttribution from "@/components/AllInCenterAttribution";
 import Navbar from "../components/layout/Navbar";
 import TreatmentSelector from "../components/booking/TreatmentSelector";
 import BookingForm from "../components/booking/BookingForm";
@@ -271,6 +272,12 @@ export default function Book() {
           )}
         </div>
       </main>
+      {/* Standalone clinic Book; /booking mount uses OfirBookingShell footer */}
+      {clinicSite && !bookingBasePath ? (
+        <footer className="overflow-x-hidden px-4 pb-8 pt-2 sm:pb-10" dir="rtl">
+          <AllInCenterAttribution />
+        </footer>
+      ) : null}
     </div>
   );
 }

@@ -31,7 +31,7 @@ body.ofirbaby-booking, body.clinic-site.ofirbaby-booking {
 .ofir-booking-brand strong { display: block; font: 400 1rem 'Bellefair', Georgia, serif; }
 .ofir-booking-brand small { display: block; font-size: 10px; letter-spacing: .28em; color: #64492f; }
 .ofir-back-home { font-size: 13px; color: #64492f; white-space: nowrap; }
-.ofir-booking-footer { padding: 24px 16px; text-align: center; font-size: 11px; color: #6f6659; }
+.ofir-booking-footer { padding: 20px 16px 28px; text-align: center; overflow-x: hidden; }
 .ofir-booking-steps { display: flex; justify-content: center; gap: .6rem; margin-bottom: 2rem; font-size: .8rem; color: #6f6659; }
 .ofir-booking-steps [aria-current="step"] { color: #64492f; font-weight: 700; }
 .ofirbaby-booking :focus-visible { outline: 2px solid #8b6a4b; outline-offset: 3px; }

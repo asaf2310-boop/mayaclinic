@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import AllInCenterAttribution from "@/components/AllInCenterAttribution";
 import { bookingUrl, isPublicBookingMount } from "@/lib/bookingMount";
 import "./ofir-booking.css";
 
@@ -24,5 +25,12 @@ export default function OfirBookingShell({ children }) {
     return () => document.body.classList.remove("ofirbaby-booking");
   }, [publicMount]);
   if (!publicMount) return children;
-  return <>{children}<footer className="ofir-booking-footer" dir="ltr">Powered by AllInCenter</footer></>;
+  return (
+    <>
+      {children}
+      <footer className="ofir-booking-footer">
+        <AllInCenterAttribution />
+      </footer>
+    </>
+  );
 }
