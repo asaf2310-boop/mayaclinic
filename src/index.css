@@ -5,8 +5,13 @@
 @tailwind utilities;
 
 @layer base {
+  /*
+   * Use overflow-x: clip (not hidden). `hidden` forces overflow-y to compute as
+   * `auto`, which creates nested vertical scrollports on html/body/#root and
+   * causes double-scroll / rubber-band feel on mobile admin lists.
+   */
   html {
-    overflow-x: hidden;
+    overflow-x: clip;
     overscroll-behavior-x: none;
   }
 
@@ -97,7 +102,7 @@
   }
 
   body {
-    overflow-x: hidden;
+    overflow-x: clip;
     overscroll-behavior-x: none;
   }
 
@@ -114,7 +119,7 @@
       radial-gradient(circle at 10% 45%, rgba(93, 127, 109, 0.22), transparent 28%),
       radial-gradient(circle at 90% 55%, rgba(93, 127, 109, 0.18), transparent 30%),
       #f7f8f6;
-    overflow-x: hidden;
+    overflow-x: clip;
     overscroll-behavior-x: none;
   }
 
@@ -169,10 +174,10 @@
     object-position: center;
   }
 
-  /* Prevent bounce/pan sideways on iOS */
+  /* Clip sideways pan on iOS without creating nested overflow-y scrollports */
   body.clinic-site,
   body.clinic-site #root {
     max-width: 100%;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 }
