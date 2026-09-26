@@ -1,7 +1,6 @@
 import React, { useEffect } from "react";
 import { I18nManager, StatusBar } from "react-native";
-import { SafeAreaProvider } from "react-native-safe-area-context";
-import { AuthProvider } from "./src/auth/AuthContext";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import RootNavigator from "./src/navigation/RootNavigator";
 import { colors } from "./src/theme";
 
@@ -15,10 +14,10 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
-      <AuthProvider>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={["top", "left", "right"]}>
+        <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
         <RootNavigator />
-      </AuthProvider>
+      </SafeAreaView>
     </SafeAreaProvider>
   );
 }

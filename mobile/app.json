@@ -8,9 +8,8 @@
     "userInterfaceStyle": "light",
     "scheme": "ofirbaby-admin",
     "extra": {
-      "bookingApiBase": "https://www.ofirbaby.com/booking/api/admin",
-      "websiteAdminUrl": "https://www.ofirbaby.com/admin",
-      "apiMode": "production"
+      "appointmentsAdminUrl": "https://www.ofirbaby.com/booking/admin",
+      "websiteAdminUrl": "https://www.ofirbaby.com/admin"
     },
     "ios": {
       "supportsTablet": true,
@@ -25,13 +24,22 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "usesCleartextTraffic": false
+      "usesCleartextTraffic": false,
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "READ_MEDIA_IMAGES",
+        "READ_MEDIA_VIDEO",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "DOWNLOAD_WITHOUT_NOTIFICATION"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-secure-store"
+      "expo-web-browser"
     ]
   }
 }
