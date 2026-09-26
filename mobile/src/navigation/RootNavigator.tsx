@@ -19,9 +19,10 @@ export default function RootNavigator() {
   return (
     <View style={styles.root}>
       <View style={styles.content}>
-        {/* Keep both WebViews mounted so each tab retains its own session. */}
+        {/* Keep both WebViews mounted so each tab retains its own session.
+            Inactive pane stays laid out (not display:none) so Android WebView keeps a real size. */}
         <View
-          style={[styles.pane, active !== "appointments" && styles.paneHidden]}
+          style={active === "appointments" ? styles.paneVisible : styles.paneHidden}
           pointerEvents={active === "appointments" ? "auto" : "none"}
           collapsable={false}
         >
@@ -32,7 +33,7 @@ export default function RootNavigator() {
           />
         </View>
         <View
-          style={[styles.pane, active !== "website" && styles.paneHidden]}
+          style={active === "website" ? styles.paneVisible : styles.paneHidden}
           pointerEvents={active === "website" ? "auto" : "none"}
           collapsable={false}
         >
@@ -53,8 +54,7 @@ export default function RootNavigator() {
       >
         <Text style={styles.tabBarHint}>בחרי מסך</Text>
         <View style={styles.tabRow}>
-          {/* Visual RTL: אתר left, תורים right */}
-          {[...TABS].reverse().map((tab) => {
+          {TABS.map((tab) => {
             const selected = active === tab.key;
             return (
               <Pressable
@@ -81,14 +81,18 @@ export default function RootNavigator() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
-  content: { flex: 1, position: "relative" },
-  pane: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 1,
+  content: { flex: 1, overflow: "hidden" },
+  paneVisible: {
+    flex: 1,
   },
   paneHidden: {
+    // Keep off-screen but with non-zero layout so the WebView can finish loading.
+    position: "absolute",
+    width: "100%",
+    height: "100%",
+    left: -10000,
+    top: 0,
     opacity: 0,
-    zIndex: 0,
   },
   tabBar: {
     backgroundColor: colors.brownDark,
@@ -101,6 +105,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: -2 },
+    zIndex: 10,
   },
   tabBarHint: {
     color: "rgba(255,255,255,0.7)",
@@ -111,6 +116,7 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   tabRow: {
+    // With app-wide RTL, row places the first tab (תורים) on the right.
     flexDirection: "row",
     gap: 10,
   },
