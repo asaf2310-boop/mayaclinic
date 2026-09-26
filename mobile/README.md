@@ -9,6 +9,8 @@ Practical phone app that opens the two existing OfirBaby admin panels:
 
 The websites remain the source of truth. Each panel keeps its own login. No Bearer-token backend and no native CMS in this version.
 
+Launcher icon uses the OfirBaby brand logo from `public/ofirbaby-logo.png`.
+
 ## Setup / build APK
 
 ```bash
@@ -27,7 +29,7 @@ Signed with the Android debug keystore for sideload testing (not Play Store).
 - Downloads / external links open outside the WebView when not on trusted hosts
 - Android Back + in-app “חזרה” for WebView history
 - Loading progress + error + retry
-- Hebrew RTL bottom tabs
+- Large Hebrew bottom tabs: **תורים** and **אתר** (safe-area padded so they stay above system navigation)
 
 ## What you must test with real credentials on a phone
 
@@ -35,3 +37,4 @@ Signed with the Android debug keystore for sideload testing (not Play Store).
 - Website admin login, media upload, content edit, publish
 - Session still present after force-stop / reopen
 - File pickers and any download buttons in either panel
+- Both tabs visible and switchable; OfirBaby logo as home-screen launcher icon

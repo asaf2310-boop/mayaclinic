@@ -14,6 +14,7 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
+      {/* Bottom inset is handled inside the custom tab bar so labels stay above system nav. */}
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={["top", "left", "right"]}>
         <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
         <RootNavigator />

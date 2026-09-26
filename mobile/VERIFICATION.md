@@ -1,17 +1,15 @@
 # Dual WebView admin shell — verification
 
-## Emulator results (no credentials)
+## Android build checks (v1.0.1)
 
 | Check | Result |
 |-------|--------|
-| App launches without crash | PASS |
-| תורים tab loads `https://www.ofirbaby.com/booking/admin` login | PASS |
-| אתר tab loads `https://www.ofirbaby.com/admin` login | PASS |
-| Switch tabs both ways | PASS |
-| Refresh button reloads current WebView | PASS |
-| Hebrew RTL bottom navigation | PASS |
-
-Evidence: `wv_appointments_tab.png`, `wv_website_tab.png`
+| App launches without crash | pending rebuild |
+| Bottom tab bar shows **תורים** and **אתר** above system nav | pending rebuild |
+| תורים loads `https://www.ofirbaby.com/booking/admin` | pending rebuild |
+| אתר loads `https://www.ofirbaby.com/admin` | pending rebuild |
+| Switch tabs both ways | pending rebuild |
+| Launcher icon is OfirBaby logo (`public/ofirbaby-logo.png`) | pending rebuild |
 
 ## Requires your testing with real admin credentials (physical phone)
 
@@ -22,6 +20,7 @@ Evidence: `wv_appointments_tab.png`, `wv_website_tab.png`
 - Appointment day-to-day actions inside booking admin WebView
 - Any download buttons (e.g. reports)
 - Android Back within nested admin pages
+- Confirm both tabs and OfirBaby launcher icon on the home screen after install
 
 ## Backend
 
