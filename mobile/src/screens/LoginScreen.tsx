@@ -7,8 +7,9 @@ import {
   Text,
   View,
 } from "react-native";
+import Constants from "expo-constants";
 import { useAuth } from "../auth/AuthContext";
-import { ApiError } from "../api/adminApi";
+import { ApiError, BOOKING_API_BASE } from "../api/adminApi";
 import { colors, radii, spacing } from "../theme";
 import { ErrorBanner, Field, Label, PrimaryButton, Subtitle, Title } from "../components/ui";
 
@@ -17,6 +18,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const apiMode = String((Constants.expoConfig?.extra as any)?.apiMode || "production");
 
   async function onSubmit() {
     setError(null);
@@ -77,6 +79,9 @@ export default function LoginScreen() {
           <Text style={styles.hint}>
             אותה סיסמת אדמין של /booking/admin. אין סיסמאות או מפתחות מוטמעים באפליקציה.
           </Text>
+          <Text style={styles.apiMeta} selectable>
+            API: {apiMode} · {BOOKING_API_BASE}
+          </Text>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -115,5 +120,12 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     textAlign: "right",
     writingDirection: "rtl",
+  },
+  apiMeta: {
+    marginTop: spacing.sm,
+    color: colors.muted,
+    fontSize: 11,
+    textAlign: "left",
+    writingDirection: "ltr",
   },
 });

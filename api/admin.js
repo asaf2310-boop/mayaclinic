@@ -401,9 +401,10 @@ export default async function handler(req, res) {
     }
     clearAdminLoginFailures(req);
     setAdminSessionCookie(res, { method: "password", cookiePath: getAdminCookiePath(req) });
+    // Mobile clients need a Bearer token (cookies are awkward in RN). Web admin keeps
+    // cookie-only responses — never return the token unless client is explicitly "mobile".
     const bodyClient = String(body.client || "").trim().toLowerCase();
-    const wantsToken = bodyClient === "mobile" || body.returnToken === true;
-    if (wantsToken) {
+    if (bodyClient === "mobile") {
       res.status(200).json({
         ok: true,
         token: createAdminSessionToken({ method: "password" }),

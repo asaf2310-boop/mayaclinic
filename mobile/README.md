@@ -17,9 +17,10 @@ Optional: override API URLs in `app.json` → `expo.extra`:
 - `bookingApiBase` (default `https://www.ofirbaby.com/booking/api/admin`)
 - `websiteAdminUrl` (default `https://www.ofirbaby.com/admin`)
 
-**Deploy note:** mobile login needs the booking backend change from this PR
-(`Authorization: Bearer` + `client: "mobile"` token on password login) deployed to
-Vercel before the APK can authenticate against production.
+**Not production-ready yet.** Mobile login needs the booking backend change from this PR
+(`Authorization: Bearer` + `client: "mobile"` token on password login) merged and
+redeployed to the ofirbaby `/booking` Vercel project before the APK can authenticate
+against production. See `SECURITY_AND_DEPLOY.md` and `VERIFICATION.md`.
 
 ## Run (dev)
 
