@@ -76,8 +76,7 @@ function createCookieValue({ email = null, method = "password" } = {}) {
   return `${encoded}.${sign(encoded)}`;
 }
 
-export function getAdminSession(req) {
-  const value = parseCookies(req)[ADMIN_COOKIE];
+function parseSessionToken(value) {
   if (!value || !value.includes(".")) return null;
 
   const [encoded, signature] = value.split(".", 2);
@@ -97,6 +96,26 @@ export function getAdminSession(req) {
   } catch {
     return null;
   }
+}
+
+function getBearerToken(req) {
+  const header = String(req?.headers?.authorization || "");
+  const match = header.match(/^Bearer\s+(.+)$/i);
+  return match ? String(match[1] || "").trim() : "";
+}
+
+/** Create a signed admin session token (same format as the HttpOnly cookie). */
+export function createAdminSessionToken({ email = null, method = "password" } = {}) {
+  return createCookieValue({ email, method });
+}
+
+export function getAdminSession(req) {
+  const bearer = getBearerToken(req);
+  if (bearer) {
+    const fromBearer = parseSessionToken(bearer);
+    if (fromBearer) return fromBearer;
+  }
+  return parseSessionToken(parseCookies(req)[ADMIN_COOKIE]);
 }
 
 export function hasAdminSession(req) {

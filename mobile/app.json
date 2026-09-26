@@ -1,0 +1,36 @@
+{
+  "expo": {
+    "name": "OfirBaby Admin",
+    "slug": "ofirbaby-admin",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "scheme": "ofirbaby-admin",
+    "extra": {
+      "bookingApiBase": "https://www.ofirbaby.com/booking/api/admin",
+      "websiteAdminUrl": "https://www.ofirbaby.com/admin"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ofirbaby.admin"
+    },
+    "android": {
+      "package": "com.ofirbaby.admin",
+      "adaptiveIcon": {
+        "backgroundColor": "#3C2C21",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "usesCleartextTraffic": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-secure-store"
+    ]
+  }
+}
