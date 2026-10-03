@@ -347,7 +347,7 @@ export default function AppointmentTable({
         onOpenChange={(open) => !open && setEditingAppointment(null)}
       >
         <DialogContent
-          className="flex max-h-[min(92dvh,920px)] w-[calc(100vw-1.25rem)] max-w-2xl flex-col gap-0 overflow-hidden p-0 sm:w-full"
+          className="flex max-h-[min(92dvh,920px)] w-[calc(100%-1.25rem)] max-w-2xl flex-col gap-0 overflow-hidden p-0 sm:w-full"
           dir="rtl"
         >
           <DialogHeader className="shrink-0 border-b border-border/70 px-4 py-4 pe-12 sm:px-6">
