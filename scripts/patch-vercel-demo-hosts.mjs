@@ -37,6 +37,14 @@ const clientRootRoutes = clients.flatMap((slug) => {
 
 const tailRoutes = [
   {
+    // Branded short link → Google Business Profile review (no SPA page).
+    src: "/review/?",
+    status: 301,
+    headers: {
+      Location: "https://g.page/r/CeZpaWz5-iNtEBM/review",
+    },
+  },
+  {
     src: "/share/(.*)",
     dest: "/api/share/$1",
   },
