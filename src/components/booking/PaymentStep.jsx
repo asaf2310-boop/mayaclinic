@@ -28,6 +28,10 @@ import { createMovementBooking } from "@/lib/movementBooking";
 import { createCashBooking } from "@/lib/cashBooking";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
+import {
+  bookingEmailErrorMessage,
+  validateBookingEmail,
+} from "@/lib/bookingEmailValidation";
 import { getClinicTenantId } from "@/lib/tenant";
 import BookingSuccess from "./BookingSuccess";
 import { redeemGiftVoucher } from "@/lib/giftVoucher";
@@ -341,11 +345,11 @@ export default function PaymentStep({
 
   const handleConfirmCashBooking = async (event) => {
     event?.preventDefault?.();
-    const email = String(formData.patient_email || "").trim();
-    if (!email || !email.includes("@")) {
-      setCashError("נא להזין אימייל בפרטי ההזמנה — יישלח אליו אישור התור");
+    const emailCheck = validateBookingEmail(formData.patient_email, { required: true });
+    if (!emailCheck.ok) {
+      setCashError(bookingEmailErrorMessage(emailCheck.error));
       toast({
-        title: "נדרש אימייל",
+        title: "נדרש אימייל תקין",
         description: "חזרו לשלב הפרטים והשלימו כתובת אימייל לקבלת אישור התור.",
         variant: "destructive",
       });
@@ -358,7 +362,7 @@ export default function PaymentStep({
       const created = await createCashBooking({
         patient_name: formData.patient_name,
         patient_phone: formData.patient_phone,
-        patient_email: email,
+        patient_email: emailCheck.normalized,
         notes: formData.notes,
         marketing_consent: formData.marketing_consent,
         treatment_id: formData.treatment_id || treatment?.id,

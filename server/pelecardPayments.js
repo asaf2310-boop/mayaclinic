@@ -1,4 +1,4 @@
-import { supabaseRequest } from "./supabaseServer.js";
+import { supabaseRequest, claimConfirmationSend, markConfirmationOutcome } from "./supabaseServer.js";
 import { pickAnalyticsContext, recordBookingCompleted } from "./websiteAnalytics.js";
 import { getPelecardTransaction, validatePelecardPayment } from "./pelecard.js";
 import {
@@ -8,6 +8,7 @@ import {
   buildClinicGiftVoucherNotifyEmail,
 } from "./emailTemplates.js";
 import { getClinicName, isEmailConfigured, sendEmail } from "./gmail.js";
+import { sendPatientEmail } from "./emailDelivery.js";
 import { getBookingNotifyEmails } from "./bookingNotify.js";
 import {
   applyMeridianVerifiedNotes,
@@ -28,6 +29,11 @@ import {
   maybeIssueBookingInvoiceReceipt,
   mergePaymentResultPayload,
 } from "./invoice4u.js";
+import {
+  bookingEmailErrorMessage,
+  normalizeBookingEmail,
+  validateBookingEmail,
+} from "../src/lib/bookingEmailValidation.js";
 
 function nowIso() {
   return new Date().toISOString();
@@ -35,10 +41,13 @@ function nowIso() {
 
 export function normalizeBookingPayload(raw = {}) {
   const appointments = Array.isArray(raw.appointments) ? raw.appointments : [];
+  const emailRaw = String(raw.patient_email || "").trim();
+  const { normalized: patientEmail } = normalizeBookingEmail(emailRaw);
   return {
     patient_name: String(raw.patient_name || "").trim(),
     patient_phone: String(raw.patient_phone || "").trim(),
-    patient_email: String(raw.patient_email || "").trim(),
+    // Domain lowercased only; local-part preserved. Never auto-correct typos.
+    patient_email: patientEmail || emailRaw,
     notes: String(raw.notes || "").trim(),
     marketing_consent: Boolean(raw.marketing_consent),
     treatment_id: raw.treatment_id || null,
@@ -61,6 +70,21 @@ export function isBookingPayloadValid(booking) {
       booking?.treatment_name &&
       booking?.appointments?.length
   );
+}
+
+/** When email is present or required, enforce shared booking email rules. */
+export function assertBookingEmail(booking, { required = false } = {}) {
+  const result = validateBookingEmail(booking?.patient_email, { required });
+  if (!result.ok) {
+    const error = new Error(bookingEmailErrorMessage(result.error));
+    error.status = 400;
+    error.code = result.error;
+    throw error;
+  }
+  if (result.normalized) {
+    booking.patient_email = result.normalized;
+  }
+  return result;
 }
 
 export async function createPaymentSession({
@@ -414,11 +438,7 @@ export async function createMeridianBooking(rawBooking = {}) {
     throw error;
   }
 
-  if (!booking.patient_email) {
-    const error = new Error("נדרש אימייל לאישור התור");
-    error.status = 400;
-    throw error;
-  }
+  assertBookingEmail(booking, { required: true });
 
   const meridianTreatmentId =
     rawBooking.meridian_treatment_id ||
@@ -471,11 +491,7 @@ export async function createMovementBooking(rawBooking = {}) {
     throw error;
   }
 
-  if (!booking.patient_email) {
-    const error = new Error("נדרש אימייל לאישור התור");
-    error.status = 400;
-    throw error;
-  }
+  assertBookingEmail(booking, { required: true });
 
   const baseName = String(booking.treatment_name || "")
     .replace(/\s*\(מובמנט[^)]*\)\s*$/u, "")
@@ -512,11 +528,7 @@ export async function createCashBooking(rawBooking = {}) {
     throw error;
   }
 
-  if (!booking.patient_email) {
-    const error = new Error("נדרש אימייל לאישור התור");
-    error.status = 400;
-    throw error;
-  }
+  assertBookingEmail(booking, { required: true });
 
   const { createdIds, createdRows } = await createAppointmentsFromBooking(booking, {
     paymentNote: "תשלום במזומן בהגעה לקליניקה",
@@ -704,16 +716,89 @@ async function maybeSendConfirmationEmail(appointments) {
   const patientEmail = String(appointments[0].patient_email || "").trim();
   if (!patientEmail) return;
 
-  try {
-    const clinicName = getClinicName();
-    const { subject, html } = buildConfirmationEmail({
-      patientName: appointments[0].patient_name || "",
-      appointments,
-      clinicName,
-    });
-    await sendEmail({ to: patientEmail, subject, html });
-  } catch (error) {
-    console.error("Patient confirmation email failed:", error?.message || error);
+  const validation = validateBookingEmail(patientEmail, { required: true });
+  if (!validation.ok) {
+    console.error("Patient confirmation skipped: invalid email");
+    return;
+  }
+
+  const clinicName = getClinicName();
+  const { subject, html } = buildConfirmationEmail({
+    patientName: appointments[0].patient_name || "",
+    appointments,
+    clinicName,
+  });
+
+  for (const appointment of appointments) {
+    if (!appointment?.id) continue;
+    let claimed = null;
+    let smtpAccepted = false;
+    let nextAttempts = 0;
+    let priorAttempts = 0;
+    try {
+      claimed = await claimConfirmationSend(appointment.id);
+      if (!claimed) {
+        // Already accepted / in-flight / permanently failed — idempotent skip.
+        continue;
+      }
+
+      priorAttempts = Number(claimed.confirmation_email_attempts || 0);
+      nextAttempts = priorAttempts + 1;
+      const result = await sendPatientEmail({
+        to: validation.normalized,
+        subject,
+        html,
+        appointmentId: appointment.id,
+        requireValid: true,
+      });
+
+      if (result.ok) {
+        smtpAccepted = true;
+        await markConfirmationOutcome(appointment.id, {
+          status: "accepted",
+          attempts: nextAttempts,
+          error: null,
+        });
+      } else if (result.status === "permanent_failure" || result.status === "suppressed") {
+        await markConfirmationOutcome(appointment.id, {
+          status: result.status,
+          attempts: nextAttempts,
+          error: result.error,
+        });
+      } else {
+        await markConfirmationOutcome(appointment.id, {
+          status:
+            nextAttempts >= 3 ? "permanent_failure" : result.status || "temporary_failure",
+          attempts: nextAttempts,
+          error: result.error,
+        });
+      }
+    } catch (error) {
+      console.error(
+        "Patient confirmation email failed:",
+        String(error?.message || error).slice(0, 200)
+      );
+      if (claimed?.id) {
+        try {
+          if (smtpAccepted) {
+            await markConfirmationOutcome(appointment.id, {
+              status: "accepted",
+              attempts: nextAttempts,
+              error: "outcome_write_failed_after_accept",
+            });
+          } else {
+            // Do not consume an attempt when SMTP outcome is unknown/interrupted.
+            await markConfirmationOutcome(appointment.id, {
+              status: "temporary_failure",
+              attempts: priorAttempts,
+              error: "send_interrupted",
+            });
+          }
+        } catch {
+          // Stale-claim reclaim after STALE_EMAIL_CLAIM_MS.
+        }
+      }
+    }
   }
 }
 

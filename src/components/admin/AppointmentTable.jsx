@@ -29,6 +29,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
+import {
+  bookingEmailErrorMessage,
+  validateBookingEmail,
+} from "@/lib/bookingEmailValidation";
 import { CheckCircle2, Circle, Loader2, Pencil, Trash2 } from "lucide-react";
 import { verifyMeridianTreatmentId } from "@/lib/meridianBooking";
 
@@ -106,6 +110,46 @@ function formatNotesForDisplay(notes) {
   );
 }
 
+function getEmailDeliveryWarning(appointment) {
+  const statuses = [
+    appointment?.confirmation_email_status,
+    appointment?.reminder_email_status,
+  ]
+    .map((value) => String(value || ""))
+    .filter(Boolean);
+
+  if (statuses.includes("permanent_failure") || statuses.includes("suppressed")) {
+    return "שליחת אימייל נכשלה באופן קבוע — בדקי/תקני את כתובת המייל. לא יישלחו ניסיונות נוספים עד לתיקון.";
+  }
+  if (statuses.includes("temporary_failure")) {
+    return "שליחת אימייל נכשלה זמנית — ייתכן ניסיון חוזר מוגבל.";
+  }
+  return "";
+}
+
+function emailDeliveryStatusLabel(status) {
+  switch (String(status || "")) {
+    case "accepted":
+      return "התקבל לשליחה";
+    case "delivered":
+      return "נמסר";
+    case "sending":
+      return "בשליחה";
+    case "temporary_failure":
+      return "כשל זמני";
+    case "permanent_failure":
+      return "כשל קבוע";
+    case "suppressed":
+      return "חסום לשליחה";
+    case "cancelled":
+      return "בוטל";
+    case "pending":
+      return "ממתין";
+    default:
+      return "";
+  }
+}
+
 export default function AppointmentTable({
   appointments,
   emptyMessage = "אין תורים עדיין",
@@ -123,6 +167,7 @@ export default function AppointmentTable({
   const [meridianBusy, setMeridianBusy] = useState(false);
   const [meridianError, setMeridianError] = useState("");
   const [meridianSuccess, setMeridianSuccess] = useState("");
+  const [editEmailError, setEditEmailError] = useState("");
 
   useEffect(() => {
     if (!editingAppointment) {
@@ -131,6 +176,7 @@ export default function AppointmentTable({
       setMeridianError("");
       setMeridianSuccess("");
       setMeridianBusy(false);
+      setEditEmailError("");
       return;
     }
 
@@ -152,9 +198,11 @@ export default function AppointmentTable({
     setMeridianIdInput(extractVerifiedMeridianId(rawNotes));
     setMeridianError("");
     setMeridianSuccess("");
+    setEditEmailError("");
   }, [editingAppointment]);
 
   const handleEditChange = (field, value) => {
+    if (field === "patient_email" && editEmailError) setEditEmailError("");
     setEditForm((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -162,11 +210,18 @@ export default function AppointmentTable({
     event.preventDefault();
     if (!editingAppointment) return;
 
+    const emailResult = validateBookingEmail(editForm.patient_email, { required: false });
+    if (!emailResult.ok) {
+      setEditEmailError(bookingEmailErrorMessage(emailResult.error));
+      return;
+    }
+    setEditEmailError("");
+
     const notesToSave = formatNotesForDisplay(editForm.notes);
     onUpdate(editingAppointment.id, {
       patient_name: editForm.patient_name,
       patient_phone: editForm.patient_phone,
-      patient_email: editForm.patient_email,
+      patient_email: emailResult.normalized || "",
       treatment_name: editForm.treatment_name,
       treatment_price: editForm.treatment_price === "" ? null : Number(editForm.treatment_price),
       date: editForm.date,
@@ -296,6 +351,7 @@ export default function AppointmentTable({
 
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
                     {renderField("טלפון", apt.patient_phone, "tabular-nums")}
+                    {renderField("אימייל", apt.patient_email || "-", "break-all")}
                     {renderField("טיפול", apt.treatment_name)}
                     {renderField(
                       "מחיר טיפול",
@@ -312,7 +368,25 @@ export default function AppointmentTable({
                     )}
                     {renderField("שעה", apt.time, "tabular-nums")}
                     {renderField("הערות", formatNotesForDisplay(apt.notes))}
+                    {renderField(
+                      "סטטוס אימייל אישור",
+                      emailDeliveryStatusLabel(apt.confirmation_email_status) ||
+                        (apt.confirmation_sent_at ? "התקבל לשליחה" : "-")
+                    )}
+                    {renderField(
+                      "סטטוס תזכורת",
+                      emailDeliveryStatusLabel(apt.reminder_email_status) ||
+                        (apt.reminder_sent_at ? "התקבל לשליחה" : "-")
+                    )}
                   </div>
+                  {getEmailDeliveryWarning(apt) ? (
+                    <div
+                      className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+                      role="status"
+                    >
+                      {getEmailDeliveryWarning(apt)}
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="flex shrink-0 gap-2 lg:flex-col">
@@ -432,7 +506,18 @@ export default function AppointmentTable({
                     onChange={(e) => handleEditChange("patient_email", e.target.value)}
                     dir="ltr"
                     className="text-left"
+                    aria-invalid={Boolean(editEmailError)}
                   />
+                  {editEmailError ? (
+                    <p className="text-sm text-destructive" role="alert">
+                      {editEmailError}
+                    </p>
+                  ) : null}
+                  {getEmailDeliveryWarning(editingAppointment) ? (
+                    <p className="text-xs text-amber-800">
+                      {getEmailDeliveryWarning(editingAppointment)} תיקון הכתובת יסיר חסימה לשליחות עתידיות בלבד (ללא שליחה אוטומטית מחדש של אישור ישן).
+                    </p>
+                  ) : null}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-treatment">טיפול</Label>

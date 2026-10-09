@@ -29,6 +29,10 @@ import {
   filterAvailableSlots,
 } from "@/lib/bookingSlots";
 import { emitBookingFunnelEvent } from "@/lib/ofirbabyAnalytics";
+import {
+  bookingEmailErrorMessage,
+  validateBookingEmail,
+} from "@/lib/bookingEmailValidation";
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -66,6 +70,9 @@ export default function BookingForm({
     date: initialData?.appointments?.[0]?.date || "",
     time: initialData?.appointments?.[0]?.time || "",
   });
+  const [emailError, setEmailError] = useState("");
+  const [emailSuggestion, setEmailSuggestion] = useState(null);
+  const [keepSuggestedEmailOriginal, setKeepSuggestedEmailOriginal] = useState(false);
 
   const {
     data: availabilityRecordsRaw = [],
@@ -189,14 +196,40 @@ export default function BookingForm({
     emitBookingFunnelEvent("timeslot_selected");
   }, [hasCompleteSelection, form.date, form.time]);
 
+  const evaluateEmail = (raw, { keepOriginal = keepSuggestedEmailOriginal } = {}) => {
+    const result = validateBookingEmail(raw, { required: requireEmail });
+    setEmailSuggestion(result.suggestion || null);
+    if (!result.ok) {
+      setEmailError(bookingEmailErrorMessage(result.error));
+      return result;
+    }
+    if (result.suggestion && !keepOriginal) {
+      setEmailError("");
+      return { ...result, needsConfirmation: true };
+    }
+    setEmailError("");
+    return result;
+  };
+
+  const handleEmailChange = (value) => {
+    setKeepSuggestedEmailOriginal(false);
+    setForm((prev) => ({ ...prev, patient_email: value }));
+    evaluateEmail(value, { keepOriginal: false });
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (step !== "all" && step !== "details") return;
     if (!selectedTreatment || !form.patient_name || !form.patient_phone || !hasCompleteSelection) return;
+
+    const emailResult = evaluateEmail(form.patient_email);
+    if (!emailResult.ok) return;
+    if (emailResult.needsConfirmation) return;
+
     onSubmit({
       patient_name: form.patient_name,
       patient_phone: form.patient_phone,
-      patient_email: form.patient_email,
+      patient_email: emailResult.normalized || form.patient_email,
       notes: form.notes,
       marketing_consent: form.marketing_consent,
       treatment_id: selectedTreatment.id,
@@ -342,15 +375,54 @@ export default function BookingForm({
           type="email"
           placeholder="your@email.com"
           value={form.patient_email}
-          onChange={(e) => handleChange("patient_email", e.target.value)}
+          onChange={(e) => handleEmailChange(e.target.value)}
           required={requireEmail && (step === "all" || step === "details")}
           dir="ltr"
           className={inputClass ? `${inputClass} text-left` : "text-left"}
+          aria-invalid={Boolean(emailError)}
         />
         {requireEmail ? (
           <p className={clinicSite ? clinicFormHint : "text-xs text-muted-foreground"}>
             נשלח לכאן אישור הזמנת התור
           </p>
+        ) : null}
+        {emailError ? (
+          <p className="text-sm text-destructive" role="alert">
+            {emailError}
+          </p>
+        ) : null}
+        {emailSuggestion && !keepSuggestedEmailOriginal ? (
+          <div className="rounded-lg border border-amber-300/70 bg-amber-50 px-3 py-2 text-sm text-amber-950 space-y-2">
+            <p>
+              ייתכן שיש טעות בכתובת המייל. התכוונת ל־
+              <button
+                type="button"
+                className="mx-1 font-semibold underline underline-offset-2"
+                onClick={() => {
+                  setForm((prev) => ({
+                    ...prev,
+                    patient_email: emailSuggestion.suggestedEmail,
+                  }));
+                  setKeepSuggestedEmailOriginal(false);
+                  setEmailSuggestion(null);
+                  setEmailError("");
+                }}
+              >
+                {emailSuggestion.suggestedEmail}
+              </button>
+              ?
+            </p>
+            <button
+              type="button"
+              className="text-xs font-medium text-amber-900/80 underline underline-offset-2"
+              onClick={() => {
+                setKeepSuggestedEmailOriginal(true);
+                setEmailError("");
+              }}
+            >
+              להשאיר את הכתובת המקורית
+            </button>
+          </div>
         ) : null}
       </div>
 

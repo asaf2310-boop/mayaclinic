@@ -5,6 +5,7 @@ import {
   shekelsToAgorot,
 } from "../../server/pelecard.js";
 import {
+  assertBookingEmail,
   createPaymentSession,
   isBookingPayloadValid,
   normalizeBookingPayload,
@@ -77,6 +78,15 @@ export default async function handler(req, res) {
         error: "booking payload is required (patient, treatment, appointments)",
       });
       return;
+    }
+    if (!isGiftVoucher) {
+      try {
+        // Card bookings collect email for confirmation — enforce shared rules.
+        assertBookingEmail(booking, { required: true });
+      } catch (emailError) {
+        res.status(400).json({ error: emailError.message || "כתובת האימייל אינה תקינה" });
+        return;
+      }
     }
 
     const bookingRef =
