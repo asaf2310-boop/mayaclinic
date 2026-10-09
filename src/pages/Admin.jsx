@@ -161,11 +161,11 @@ export default function Admin() {
       }`}
     >
       <Navbar />
-      <main className="relative pt-24 pb-16 px-6" dir="rtl">
-        <div className="relative max-w-6xl mx-auto">
-          <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+      <main className="relative px-3 pb-16 pt-20 sm:px-6 sm:pt-24" dir="rtl">
+        <div className="relative mx-auto max-w-6xl">
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3 sm:mb-8 sm:gap-4">
             <div>
-              <h1 className={`text-3xl font-bold ${clinicSite ? clinicTextHeading : "text-foreground"}`}>
+              <h1 className={`text-2xl font-bold sm:text-3xl ${clinicSite ? clinicTextHeading : "text-foreground"}`}>
                 ניהול
               </h1>
               {user?.email ? (
@@ -187,7 +187,7 @@ export default function Admin() {
 
           <Tabs value={activeAdminTab} onValueChange={setActiveAdminTab} dir="rtl">
             <div
-              className={`mb-8 grid w-full grid-cols-1 gap-3 rounded-2xl border p-3 shadow-sm sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 ${
+              className={`mb-6 grid w-full grid-cols-2 gap-2 rounded-2xl border p-2 shadow-sm sm:mb-8 sm:grid-cols-2 sm:gap-3 sm:p-3 lg:grid-cols-3 xl:grid-cols-6 ${
                 clinicSite
                   ? clinicGlassPanel
                   : "border-border/60 bg-card"
@@ -202,10 +202,10 @@ export default function Admin() {
                   role="tab"
                   aria-selected={activeAdminTab === tab.value}
                   onClick={() => setActiveAdminTab(tab.value)}
-                  className={`flex h-16 w-full items-center justify-center gap-2 rounded-xl border px-4 text-base font-semibold transition-all duration-300 ${
+                  className={`flex min-h-12 w-full items-center justify-center gap-1.5 rounded-xl border px-2 py-2 text-sm font-semibold transition-all duration-300 sm:h-16 sm:gap-2 sm:px-4 sm:text-base ${
                     activeAdminTab === tab.value
                       ? clinicSite
-                        ? `border-transparent ${clinicPrimaryBtn} !px-4 !py-3 text-sm`
+                        ? `border-transparent ${clinicPrimaryBtn} !px-3 !py-2 text-sm sm:!px-4 sm:!py-3`
                         : "border-primary/30 bg-primary text-primary-foreground shadow-md"
                       : clinicSite
                         ? "border-transparent bg-white text-[#2F3B34] hover:bg-[#F7F8F6]"

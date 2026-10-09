@@ -96,8 +96,8 @@ export default function AdminLoginRequired() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 px-6 py-20" dir="rtl">
-      <div className="mx-auto max-w-md rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+    <div className="min-h-screen bg-slate-50 px-4 py-10 sm:px-6 sm:py-20" dir="rtl">
+      <div className="mx-auto max-w-md rounded-3xl border border-slate-200 bg-white p-6 text-center shadow-sm sm:p-8">
         <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100">
           <LockKeyhole className="h-8 w-8 text-slate-700" />
         </div>
