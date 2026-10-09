@@ -44,6 +44,9 @@ export default async function handler(req, res) {
     let failed = 0;
 
     for (const candidate of candidates) {
+      let claimed = null;
+      let smtpAccepted = false;
+      let attempts = 0;
       try {
         // Re-fetch latest row before any send (cancel / reschedule / past start).
         const latest = await fetchAppointmentById(candidate.id);
@@ -62,7 +65,7 @@ export default async function handler(req, res) {
           continue;
         }
 
-        const attempts = Number(latest.reminder_email_attempts || 0);
+        attempts = Number(latest.reminder_email_attempts || 0);
         if (attempts >= MAX_EMAIL_ATTEMPTS) {
           await markReminderOutcome(latest.id, {
             status: "permanent_failure",
@@ -73,7 +76,7 @@ export default async function handler(req, res) {
           continue;
         }
 
-        const claimed = await claimReminderSend(latest.id);
+        claimed = await claimReminderSend(latest.id);
         if (!claimed) {
           skipped += 1;
           continue;
@@ -95,6 +98,7 @@ export default async function handler(req, res) {
         const nextAttempts = attempts + 1;
 
         if (result.ok) {
+          smtpAccepted = true;
           await markReminderOutcome(claimed.id, {
             status: "accepted",
             attempts: nextAttempts,
@@ -124,8 +128,8 @@ export default async function handler(req, res) {
           continue;
         }
 
-        // Transient: release claim (clear sending) so a later cron can retry,
-        // but keep attempts. Do NOT set reminder_sent_at.
+        // Transient: release claim so a later cron can retry.
+        // Do NOT set reminder_sent_at.
         await markReminderOutcome(claimed.id, {
           status:
             nextAttempts >= MAX_EMAIL_ATTEMPTS
@@ -141,6 +145,27 @@ export default async function handler(req, res) {
           "reminder send failed:",
           String(error?.message || error).slice(0, 200)
         );
+        // Release or finalize claim so reminders are not stuck in `sending`.
+        if (claimed?.id) {
+          try {
+            if (smtpAccepted) {
+              // SMTP accepted but outcome write failed — prefer accepted to avoid duplicate.
+              await markReminderOutcome(claimed.id, {
+                status: "accepted",
+                attempts: attempts + 1,
+                error: "outcome_write_failed_after_accept",
+              });
+            } else {
+              await markReminderOutcome(claimed.id, {
+                status: "temporary_failure",
+                attempts,
+                error: "send_interrupted",
+              });
+            }
+          } catch {
+            // Leave for stale-claim reclaim after STALE_EMAIL_CLAIM_MS.
+          }
+        }
       }
     }
 

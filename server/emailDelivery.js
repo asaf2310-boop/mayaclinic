@@ -5,6 +5,7 @@ import {
   validateBookingEmail,
 } from "../src/lib/bookingEmailValidation.js";
 
+export { STALE_EMAIL_CLAIM_MS, canClaimEmailDelivery, buildEmailClaimOrFilter } from "./emailClaim.js";
 export const MAX_EMAIL_ATTEMPTS = 3;
 
 const SUPPRESSION_TABLE_MISSING = /relation .*email_suppressions.* does not exist|Could not find the table/i;

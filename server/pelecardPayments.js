@@ -731,14 +731,19 @@ async function maybeSendConfirmationEmail(appointments) {
 
   for (const appointment of appointments) {
     if (!appointment?.id) continue;
+    let claimed = null;
+    let smtpAccepted = false;
+    let nextAttempts = 0;
+    let priorAttempts = 0;
     try {
-      const claimed = await claimConfirmationSend(appointment.id);
+      claimed = await claimConfirmationSend(appointment.id);
       if (!claimed) {
         // Already accepted / in-flight / permanently failed — idempotent skip.
         continue;
       }
 
-      const attempts = Number(claimed.confirmation_email_attempts || 0) + 1;
+      priorAttempts = Number(claimed.confirmation_email_attempts || 0);
+      nextAttempts = priorAttempts + 1;
       const result = await sendPatientEmail({
         to: validation.normalized,
         subject,
@@ -748,22 +753,23 @@ async function maybeSendConfirmationEmail(appointments) {
       });
 
       if (result.ok) {
+        smtpAccepted = true;
         await markConfirmationOutcome(appointment.id, {
           status: "accepted",
-          attempts,
+          attempts: nextAttempts,
           error: null,
         });
       } else if (result.status === "permanent_failure" || result.status === "suppressed") {
         await markConfirmationOutcome(appointment.id, {
           status: result.status,
-          attempts,
+          attempts: nextAttempts,
           error: result.error,
         });
       } else {
         await markConfirmationOutcome(appointment.id, {
           status:
-            attempts >= 3 ? "permanent_failure" : result.status || "temporary_failure",
-          attempts,
+            nextAttempts >= 3 ? "permanent_failure" : result.status || "temporary_failure",
+          attempts: nextAttempts,
           error: result.error,
         });
       }
@@ -772,6 +778,26 @@ async function maybeSendConfirmationEmail(appointments) {
         "Patient confirmation email failed:",
         String(error?.message || error).slice(0, 200)
       );
+      if (claimed?.id) {
+        try {
+          if (smtpAccepted) {
+            await markConfirmationOutcome(appointment.id, {
+              status: "accepted",
+              attempts: nextAttempts,
+              error: "outcome_write_failed_after_accept",
+            });
+          } else {
+            // Do not consume an attempt when SMTP outcome is unknown/interrupted.
+            await markConfirmationOutcome(appointment.id, {
+              status: "temporary_failure",
+              attempts: priorAttempts,
+              error: "send_interrupted",
+            });
+          }
+        } catch {
+          // Stale-claim reclaim after STALE_EMAIL_CLAIM_MS.
+        }
+      }
     }
   }
 }

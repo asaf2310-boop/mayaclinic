@@ -26,6 +26,13 @@ alter table if exists public.appointments
 alter table if exists public.appointments
   add column if not exists reminder_email_last_error text;
 
+-- Claim timestamps for crash recovery of stuck `sending` rows (no backfill needed).
+alter table if exists public.appointments
+  add column if not exists confirmation_email_claimed_at timestamptz;
+
+alter table if exists public.appointments
+  add column if not exists reminder_email_claimed_at timestamptz;
+
 -- Known-bad addresses (hard bounce / permanent SMTP failure). Cleared only on
 -- explicit admin email correction / override.
 create table if not exists public.email_suppressions (
@@ -42,4 +49,6 @@ create index if not exists idx_email_suppressions_active
 
 alter table if exists public.email_suppressions enable row level security;
 
+-- No anon/authenticated policies → deny-by-default under RLS.
+-- Service-role API routes bypass RLS.
 revoke all on table public.email_suppressions from anon, authenticated;

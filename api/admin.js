@@ -287,9 +287,26 @@ async function updateEntity(entity, id, row, tenantId) {
         String(previous?.reminder_email_status || "") === "suppressed"
       ) {
         payload.reminder_email_status = "pending";
+        payload.reminder_email_attempts = 0;
         payload.reminder_email_last_error = null;
+        payload.reminder_email_claimed_at = null;
       }
     }
+  }
+
+  // Date change = new reminder occurrence. Invalidate prior reminder claim/sent state.
+  // Do not touch confirmation_* audit fields or auto-resend confirmations.
+  if (
+    entity === "appointments" &&
+    previous &&
+    Object.prototype.hasOwnProperty.call(payload, "date") &&
+    String(payload.date || "") !== String(previous.date || "")
+  ) {
+    payload.reminder_sent_at = null;
+    payload.reminder_email_status = "pending";
+    payload.reminder_email_attempts = 0;
+    payload.reminder_email_last_error = null;
+    payload.reminder_email_claimed_at = null;
   }
 
   const path = withTenantFilter(

@@ -54,6 +54,8 @@ alter table appointments add column if not exists confirmation_sent_at timestamp
 alter table appointments add column if not exists reminder_email_status text;
 alter table appointments add column if not exists reminder_email_attempts integer not null default 0;
 alter table appointments add column if not exists reminder_email_last_error text;
+alter table appointments add column if not exists confirmation_email_claimed_at timestamptz;
+alter table appointments add column if not exists reminder_email_claimed_at timestamptz;
 
 create index if not exists idx_treatments_created_at on treatments(created_at);
 create index if not exists idx_availability_date on availability(date);
