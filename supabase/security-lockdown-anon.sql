@@ -21,6 +21,7 @@ alter table if exists public.patient_profiles enable row level security;
 alter table if exists public.weekly_schedule enable row level security;
 alter table if exists public.pelecard_payments enable row level security;
 alter table if exists public.clinic_tenants enable row level security;
+alter table if exists public.email_suppressions enable row level security;
 
 -- Remove every policy on clinic tables (including open "anon_all_*")
 do $$
@@ -38,7 +39,8 @@ begin
         'patient_profiles',
         'weekly_schedule',
         'pelecard_payments',
-        'clinic_tenants'
+        'clinic_tenants',
+        'email_suppressions'
       )
   loop
     execute format('drop policy if exists %I on %I.%I', r.policyname, r.schemaname, r.tablename);
@@ -58,6 +60,7 @@ revoke all on table public.appointments from anon, authenticated;
 revoke all on table public.patient_profiles from anon, authenticated;
 revoke all on table public.weekly_schedule from anon, authenticated;
 revoke all on table public.pelecard_payments from anon, authenticated;
+revoke all on table public.email_suppressions from anon, authenticated;
 
 -- Quick self-check after running:
 -- select tablename, policyname from pg_policies

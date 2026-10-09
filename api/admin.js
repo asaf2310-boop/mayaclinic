@@ -26,6 +26,12 @@ import { supabaseRequest } from "../server/supabaseServer.js";
 import { probeMeridianMailbox } from "../server/meridianEmail.js";
 import { notifyClinicAppointmentCancelled } from "../server/clinicCancellationNotify.js";
 import { syncClinicCalendarForAppointment } from "../server/syncClinicCalendar.js";
+import { clearEmailSuppression } from "../server/emailDelivery.js";
+import {
+  bookingEmailErrorMessage,
+  normalizeBookingEmail,
+  validateBookingEmail,
+} from "../src/lib/bookingEmailValidation.js";
 
 const TENANT_ENTITIES = new Set([
   "appointments",
@@ -259,6 +265,32 @@ async function updateEntity(entity, id, row, tenantId) {
 
   const previous =
     entity === "appointments" ? await getEntityById(entity, id, tenantId) : null;
+
+  if (entity === "appointments" && Object.prototype.hasOwnProperty.call(payload, "patient_email")) {
+    const emailResult = validateBookingEmail(payload.patient_email, { required: false });
+    if (!emailResult.ok) {
+      const error = new Error(bookingEmailErrorMessage(emailResult.error));
+      error.statusCode = 400;
+      throw error;
+    }
+    payload.patient_email = emailResult.normalized || "";
+
+    const prevEmail = normalizeBookingEmail(previous?.patient_email || "").normalized.toLowerCase();
+    const nextEmail = normalizeBookingEmail(payload.patient_email || "").normalized.toLowerCase();
+    if (nextEmail && nextEmail !== prevEmail) {
+      // Explicit correction: lift suppression for the new address only.
+      // Do not auto-resend old confirmations.
+      await clearEmailSuppression(nextEmail);
+      payload.confirmation_email_last_error = null;
+      if (
+        String(previous?.reminder_email_status || "") === "permanent_failure" ||
+        String(previous?.reminder_email_status || "") === "suppressed"
+      ) {
+        payload.reminder_email_status = "pending";
+        payload.reminder_email_last_error = null;
+      }
+    }
+  }
 
   const path = withTenantFilter(
     `${entity}`,

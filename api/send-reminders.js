@@ -1,8 +1,15 @@
 import { buildReminderEmail } from "../server/emailTemplates.js";
-import { getClinicName, isEmailConfigured, sendEmail } from "../server/gmail.js";
+import { getClinicName, isEmailConfigured } from "../server/gmail.js";
 import {
+  MAX_EMAIL_ATTEMPTS,
+  isAppointmentReminderEligible,
+  sendPatientEmail,
+} from "../server/emailDelivery.js";
+import {
+  claimReminderSend,
+  fetchAppointmentById,
   fetchTomorrowAppointmentsNeedingReminder,
-  markReminderSent,
+  markReminderOutcome,
 } from "../server/supabaseServer.js";
 
 function isAuthorized(req) {
@@ -30,28 +37,120 @@ export default async function handler(req, res) {
   }
 
   try {
-    const appointments = await fetchTomorrowAppointmentsNeedingReminder();
+    const candidates = await fetchTomorrowAppointmentsNeedingReminder();
     const clinicName = getClinicName();
     let sent = 0;
+    let skipped = 0;
+    let failed = 0;
 
-    for (const appointment of appointments) {
-      const { subject, html } = buildReminderEmail({
-        patientName: appointment.patient_name,
-        appointments: [appointment],
-        clinicName,
-      });
+    for (const candidate of candidates) {
+      try {
+        // Re-fetch latest row before any send (cancel / reschedule / past start).
+        const latest = await fetchAppointmentById(candidate.id);
+        if (!latest) {
+          skipped += 1;
+          continue;
+        }
 
-      await sendEmail({
-        to: appointment.patient_email,
-        subject,
-        html,
-      });
+        if (!isAppointmentReminderEligible(latest)) {
+          await markReminderOutcome(latest.id, {
+            status: "cancelled",
+            error: "ineligible_or_expired",
+            attempts: Number(latest.reminder_email_attempts || 0),
+          });
+          skipped += 1;
+          continue;
+        }
 
-      await markReminderSent(appointment.id);
-      sent += 1;
+        const attempts = Number(latest.reminder_email_attempts || 0);
+        if (attempts >= MAX_EMAIL_ATTEMPTS) {
+          await markReminderOutcome(latest.id, {
+            status: "permanent_failure",
+            error: "max_attempts",
+            attempts,
+          });
+          skipped += 1;
+          continue;
+        }
+
+        const claimed = await claimReminderSend(latest.id);
+        if (!claimed) {
+          skipped += 1;
+          continue;
+        }
+
+        const emailContent = buildReminderEmail({
+          patientName: claimed.patient_name,
+          appointments: [claimed],
+          clinicName,
+        });
+        const result = await sendPatientEmail({
+          to: claimed.patient_email,
+          subject: emailContent.subject,
+          html: emailContent.html,
+          appointmentId: claimed.id,
+          requireValid: true,
+        });
+
+        const nextAttempts = attempts + 1;
+
+        if (result.ok) {
+          await markReminderOutcome(claimed.id, {
+            status: "accepted",
+            attempts: nextAttempts,
+            error: null,
+          });
+          sent += 1;
+          continue;
+        }
+
+        if (result.status === "suppressed" || result.status === "cancelled") {
+          await markReminderOutcome(claimed.id, {
+            status: result.status,
+            attempts: nextAttempts,
+            error: result.error,
+          });
+          skipped += 1;
+          continue;
+        }
+
+        if (result.status === "permanent_failure" || !result.retryable) {
+          await markReminderOutcome(claimed.id, {
+            status: "permanent_failure",
+            attempts: nextAttempts,
+            error: result.error,
+          });
+          failed += 1;
+          continue;
+        }
+
+        // Transient: release claim (clear sending) so a later cron can retry,
+        // but keep attempts. Do NOT set reminder_sent_at.
+        await markReminderOutcome(claimed.id, {
+          status:
+            nextAttempts >= MAX_EMAIL_ATTEMPTS
+              ? "permanent_failure"
+              : "temporary_failure",
+          attempts: nextAttempts,
+          error: result.error,
+        });
+        failed += 1;
+      } catch (error) {
+        failed += 1;
+        console.error(
+          "reminder send failed:",
+          String(error?.message || error).slice(0, 200)
+        );
+      }
     }
 
-    res.status(200).json({ ok: true, sent, total: appointments.length });
+    res.status(200).json({
+      ok: true,
+      sent,
+      skipped,
+      failed,
+      total: candidates.length,
+    });
   } catch (error) {
     res.status(500).json({ error: error.message || "Failed to send reminders" });
   }
