@@ -108,6 +108,7 @@ function formatNotesForDisplay(notes) {
 
 export default function AppointmentTable({
   appointments,
+  emptyMessage = "אין תורים עדיין",
   onStatusChange,
   onPaidChange,
   onUpdate,
@@ -237,7 +238,7 @@ export default function AppointmentTable({
       <div className="space-y-4" dir="rtl">
         {appointments.length === 0 ? (
           <div className="rounded-xl border border-border/60 bg-card py-12 text-center text-muted-foreground">
-            אין תורים עדיין
+            {emptyMessage}
           </div>
         ) : (
           appointments.map((apt) => (
