@@ -10,9 +10,10 @@ import CustomerManagement from "../components/admin/CustomerManagement";
 import TreatmentManagement from "../components/admin/TreatmentManagement";
 import GiftVoucherManagement from "../components/admin/GiftVoucherManagement";
 import { Card } from "@/components/ui/card";
-import { BarChart3, CalendarCheck, CalendarDays, CheckCircle2, Clock, Gift, LogOut, Settings2, Sparkles, Users } from "lucide-react";
+import { BarChart3, CalendarCheck, CalendarDays, CheckCircle2, Clock, Gift, LogOut, Search, Settings2, Sparkles, Users } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/AuthContext";
 import {
   filterAppointmentsForClinic,
@@ -27,11 +28,45 @@ import {
   clinicTextHeading,
 } from "@/lib/clinicUi";
 
+function normalizePhoneDigits(value = "") {
+  return String(value).replace(/\D/g, "");
+}
+
+function formatAppointmentDateDisplay(isoDate = "") {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(isoDate).trim());
+  if (!match) return String(isoDate || "");
+  return `${match[3]}/${match[2]}/${match[1]}`;
+}
+
+function appointmentMatchesSearch(appointment, rawQuery) {
+  const query = String(rawQuery || "").trim().toLowerCase();
+  if (!query) return true;
+
+  const name = String(appointment.patient_name || "").toLowerCase();
+  const phone = String(appointment.patient_phone || "");
+  const phoneDigits = normalizePhoneDigits(phone);
+  const queryDigits = normalizePhoneDigits(query);
+  const dateIso = String(appointment.date || "");
+  const dateDisplay = formatAppointmentDateDisplay(dateIso);
+
+  if (name.includes(query)) return true;
+  if (phone.toLowerCase().includes(query)) return true;
+  if (queryDigits && phoneDigits.includes(queryDigits)) return true;
+  if (dateIso.toLowerCase().includes(query)) return true;
+  if (dateDisplay.toLowerCase().includes(query)) return true;
+  // Allow day/month fragments without separators, e.g. 0310 or 20261003
+  const compactDate = `${dateIso}${dateDisplay}`.replace(/\D/g, "");
+  if (queryDigits.length >= 2 && compactDate.includes(queryDigits)) return true;
+
+  return false;
+}
+
 export default function Admin() {
   const clinicSite = getClinicSite();
   const { logout, user } = useAuth();
   const [activeAdminTab, setActiveAdminTab] = useState("appointments");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [appointmentSearch, setAppointmentSearch] = useState("");
   const queryClient = useQueryClient();
 
   const { data: appointments = [], isLoading } = useQuery({
@@ -72,14 +107,21 @@ export default function Admin() {
     },
   });
 
-  const filteredAppointments = (statusFilter === "all"
-    ? clinicAppointments
-    : clinicAppointments.filter((a) => a.status === statusFilter)
-  ).sort((a, b) => {
-    const dateCompare = (a.date || "").localeCompare(b.date || "");
-    if (dateCompare !== 0) return dateCompare;
-    return (a.time || "").localeCompare(b.time || "");
-  });
+  const filteredAppointments = useMemo(() => {
+    const byStatus =
+      statusFilter === "all"
+        ? clinicAppointments
+        : clinicAppointments.filter((a) => a.status === statusFilter);
+
+    return byStatus
+      .filter((appointment) => appointmentMatchesSearch(appointment, appointmentSearch))
+      .sort((a, b) => {
+        // Newest date first, then latest time within the same day.
+        const dateCompare = (b.date || "").localeCompare(a.date || "");
+        if (dateCompare !== 0) return dateCompare;
+        return (b.time || "").localeCompare(a.time || "");
+      });
+  }, [appointmentSearch, clinicAppointments, statusFilter]);
 
   const stats = {
     total: clinicAppointments.length,
@@ -196,7 +238,17 @@ export default function Admin() {
                 ))}
               </div>
 
-              <div className="mb-6">
+              <div className="mb-6 flex flex-col gap-4">
+                <div className="relative max-w-xl mr-auto w-full">
+                  <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={appointmentSearch}
+                    onChange={(event) => setAppointmentSearch(event.target.value)}
+                    placeholder="חיפוש לפי שם, טלפון או תאריך"
+                    className="pr-9"
+                    aria-label="חיפוש תורים לפי שם, טלפון או תאריך"
+                  />
+                </div>
                 <div className="flex w-full flex-wrap justify-end gap-2 rounded-xl bg-muted/50 p-2 sm:w-fit" role="tablist" aria-label="סינון סטטוס תורים">
                   {statusTabs.map((tab) => (
                     <button
@@ -220,6 +272,11 @@ export default function Admin() {
               ) : (
                 <AppointmentTable
                   appointments={filteredAppointments}
+                  emptyMessage={
+                    appointmentSearch.trim()
+                      ? "לא נמצאו תורים התואמים לחיפוש"
+                      : "אין תורים עדיין"
+                  }
                   onStatusChange={(id, status) => updateMutation.mutate({ id, data: { status } })}
                   onPaidChange={(id, paid) => updateMutation.mutate({ id, data: { paid } })}
                   onUpdate={(id, data) => updateMutation.mutate({ id, data })}
