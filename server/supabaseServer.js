@@ -63,6 +63,14 @@ export async function fetchRecentAppointmentsByIds(ids = [], { maxAgeMs = 10 * 6
   });
 }
 
+function isMissingReminderEmailColumnError(error) {
+  const message = String(error?.message || error || "");
+  return (
+    /reminder_email_/i.test(message) ||
+    (/column/i.test(message) && /reminder_email/i.test(message))
+  );
+}
+
 export function getTomorrowDateIso() {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Jerusalem",
@@ -81,13 +89,28 @@ export function getTomorrowDateIso() {
 
 export async function fetchTomorrowAppointmentsNeedingReminder() {
   const tomorrow = getTomorrowDateIso();
-  const rows =
-    (await supabaseRequest(
-      `appointments?date=eq.${tomorrow}&status=neq.cancelled&patient_email=not.is.null&reminder_sent_at=is.null&select=id,patient_name,patient_email,treatment_name,treatment_price,date,time,status,reminder_email_status,reminder_email_attempts,reminder_email_claimed_at,reminder_sent_at`
-    )) || [];
+  const baseFilter = `appointments?date=eq.${tomorrow}&status=neq.cancelled&patient_email=not.is.null&reminder_sent_at=is.null`;
+  const selectWithMeta =
+    "id,patient_name,patient_email,treatment_name,treatment_price,date,time,status,reminder_email_status,reminder_email_attempts,reminder_email_claimed_at,reminder_sent_at";
+  const selectLegacy =
+    "id,patient_name,patient_email,treatment_name,treatment_price,date,time,status,reminder_sent_at";
+
+  let rows;
+  let legacy = false;
+  try {
+    rows = (await supabaseRequest(`${baseFilter}&select=${selectWithMeta}`)) || [];
+  } catch (error) {
+    if (!isMissingReminderEmailColumnError(error)) throw error;
+    console.warn(
+      "reminder email columns missing — falling back to legacy reminder query; run supabase/appointment-email-delivery.sql"
+    );
+    legacy = true;
+    rows = (await supabaseRequest(`${baseFilter}&select=${selectLegacy}`)) || [];
+  }
 
   return rows.filter((row) => {
     if (!String(row.patient_email || "").trim()) return false;
+    if (legacy) return true;
     const status = String(row.reminder_email_status || "");
     if (status === "permanent_failure" || status === "suppressed" || status === "cancelled") {
       return false;
@@ -140,14 +163,16 @@ export async function claimReminderSend(id, now = new Date()) {
     );
     return Array.isArray(rows) && rows[0] ? rows[0] : null;
   } catch (error) {
-    if (/reminder_email_/i.test(String(error?.message || ""))) {
-      console.warn(
-        "reminder email columns missing — run supabase/appointment-email-delivery.sql"
-      );
-      // Without claim columns we cannot safely de-dupe concurrent workers — skip send.
+    if (!isMissingReminderEmailColumnError(error)) throw error;
+    console.warn(
+      "reminder email columns missing — legacy claim fallback; run supabase/appointment-email-delivery.sql"
+    );
+    // Daily cron is single-worker; prefer sending over silently skipping everyone.
+    const row = await fetchAppointmentById(id);
+    if (!row || row.reminder_sent_at || String(row.status || "") === "cancelled") {
       return null;
     }
-    throw error;
+    return { ...row, __legacyReminderClaim: true };
   }
 }
 
@@ -161,11 +186,23 @@ export async function markReminderOutcome(id, { status, error = null, attempts =
   if (status === "accepted" || status === "delivered") {
     patch.reminder_sent_at = new Date().toISOString();
   }
-  await supabaseRequest(`appointments?id=eq.${encodeURIComponent(id)}`, {
-    method: "PATCH",
-    headers: { Prefer: "return=minimal" },
-    body: JSON.stringify(patch),
-  });
+  try {
+    await supabaseRequest(`appointments?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify(patch),
+    });
+  } catch (err) {
+    if (!isMissingReminderEmailColumnError(err)) throw err;
+    // Pre-migration DB: only persist idempotency for successful sends.
+    if (status === "accepted" || status === "delivered") {
+      await supabaseRequest(`appointments?id=eq.${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify({ reminder_sent_at: new Date().toISOString() }),
+      });
+    }
+  }
 }
 
 /** @deprecated Prefer markReminderOutcome — kept for callers/tests. */

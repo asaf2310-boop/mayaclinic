@@ -235,11 +235,12 @@ export function getJerusalemNowParts(now = new Date()) {
 }
 
 export function parseAppointmentTimeMinutes(time) {
-  const match = /^(\d{1,2}):(\d{2})$/.exec(String(time || "").trim());
+  // Accept HH:MM and HH:MM:SS (Postgres/text exports sometimes include seconds).
+  const match = /^(\d{1,2}):(\d{2})(?::\d{2})?$/.exec(String(time || "").trim());
   if (!match) return null;
   const h = Number(match[1]);
   const m = Number(match[2]);
-  if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+  if (!Number.isFinite(h) || !Number.isFinite(m) || h > 23 || m > 59) return null;
   return h * 60 + m;
 }
 
@@ -248,13 +249,26 @@ export function isAppointmentReminderEligible(appointment, now = new Date()) {
   if (!appointment) return false;
   if (String(appointment.status || "") === "cancelled") return false;
   const date = String(appointment.date || "").trim();
-  const timeMinutes = parseAppointmentTimeMinutes(appointment.time);
-  if (!date || timeMinutes == null) return false;
+  if (!date) return false;
 
   const { dateIso, minutes } = getJerusalemNowParts(now);
   if (date < dateIso) return false;
+  // Future calendar day: still remind even if time text is odd/unparseable.
   if (date > dateIso) return true;
+
+  const timeMinutes = parseAppointmentTimeMinutes(appointment.time);
+  if (timeMinutes == null) return false;
   return timeMinutes > minutes;
+}
+
+/** True when a missed/cancelled reminder should be terminal (do not retry later). */
+export function isReminderIneligibilityTerminal(appointment, now = new Date()) {
+  if (!appointment) return true;
+  if (String(appointment.status || "") === "cancelled") return true;
+  const date = String(appointment.date || "").trim();
+  if (!date) return true;
+  const { dateIso } = getJerusalemNowParts(now);
+  return date < dateIso;
 }
 
 export function reminderOccurrenceKey(appointment) {

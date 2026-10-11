@@ -9,7 +9,9 @@ import {
 import {
   classifyEmailSendError,
   isAppointmentReminderEligible,
+  isReminderIneligibilityTerminal,
   MAX_EMAIL_ATTEMPTS,
+  parseAppointmentTimeMinutes,
   reminderOccurrenceKey,
   STALE_EMAIL_CLAIM_MS,
   canClaimEmailDelivery,
@@ -129,6 +131,46 @@ assert.equal(EMAIL_DOMAIN_SUGGESTIONS["gmail.co.il"], "gmail.com");
     }),
     true
   );
+}
+
+// HH:MM:SS time text must still parse / remain eligible for tomorrow+
+{
+  assert.equal(parseAppointmentTimeMinutes("09:00:00"), 540);
+  assert.equal(parseAppointmentTimeMinutes("9:30"), 570);
+  assert.equal(
+    isAppointmentReminderEligible({
+      date: "2099-06-01",
+      time: "09:00:00",
+      status: "confirmed",
+    }),
+    true
+  );
+  assert.equal(
+    isReminderIneligibilityTerminal({
+      date: "2099-06-01",
+      time: "bad",
+      status: "confirmed",
+    }),
+    false
+  );
+  assert.equal(
+    isReminderIneligibilityTerminal({
+      date: "2020-01-01",
+      time: "10:00",
+      status: "confirmed",
+    }),
+    true
+  );
+}
+
+// Reminder cron must fall back when delivery columns are missing (pre-migration).
+{
+  const supabase = read("../server/supabaseServer.js");
+  assert.match(supabase, /falling back to legacy reminder query/);
+  assert.match(supabase, /__legacyReminderClaim/);
+  assert.match(supabase, /legacy claim fallback/);
+  const reminders = read("../api/send-reminders.js");
+  assert.match(reminders, /isReminderIneligibilityTerminal/);
 }
 
 // 9) Rescheduled appointment → occurrence key changes; admin resets reminder fields
