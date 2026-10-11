@@ -3,6 +3,7 @@ import { getClinicName, isEmailConfigured } from "../server/gmail.js";
 import {
   MAX_EMAIL_ATTEMPTS,
   isAppointmentReminderEligible,
+  isReminderIneligibilityTerminal,
   sendPatientEmail,
 } from "../server/emailDelivery.js";
 import {
@@ -56,11 +57,15 @@ export default async function handler(req, res) {
         }
 
         if (!isAppointmentReminderEligible(latest)) {
-          await markReminderOutcome(latest.id, {
-            status: "cancelled",
-            error: "ineligible_or_expired",
-            attempts: Number(latest.reminder_email_attempts || 0),
-          });
+          // Only terminal-skip cancelled/past appointments. Soft skips (e.g. odd
+          // same-day time text) must not permanently block a later retry.
+          if (isReminderIneligibilityTerminal(latest)) {
+            await markReminderOutcome(latest.id, {
+              status: "cancelled",
+              error: "ineligible_or_expired",
+              attempts: Number(latest.reminder_email_attempts || 0),
+            });
+          }
           skipped += 1;
           continue;
         }
