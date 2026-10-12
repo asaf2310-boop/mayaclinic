@@ -63,6 +63,15 @@ alter table appointments add column if not exists reminder_sms_claimed_at timest
 alter table appointments add column if not exists reminder_sms_sent_at timestamptz;
 alter table appointments add column if not exists reminder_sms_shipment_id text;
 
+-- Prefer supabase/appointment-sms-delivery.sql in production (indexes + seed + revoke).
+create table if not exists public.sms_reminder_settings (
+  tenant_id text primary key,
+  enabled boolean not null default false,
+  lead_hours integer not null default 24,
+  updated_at timestamptz not null default now()
+);
+alter table public.sms_reminder_settings enable row level security;
+
 create index if not exists idx_treatments_created_at on treatments(created_at);
 create index if not exists idx_availability_date on availability(date);
 create index if not exists idx_appointments_date_time on appointments(date, time);
