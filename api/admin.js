@@ -574,7 +574,10 @@ export default async function handler(req, res) {
         },
       });
     } catch (error) {
-      res.status(500).json({ ok: false, error: error?.message || "Failed to load SMS settings" });
+      res.status(500).json({
+        ok: false,
+        error: "לא ניתן לטעון את הגדרות ההודעות. נסו שוב או פנו לתמיכה.",
+      });
     }
     return;
   }
@@ -635,12 +638,14 @@ export default async function handler(req, res) {
       if (/sms_reminder_settings|Could not find the table|relation/i.test(message)) {
         res.status(503).json({
           ok: false,
-          error:
-            "יש להריץ את supabase/appointment-sms-delivery.sql ו־supabase/appointment-sms-templates.sql לפני הפעלת הודעות SMS",
+          error: "שירות ההודעות עדיין לא מוכן — פני לתמיכה",
         });
         return;
       }
-      res.status(500).json({ ok: false, error: error?.message || "Failed to save SMS settings" });
+      res.status(500).json({
+        ok: false,
+        error: "לא ניתן לשמור את ההגדרות. נסו שוב או פנו לתמיכה.",
+      });
     }
     return;
   }
@@ -664,7 +669,10 @@ export default async function handler(req, res) {
       });
       res.status(preview.ok ? 200 : 400).json({ ok: Boolean(preview.ok), ...preview });
     } catch (error) {
-      res.status(500).json({ ok: false, error: error?.message || "Failed to preview SMS template" });
+      res.status(500).json({
+        ok: false,
+        error: "לא ניתן להציג תצוגה מקדימה. נסו שוב או פנו לתמיכה.",
+      });
     }
     return;
   }
@@ -675,7 +683,10 @@ export default async function handler(req, res) {
       const rows = await fetchRecentSmsReminderHistory({ limit, tenantId });
       res.status(200).json({ ok: true, rows });
     } catch (error) {
-      res.status(500).json({ ok: false, error: error?.message || "Failed to load SMS history" });
+      res.status(500).json({
+        ok: false,
+        error: "לא ניתן לטעון את היסטוריית השליחות. נסו שוב או פנו לתמיכה.",
+      });
     }
     return;
   }
