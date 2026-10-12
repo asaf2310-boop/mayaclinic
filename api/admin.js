@@ -28,6 +28,13 @@ import { notifyClinicAppointmentCancelled } from "../server/clinicCancellationNo
 import { syncClinicCalendarForAppointment } from "../server/syncClinicCalendar.js";
 import { clearEmailSuppression } from "../server/emailDelivery.js";
 import {
+  describeSmsAutomationGate,
+  fetchRecentSmsReminderHistory,
+  fetchSmsReminderSettings,
+  sendAdminTestSms,
+  upsertSmsReminderSettings,
+} from "../server/smsReminders.js";
+import {
   bookingEmailErrorMessage,
   normalizeBookingEmail,
   validateBookingEmail,
@@ -309,6 +316,35 @@ async function updateEntity(entity, id, row, tenantId) {
     payload.reminder_email_claimed_at = null;
   }
 
+  // Date or time change = new SMS reminder occurrence. Clear SMS claim so the new slot can remind.
+  // Cancelled appointments are never SMS'd (cron + eligibility skip status=cancelled).
+  if (
+    entity === "appointments" &&
+    previous &&
+    ((Object.prototype.hasOwnProperty.call(payload, "date") &&
+      String(payload.date || "") !== String(previous.date || "")) ||
+      (Object.prototype.hasOwnProperty.call(payload, "time") &&
+        String(payload.time || "") !== String(previous.time || "")))
+  ) {
+    payload.reminder_sms_sent_at = null;
+    payload.reminder_sms_status = "pending";
+    payload.reminder_sms_attempts = 0;
+    payload.reminder_sms_last_error = null;
+    payload.reminder_sms_claimed_at = null;
+    payload.reminder_sms_shipment_id = null;
+  }
+
+  if (
+    entity === "appointments" &&
+    Object.prototype.hasOwnProperty.call(payload, "status") &&
+    String(payload.status || "") === "cancelled"
+  ) {
+    // Stop in-flight / pending SMS; do not send after cancel.
+    payload.reminder_sms_status = "cancelled";
+    payload.reminder_sms_claimed_at = null;
+    payload.reminder_sms_last_error = "appointment_cancelled";
+  }
+
   const path = withTenantFilter(
     `${entity}`,
     entity,
@@ -316,11 +352,39 @@ async function updateEntity(entity, id, row, tenantId) {
     `id=eq.${encodeURIComponent(id)}&select=*`
   );
 
-  const updated = await supabaseRequest(path, {
+  const patchOpts = {
     method: "PATCH",
     headers: { Prefer: "return=representation" },
-    body: JSON.stringify(payload),
-  });
+  };
+
+  let updated;
+  try {
+    updated = await supabaseRequest(path, {
+      ...patchOpts,
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    // Pre-SMS-migration DBs: never block cancel/reschedule on missing reminder_sms_* columns.
+    const message = String(error?.message || error || "");
+    const smsKeys = Object.keys(payload).filter((key) => key.startsWith("reminder_sms_"));
+    if (
+      smsKeys.length > 0 &&
+      (/reminder_sms_/i.test(message) ||
+        (/column/i.test(message) && /reminder_sms/i.test(message)))
+    ) {
+      console.warn(
+        "reminder sms columns missing on appointment update — run supabase/appointment-sms-delivery.sql"
+      );
+      const stripped = { ...payload };
+      for (const key of smsKeys) delete stripped[key];
+      updated = await supabaseRequest(path, {
+        ...patchOpts,
+        body: JSON.stringify(stripped),
+      });
+    } else {
+      throw error;
+    }
+  }
   const rowOut = Array.isArray(updated) ? updated[0] : updated;
   if (!rowOut) {
     throw new Error("Record not found for this clinic tenant");
@@ -476,6 +540,95 @@ export default async function handler(req, res) {
         ok: false,
         error: error?.message || "IMAP probe failed",
       });
+    }
+    return;
+  }
+
+  if (req.method === "GET" && action === "sms-reminder-settings") {
+    try {
+      const settings = await fetchSmsReminderSettings(tenantId);
+      res.status(200).json({
+        ok: true,
+        settings,
+        gate: describeSmsAutomationGate(settings),
+      });
+    } catch (error) {
+      res.status(500).json({ ok: false, error: error?.message || "Failed to load SMS settings" });
+    }
+    return;
+  }
+
+  if (req.method === "PATCH" && action === "sms-reminder-settings") {
+    try {
+      const body = readBody(req);
+      const patch = {};
+      if (Object.prototype.hasOwnProperty.call(body, "enabled")) {
+        patch.enabled = body.enabled;
+      }
+      if (Object.prototype.hasOwnProperty.call(body, "lead_hours")) {
+        patch.lead_hours = body.lead_hours;
+      }
+      const settings = await upsertSmsReminderSettings(tenantId, patch);
+      res.status(200).json({
+        ok: true,
+        settings,
+        gate: describeSmsAutomationGate(settings),
+      });
+    } catch (error) {
+      const message = String(error?.message || error || "");
+      if (/sms_reminder_settings|Could not find the table|relation/i.test(message)) {
+        res.status(503).json({
+          ok: false,
+          error: "יש להריץ את supabase/appointment-sms-delivery.sql לפני הפעלת תזכורות SMS",
+        });
+        return;
+      }
+      res.status(500).json({ ok: false, error: error?.message || "Failed to save SMS settings" });
+    }
+    return;
+  }
+
+  if (req.method === "GET" && action === "sms-reminder-history") {
+    try {
+      const limit = Number(req.query?.limit || 50);
+      const rows = await fetchRecentSmsReminderHistory({ limit, tenantId });
+      res.status(200).json({ ok: true, rows });
+    } catch (error) {
+      res.status(500).json({ ok: false, error: error?.message || "Failed to load SMS history" });
+    }
+    return;
+  }
+
+  if (req.method === "POST" && action === "sms-test") {
+    try {
+      const body = readBody(req);
+      if (!body?.confirm) {
+        res.status(400).json({
+          ok: false,
+          error: "confirm_required",
+          message: "יש לאשר במפורש לפני שליחת SMS לבדיקה",
+        });
+        return;
+      }
+      const result = await sendAdminTestSms({
+        phone: body.phone,
+        message: body.message,
+        confirm: true,
+        // Live only when env gate is on AND caller explicitly requests it.
+        useLive: Boolean(body.useLive),
+      });
+      res.status(result.ok ? 200 : 400).json({
+        ok: Boolean(result.ok),
+        ...result,
+        // Never echo credentials; include safety flags for the UI.
+        note: result.usedTestEndpoint
+          ? "נשלח ל-endpoint בדיקה של 019 (ללא שליחה חיה)"
+          : result.sentLive
+            ? "נשלח ב-endpoint חי — ודאו שההודעה התקבלה"
+            : undefined,
+      });
+    } catch (error) {
+      res.status(500).json({ ok: false, error: error?.message || "SMS test failed" });
     }
     return;
   }
