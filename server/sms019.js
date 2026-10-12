@@ -20,10 +20,30 @@ function cleanEnv(value) {
     .find(Boolean) || "";
 }
 
-/** True when ops explicitly enabled live SMS automation via env. Defaults false. */
-export function isSmsRemindersEnvEnabled() {
-  const raw = cleanEnv(process.env.SMS_REMINDERS_ENABLED).toLowerCase();
+function envFlagEnabled(name) {
+  const raw = cleanEnv(process.env[name]).toLowerCase();
   return raw === "1" || raw === "true" || raw === "yes" || raw === "on";
+}
+
+/** True when ops explicitly enabled live SMS reminder automation via env. Defaults false. */
+export function isSmsRemindersEnvEnabled() {
+  return envFlagEnabled("SMS_REMINDERS_ENABLED");
+}
+
+/**
+ * True when ops enabled booking-confirmation SMS automation via env. Defaults false.
+ * Independent of SMS_REMINDERS_ENABLED — both require admin toggle + credentials.
+ */
+export function isSmsBookingConfirmEnvEnabled() {
+  return envFlagEnabled("SMS_BOOKING_CONFIRM_ENABLED");
+}
+
+/**
+ * Technical live/test SMS UI endpoints. Defaults false — clinic admins cannot use
+ * sms-test / sms-live-test until ops sets SMS_TECH_TEST_ENABLED=true.
+ */
+export function isSmsTechTestEnvEnabled() {
+  return envFlagEnabled("SMS_TECH_TEST_ENABLED");
 }
 
 export function getSms019Config() {

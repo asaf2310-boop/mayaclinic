@@ -34,6 +34,7 @@ import {
   normalizeBookingEmail,
   validateBookingEmail,
 } from "../src/lib/bookingEmailValidation.js";
+import { maybeSendBookingConfirmSms } from "./smsReminders.js";
 
 function nowIso() {
   return new Date().toISOString();
@@ -467,6 +468,7 @@ export async function createMeridianBooking(rawBooking = {}) {
   });
 
   await maybeSendConfirmationEmail(createdRows);
+  await maybeSendBookingConfirmSms(createdRows);
   await maybeSendClinicBookingNotify(createdRows, {
     sourceLabel: "מרידיאן",
     extraNote: `מזהה טיפול מרידיאן שאומת: ${meridianId}`,
@@ -508,6 +510,7 @@ export async function createMovementBooking(rawBooking = {}) {
   });
 
   await maybeSendConfirmationEmail(createdRows);
+  await maybeSendBookingConfirmSms(createdRows);
   await maybeSendClinicBookingNotify(createdRows, {
     sourceLabel: "מובמנט / Movement",
     extraNote: "תור ללקוחות מובמנט · 60 דקות · ללא תשלום באשראי באתר",
@@ -538,6 +541,7 @@ export async function createCashBooking(rawBooking = {}) {
   });
 
   await maybeSendConfirmationEmail(createdRows);
+  await maybeSendBookingConfirmSms(createdRows);
   await maybeSendClinicBookingNotify(createdRows, {
     sourceLabel: "מזומן בהגעה",
     extraNote: "התשלום יתבצע במזומן בהגעה לקליניקה",
@@ -556,6 +560,7 @@ export async function redeemGiftVoucher({ rawBooking, code, tenantId }) {
     const { createdIds, createdRows } = await createAppointmentsFromBooking(booking, { paymentNote: `שולם בשובר מתנה ${voucher.code}`, paid: true, status: "confirmed", analytics: rawBooking });
     await appendVoucherAppointments(voucher.id, createdIds);
     await maybeSendConfirmationEmail(createdRows);
+    await maybeSendBookingConfirmSms(createdRows);
     await maybeSendClinicBookingNotify(createdRows, { sourceLabel: "שובר מתנה", extraNote: `שובר: ${voucher.code}` });
     return { createdIds, appointments: createdRows, voucher };
   } catch (error) {
@@ -692,6 +697,7 @@ export async function verifyMeridianTreatmentId({
   }
 
   await maybeSendConfirmationEmail(updated);
+  await maybeSendBookingConfirmSms(updated);
   await maybeSendClinicBookingNotify(updated, {
     sourceLabel: "מרידיאן",
     extraNote: `מזהה טיפול מרידיאן שאומת: ${meridianId}`,
@@ -1054,6 +1060,7 @@ export async function finalizePaymentFromPelecard({
   });
 
   await maybeSendConfirmationEmail(createdRows);
+  await maybeSendBookingConfirmSms(createdRows);
   await maybeSendClinicBookingNotify(createdRows, {
     sourceLabel: "תשלום באשראי",
     extraNote: paymentNote,

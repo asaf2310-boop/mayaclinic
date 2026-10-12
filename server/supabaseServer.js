@@ -1,6 +1,7 @@
 import {
   buildEmailClaimOrFilter,
   canClaimEmailDelivery,
+  STALE_EMAIL_CLAIM_MS,
 } from "./emailClaim.js";
 
 function cleanEnv(value) {
@@ -218,6 +219,28 @@ function isMissingReminderSmsColumnError(error) {
   );
 }
 
+function isMissingConfirmSmsColumnError(error) {
+  const message = String(error?.message || error || "");
+  return (
+    /confirm_sms_/i.test(message) ||
+    (/column/i.test(message) && /confirm_sms/i.test(message))
+  );
+}
+
+/**
+ * Booking-confirm SMS claim filter — excludes temporary_failure so uncertain
+ * outcomes are never auto-retried on payment refresh/retry.
+ */
+function buildConfirmSmsClaimOrFilter(now = new Date()) {
+  const staleBefore = new Date(now.getTime() - STALE_EMAIL_CLAIM_MS).toISOString();
+  return (
+    `or=(confirm_sms_status.is.null,` +
+    `confirm_sms_status.eq.pending,` +
+    `and(confirm_sms_status.eq.sending,confirm_sms_claimed_at.lt."${staleBefore}"),` +
+    `and(confirm_sms_status.eq.sending,confirm_sms_claimed_at.is.null))`
+  );
+}
+
 /**
  * Appointments needing an SMS reminder for the target calendar day (Israel TZ).
  * Independent of email reminder_* columns / reminder_sent_at.
@@ -336,6 +359,65 @@ export async function markSmsReminderOutcome(
     if (!isMissingReminderSmsColumnError(err)) throw err;
     console.warn(
       "reminder sms columns missing — run supabase/appointment-sms-delivery.sql"
+    );
+  }
+}
+
+/**
+ * Atomic booking-confirmation SMS claim (separate from reminder_sms_* / email).
+ * Does not reclaim temporary_failure — no auto-retry on uncertain delivery.
+ */
+export async function claimSmsConfirmSend(id, now = new Date()) {
+  const orFilter = buildConfirmSmsClaimOrFilter(now);
+  try {
+    const rows = await supabaseRequest(
+      `appointments?id=eq.${encodeURIComponent(id)}&confirm_sms_sent_at=is.null&${orFilter}`,
+      {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({
+          confirm_sms_status: "sending",
+          confirm_sms_claimed_at: now.toISOString(),
+        }),
+      }
+    );
+    return Array.isArray(rows) && rows[0] ? rows[0] : null;
+  } catch (error) {
+    if (!isMissingConfirmSmsColumnError(error)) throw error;
+    console.warn(
+      "confirm sms columns missing — run supabase/appointment-sms-templates.sql"
+    );
+    return null;
+  }
+}
+
+export async function markSmsConfirmOutcome(
+  id,
+  { status, error = null, attempts = null, shipmentId = null } = {}
+) {
+  const patch = {
+    confirm_sms_status: status,
+    confirm_sms_claimed_at: null,
+  };
+  if (error != null) patch.confirm_sms_last_error = String(error).slice(0, 240);
+  if (attempts != null) patch.confirm_sms_attempts = attempts;
+  if (shipmentId != null && String(shipmentId).trim()) {
+    patch.confirm_sms_shipment_id = String(shipmentId).trim().slice(0, 120);
+  }
+  if (status === "accepted" || status === "delivered") {
+    patch.confirm_sms_sent_at = new Date().toISOString();
+    if (error == null) patch.confirm_sms_last_error = null;
+  }
+  try {
+    await supabaseRequest(`appointments?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify(patch),
+    });
+  } catch (err) {
+    if (!isMissingConfirmSmsColumnError(err)) throw err;
+    console.warn(
+      "confirm sms columns missing — run supabase/appointment-sms-templates.sql"
     );
   }
 }
