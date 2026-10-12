@@ -45,11 +45,26 @@ async function loadHistory() {
   return data.rows || [];
 }
 
+const LIVE_TEST_FALLBACK = {
+  phone: "0502677765",
+  message:
+    "בדיקת SMS ממערכת OfirBaby. אם קיבלת הודעה זו, שירות התזכורות פועל בהצלחה.",
+  sender: "0549000301",
+};
+
+async function loadLiveTestPreview() {
+  const response = await bookingFetch("/api/admin?action=sms-live-test");
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || "לא ניתן לטעון תצוגת בדיקה חיה");
+  return data.preview || LIVE_TEST_FALLBACK;
+}
+
 export default function SmsReminderSettings() {
   const queryClient = useQueryClient();
   const [leadHours, setLeadHours] = useState(null);
   const [testPhone, setTestPhone] = useState("");
   const [testResult, setTestResult] = useState(null);
+  const [liveTestResult, setLiveTestResult] = useState(null);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["sms-reminder-settings"],
@@ -63,6 +78,11 @@ export default function SmsReminderSettings() {
   } = useQuery({
     queryKey: ["sms-reminder-history"],
     queryFn: loadHistory,
+  });
+
+  const { data: livePreview = LIVE_TEST_FALLBACK } = useQuery({
+    queryKey: ["sms-live-test-preview"],
+    queryFn: loadLiveTestPreview,
   });
 
   const settings = data?.settings;
@@ -112,6 +132,32 @@ export default function SmsReminderSettings() {
     },
     onError: (err) => {
       setTestResult({ ok: false, error: err.message });
+    },
+  });
+
+  const liveTestMutation = useMutation({
+    mutationFn: async () => {
+      const response = await bookingFetch("/api/admin?action=sms-live-test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          confirm: true,
+          phone: livePreview?.phone || LIVE_TEST_FALLBACK.phone,
+        }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const err = new Error(body.message || body.error || "שליחת SMS חי נכשלה");
+        err.payload = body;
+        throw err;
+      }
+      return body;
+    },
+    onSuccess: (body) => {
+      setLiveTestResult(body);
+    },
+    onError: (err) => {
+      setLiveTestResult(err.payload || { ok: false, error: err.message, accepted: false });
     },
   });
 
@@ -248,6 +294,102 @@ export default function SmsReminderSettings() {
               <div className="mt-1 font-mono text-xs" dir="ltr">
                 shipment: {testResult.shipmentId}
               </div>
+            ) : null}
+          </div>
+        ) : null}
+      </Card>
+
+      <Card className="p-6 space-y-4 border-amber-200 bg-amber-50/40">
+        <div>
+          <h3 className="text-lg font-semibold">שליחת SMS אמיתי לבדיקה</h3>
+          <p className="text-sm text-muted-foreground">
+            שולח הודעה אחת בלבד דרך ה-API החי של 019 (
+            <span dir="ltr">/api</span>
+            ), לא דרך endpoint הבדיקה. האוטומציה נשארת כבויה — לא דורש{" "}
+            <span dir="ltr">SMS_REMINDERS_ENABLED=true</span>.
+          </p>
+        </div>
+
+        <div className="rounded-lg border bg-background px-4 py-3 text-sm space-y-2">
+          <p>
+            יעד:{" "}
+            <strong className="tabular-nums" dir="ltr">
+              {livePreview?.phone || LIVE_TEST_FALLBACK.phone}
+            </strong>
+          </p>
+          <p>
+            שולח:{" "}
+            <strong className="tabular-nums" dir="ltr">
+              {livePreview?.sender || LIVE_TEST_FALLBACK.sender}
+            </strong>
+          </p>
+          <p className="whitespace-pre-wrap leading-relaxed">
+            תוכן ההודעה:
+            <br />
+            <span className="font-medium">{livePreview?.message || LIVE_TEST_FALLBACK.message}</span>
+          </p>
+          {livePreview?.providerConfigured === false ? (
+            <p className="text-destructive">ספק 019 אינו מוגדר בשרת — לא ניתן לשלוח.</p>
+          ) : null}
+        </div>
+
+        <Button
+          type="button"
+          variant="default"
+          disabled={liveTestMutation.isPending || livePreview?.providerConfigured === false}
+          onClick={() => {
+            const phone = livePreview?.phone || LIVE_TEST_FALLBACK.phone;
+            const message = livePreview?.message || LIVE_TEST_FALLBACK.message;
+            const ok = window.confirm(
+              `לשלוח SMS אמיתי אחד?\n\nיעד: ${phone}\n\nהודעה:\n${message}\n\nקבלה אצל הספק אינה מאשרת מסירה לטלפון.`
+            );
+            if (!ok) return;
+            setLiveTestResult(null);
+            liveTestMutation.mutate();
+          }}
+        >
+          {liveTestMutation.isPending ? "שולח…" : "שליחת SMS אמיתי לבדיקה"}
+        </Button>
+
+        {liveTestResult ? (
+          <div
+            className={`rounded-lg border px-3 py-3 text-sm space-y-1 ${
+              liveTestResult.accepted
+                ? "border-green-300 bg-green-50 text-green-900"
+                : "border-destructive/30 bg-destructive/5 text-destructive"
+            }`}
+          >
+            <p className="font-semibold">
+              {liveTestResult.accepted
+                ? "התקבל אצל הספק (status 0)"
+                : "נכשל / לא התקבל אצל הספק"}
+            </p>
+            <p>{liveTestResult.note || liveTestResult.message || liveTestResult.error}</p>
+            {liveTestResult.accepted ? (
+              <p className="text-xs opacity-90">שים לב: קבלה אצל הספק ≠ מסירה לטלפון.</p>
+            ) : null}
+            {liveTestResult.status != null ? (
+              <div className="font-mono text-xs" dir="ltr">
+                provider status: {String(liveTestResult.status)}
+              </div>
+            ) : null}
+            {liveTestResult.shipmentId ? (
+              <div className="font-mono text-xs" dir="ltr">
+                shipment: {liveTestResult.shipmentId}
+              </div>
+            ) : null}
+            {liveTestResult.providerMessage ? (
+              <div className="text-xs" dir="ltr">
+                provider message: {liveTestResult.providerMessage}
+              </div>
+            ) : null}
+            {liveTestResult.error && !liveTestResult.accepted ? (
+              <div className="text-xs font-mono" dir="ltr">
+                error: {liveTestResult.error}
+              </div>
+            ) : null}
+            {liveTestResult.retryAfterSec ? (
+              <div className="text-xs">נסו שוב בעוד {liveTestResult.retryAfterSec} שניות</div>
             ) : null}
           </div>
         ) : null}

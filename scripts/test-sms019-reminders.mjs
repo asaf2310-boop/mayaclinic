@@ -28,6 +28,15 @@ import {
   normalizeSmsLeadHours,
   sendAdminTestSms,
 } from "../server/smsReminders.js";
+import {
+  LIVE_SMS_TEST_ALLOWED_RECIPIENTS,
+  LIVE_SMS_TEST_MESSAGE,
+  getLiveSmsTestPreview,
+  isAllowedLiveSmsTestRecipient,
+  resetLiveSmsTestGateForTests,
+  sendAdminLiveTestSms,
+} from "../server/smsLiveTest.js";
+import { getRecentAdminAuditEvents } from "../server/adminAuditLog.js";
 
 const root = dirname(fileURLToPath(import.meta.url));
 const read = (rel) => readFileSync(join(root, rel), "utf8");
@@ -259,6 +268,100 @@ const read = (rel) => readFileSync(join(root, rel), "utf8");
   else process.env.SMS_REMINDERS_ENABLED = prevEnabled;
 }
 
+// --- Live admin SMS test: allowlist, confirm, live endpoint, no env gate ---
+{
+  const prevUser = process.env.SMS019_USERNAME;
+  const prevToken = process.env.SMS019_API_TOKEN;
+  const prevSender = process.env.SMS019_SENDER;
+  const prevEnabled = process.env.SMS_REMINDERS_ENABLED;
+  process.env.SMS019_USERNAME = "unit-test-user";
+  process.env.SMS019_API_TOKEN = "unit-test-token";
+  process.env.SMS019_SENDER = "0549000301";
+  delete process.env.SMS_REMINDERS_ENABLED;
+  resetLiveSmsTestGateForTests();
+
+  assert.equal(LIVE_SMS_TEST_ALLOWED_RECIPIENTS[0], "0502677765");
+  assert.equal(
+    LIVE_SMS_TEST_MESSAGE,
+    "בדיקת SMS ממערכת OfirBaby. אם קיבלת הודעה זו, שירות התזכורות פועל בהצלחה."
+  );
+  assert.equal(isAllowedLiveSmsTestRecipient("0502677765"), true);
+  assert.equal(isAllowedLiveSmsTestRecipient("+972502677765"), true);
+  assert.equal(isAllowedLiveSmsTestRecipient("0501234567"), false);
+
+  const preview = getLiveSmsTestPreview();
+  assert.equal(preview.phone, "0502677765");
+  assert.equal(preview.endpoint, "https://019sms.co.il/api");
+  assert.equal(preview.providerConfigured, true);
+
+  const noConfirm = await sendAdminLiveTestSms({ confirm: false });
+  assert.equal(noConfirm.error, "confirm_required");
+  assert.equal(noConfirm.sentLive, false);
+
+  const blocked = await sendAdminLiveTestSms({
+    confirm: true,
+    phone: "0501234567",
+    fetchImpl: async () => {
+      throw new Error("should_not_call_provider");
+    },
+  });
+  assert.equal(blocked.error, "recipient_not_allowlisted");
+
+  let liveUrl = "";
+  let liveBody = null;
+  const liveOk = await sendAdminLiveTestSms({
+    confirm: true,
+    phone: "0502677765",
+    actorEmail: "ops@example.com",
+    fetchImpl: async (u, init) => {
+      liveUrl = u;
+      liveBody = JSON.parse(init.body);
+      return {
+        status: 200,
+        json: async () => ({ status: 0, message: "ok", shipment_id: "LIVE-SHIP" }),
+      };
+    },
+  });
+  assert.equal(liveUrl, "https://019sms.co.il/api");
+  assert.equal(liveOk.ok, true);
+  assert.equal(liveOk.accepted, true);
+  assert.equal(liveOk.sentLive, true);
+  assert.equal(liveOk.usedTestEndpoint, false);
+  assert.equal(liveOk.shipmentId, "LIVE-SHIP");
+  assert.equal(liveBody.sms.message, LIVE_SMS_TEST_MESSAGE);
+  assert.equal(liveBody.sms.source, "0549000301");
+  assert.match(liveOk.note || "", /≠|קבלה|מסירה/);
+
+  // Cooldown / single-flight: immediate second send must be rejected.
+  const cooled = await sendAdminLiveTestSms({
+    confirm: true,
+    phone: "0502677765",
+    fetchImpl: async () => {
+      throw new Error("should_not_call_during_cooldown");
+    },
+  });
+  assert.equal(cooled.error, "live_test_cooldown");
+  assert.ok(cooled.retryAfterSec >= 1);
+
+  const audits = getRecentAdminAuditEvents({ limit: 10 });
+  assert.ok(audits.some((e) => e.action === "sms_live_test_attempt"));
+  assert.ok(audits.some((e) => e.action === "sms_live_test_result" && e.ok === true));
+  assert.ok(
+    !JSON.stringify(audits).includes("unit-test-token"),
+    "audit must never contain API token"
+  );
+
+  if (prevUser == null) delete process.env.SMS019_USERNAME;
+  else process.env.SMS019_USERNAME = prevUser;
+  if (prevToken == null) delete process.env.SMS019_API_TOKEN;
+  else process.env.SMS019_API_TOKEN = prevToken;
+  if (prevSender == null) delete process.env.SMS019_SENDER;
+  else process.env.SMS019_SENDER = prevSender;
+  if (prevEnabled == null) delete process.env.SMS_REMINDERS_ENABLED;
+  else process.env.SMS_REMINDERS_ENABLED = prevEnabled;
+  resetLiveSmsTestGateForTests();
+}
+
 // --- Concurrent claim semantics (reuse email claim helpers for SMS columns) ---
 {
   const now = new Date("2026-10-12T12:00:00.000Z");
@@ -328,6 +431,8 @@ const read = (rel) => readFileSync(join(root, rel), "utf8");
   assert.match(admin, /reminder_sms_status = "pending"/);
   assert.match(admin, /reminder_sms_status = "cancelled"/);
   assert.match(admin, /action === "sms-test"/);
+  assert.match(admin, /action === "sms-live-test"/);
+  assert.match(admin, /sendAdminLiveTestSms/);
   assert.match(admin, /action === "sms-reminder-settings"/);
   assert.match(admin, /useLive: Boolean\(body\.useLive\)/);
   // Cancel/reschedule must not hard-fail before SMS migration is applied.
@@ -355,13 +460,24 @@ const read = (rel) => readFileSync(join(root, rel), "utf8");
   ];
   for (const file of clientFiles) {
     const src = read(file);
-    assert.doesNotMatch(src, /SMS019_API_TOKEN|019sms\.co\.il\/api/);
+    // Client must not embed credentials or call the provider host directly.
+    assert.doesNotMatch(src, /SMS019_API_TOKEN|019sms\.co\.il/);
   }
 
-  // Admin test UI forces useLive:false
+  // Admin dry-run test UI forces useLive:false; live path is separate action.
   const ui = read("../src/components/admin/SmsReminderSettings.jsx");
   assert.match(ui, /useLive:\s*false/);
   assert.match(ui, /window\.confirm/);
+  assert.match(ui, /שליחת SMS אמיתי לבדיקה/);
+  assert.match(ui, /action=sms-live-test/);
+  assert.match(ui, /0502677765/);
+  assert.match(ui, /קבלה אצל הספק אינה מאשרת מסירה/);
+
+  const liveMod = read("../server/smsLiveTest.js");
+  assert.match(liveMod, /https:\/\/019sms\.co\.il\/api/);
+  assert.doesNotMatch(liveMod, /isSmsRemindersEnvEnabled/);
+  assert.match(liveMod, /useTestEndpoint:\s*false/);
+  assert.match(liveMod, /recordAdminAuditEvent/);
 }
 
 console.log("test-sms019-reminders: OK");
