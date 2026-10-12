@@ -383,11 +383,16 @@ export default function PaymentStep({
           treatment?.price ??
           formData.treatment_price ??
           null,
-        patient_email: email,
+        patient_email: emailCheck.normalized,
         payment_note: "תשלום במזומן בהגעה לקליניקה",
       });
     } catch (error) {
-      setCashError(error?.message || "לא ניתן לאשר את התור. נסו שוב.");
+      const raw = String(error?.message || "").trim();
+      const looksLikeJsError =
+        /is not defined|ReferenceError|TypeError|Cannot read propert/i.test(raw);
+      setCashError(
+        looksLikeJsError || !raw ? "לא ניתן לאשר את התור. נסו שוב." : raw
+      );
     } finally {
       setIsCashConfirming(false);
     }
