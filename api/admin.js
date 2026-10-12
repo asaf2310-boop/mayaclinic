@@ -35,6 +35,10 @@ import {
   upsertSmsReminderSettings,
 } from "../server/smsReminders.js";
 import {
+  getLiveSmsTestPreview,
+  sendAdminLiveTestSms,
+} from "../server/smsLiveTest.js";
+import {
   bookingEmailErrorMessage,
   normalizeBookingEmail,
   validateBookingEmail,
@@ -615,6 +619,7 @@ export default async function handler(req, res) {
         message: body.message,
         confirm: true,
         // Live only when env gate is on AND caller explicitly requests it.
+        // Dedicated live path is action=sms-live-test (allowlisted).
         useLive: Boolean(body.useLive),
       });
       res.status(result.ok ? 200 : 400).json({
@@ -629,6 +634,48 @@ export default async function handler(req, res) {
       });
     } catch (error) {
       res.status(500).json({ ok: false, error: error?.message || "SMS test failed" });
+    }
+    return;
+  }
+
+  // Preview for live allowlisted test (no send). Automation env gate not required.
+  if (req.method === "GET" && action === "sms-live-test") {
+    try {
+      res.status(200).json({ ok: true, preview: getLiveSmsTestPreview() });
+    } catch (error) {
+      res.status(500).json({ ok: false, error: error?.message || "Failed to load live SMS preview" });
+    }
+    return;
+  }
+
+  // One live SMS to hard-allowlisted number only. Does NOT require SMS_REMINDERS_ENABLED.
+  if (req.method === "POST" && action === "sms-live-test") {
+    try {
+      const body = readBody(req);
+      const session = getAdminSession(req);
+      const result = await sendAdminLiveTestSms({
+        confirm: Boolean(body?.confirm),
+        // Server ignores arbitrary destinations; allowlist is enforced inside.
+        phone: body?.phone,
+        actorEmail: session?.email || null,
+        actorMethod: session?.method || null,
+        tenantId,
+      });
+      const status = result.ok
+        ? 200
+        : result.error === "live_test_in_flight" || result.error === "live_test_cooldown"
+          ? 429
+          : result.error === "confirm_required" || result.error === "recipient_not_allowlisted"
+            ? 400
+            : result.error === "sms019_not_configured"
+              ? 503
+              : 400;
+      res.status(status).json({
+        ok: Boolean(result.ok),
+        ...result,
+      });
+    } catch (error) {
+      res.status(500).json({ ok: false, error: error?.message || "Live SMS test failed" });
     }
     return;
   }
