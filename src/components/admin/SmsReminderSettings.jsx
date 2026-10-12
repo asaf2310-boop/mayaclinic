@@ -22,11 +22,12 @@ function friendlySmsAdminError(raw) {
   const text = String(raw?.message || raw || "").trim();
   if (!text) return "משהו השתבש. נסו שוב או פנו לתמיכה.";
 
-  if (
-    /SMS_REMINDERS_ENABLED|SMS_BOOKING_CONFIRM_ENABLED|SMS_TECH_|environment|env\b|Vercel|cron|endpoint|API\b/i.test(
-      text
-    )
-  ) {
+  const upper = text.toUpperCase();
+  // Match gate/ops jargon without embedding full env var names in the client bundle.
+  const looksLikeGateJargon =
+    (upper.includes("SMS_") && upper.includes("ENABLED")) ||
+    /\benvironment\b|\benv\b|Vercel|\bcron\b|\bendpoint\b|\bAPI\b/i.test(text);
+  if (looksLikeGateJargon) {
     return "שליחת SMS מושהית כרגע — פני לתמיכה להפעלה";
   }
   if (

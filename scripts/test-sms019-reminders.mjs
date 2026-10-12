@@ -522,14 +522,20 @@ const read = (rel) => readFileSync(join(root, rel), "utf8");
     assert.doesNotMatch(src, /SMS019_API_TOKEN|019sms\.co\.il/);
   }
 
-  // Clinic admin UI: patient SMS settings only — no technical test buttons.
+  // Clinic admin UI: patient SMS settings only — plain Hebrew, no ops jargon.
   const ui = read("../src/components/admin/SmsReminderSettings.jsx");
   assert.match(ui, /הודעות SMS למטופלים/);
   assert.match(ui, /שליחת SMS לאחר קביעת תור/);
-  assert.match(ui, /שליחת תזכורת SMS יום לפני התור/);
+  assert.match(ui, /שליחת תזכורת SMS לפני התור/);
   assert.match(ui, /תבנית אישור קביעת תור/);
-  assert.match(ui, /תבנית תזכורת יום לפני/);
-  assert.match(ui, /קבלה אצל הספק אינה מאשרת מסירה/);
+  assert.match(ui, /תבנית תזכורת לפני התור/);
+  assert.match(ui, /התקבל אצל הספק/);
+  assert.match(ui, /פני לתמיכה/);
+  assert.doesNotMatch(ui, /SMS_REMINDERS_ENABLED/);
+  assert.doesNotMatch(ui, /SMS_BOOKING_CONFIRM_ENABLED/);
+  assert.doesNotMatch(ui, /מיגרציה/);
+  assert.doesNotMatch(ui, /supabase\/appointment-sms/);
+  assert.doesNotMatch(ui, /שער תזכורות/);
   assert.doesNotMatch(ui, /שליחת SMS אמיתי לבדיקה/);
   assert.doesNotMatch(ui, /action=sms-live-test/);
   assert.doesNotMatch(ui, /action=sms-test/);
