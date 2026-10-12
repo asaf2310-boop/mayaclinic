@@ -28,9 +28,15 @@ import { notifyClinicAppointmentCancelled } from "../server/clinicCancellationNo
 import { syncClinicCalendarForAppointment } from "../server/syncClinicCalendar.js";
 import { clearEmailSuppression } from "../server/emailDelivery.js";
 import {
+  DEFAULT_CLINIC_ADDRESS,
+  DEFAULT_CONFIRM_SMS_TEMPLATE,
+  DEFAULT_REMINDER_SMS_TEMPLATE,
+  SMS_TEMPLATE_VARS,
   describeSmsAutomationGate,
   fetchRecentSmsReminderHistory,
   fetchSmsReminderSettings,
+  isAllowedTechnicalAdmin,
+  previewSmsTemplate,
   sendAdminTestSms,
   upsertSmsReminderSettings,
 } from "../server/smsReminders.js";
@@ -551,10 +557,21 @@ export default async function handler(req, res) {
   if (req.method === "GET" && action === "sms-reminder-settings") {
     try {
       const settings = await fetchSmsReminderSettings(tenantId);
+      const session = getAdminSession(req);
+      const gate = {
+        ...describeSmsAutomationGate(settings),
+        techTestAllowed: isAllowedTechnicalAdmin(session?.email),
+      };
       res.status(200).json({
         ok: true,
         settings,
-        gate: describeSmsAutomationGate(settings),
+        gate,
+        variables: SMS_TEMPLATE_VARS,
+        defaults: {
+          clinic_address: DEFAULT_CLINIC_ADDRESS,
+          confirm_template: DEFAULT_CONFIRM_SMS_TEMPLATE,
+          reminder_template: DEFAULT_REMINDER_SMS_TEMPLATE,
+        },
       });
     } catch (error) {
       res.status(500).json({ ok: false, error: error?.message || "Failed to load SMS settings" });
@@ -569,25 +586,85 @@ export default async function handler(req, res) {
       if (Object.prototype.hasOwnProperty.call(body, "enabled")) {
         patch.enabled = body.enabled;
       }
+      if (Object.prototype.hasOwnProperty.call(body, "booking_confirm_enabled")) {
+        patch.booking_confirm_enabled = body.booking_confirm_enabled;
+      }
       if (Object.prototype.hasOwnProperty.call(body, "lead_hours")) {
         patch.lead_hours = body.lead_hours;
       }
+      if (Object.prototype.hasOwnProperty.call(body, "clinic_address")) {
+        patch.clinic_address = body.clinic_address;
+      }
+      if (Object.prototype.hasOwnProperty.call(body, "confirm_template")) {
+        patch.confirm_template = body.confirm_template;
+      }
+      if (Object.prototype.hasOwnProperty.call(body, "reminder_template")) {
+        patch.reminder_template = body.reminder_template;
+      }
+      if (body?.restore_confirm_default) {
+        patch.confirm_template = DEFAULT_CONFIRM_SMS_TEMPLATE;
+      }
+      if (body?.restore_reminder_default) {
+        patch.reminder_template = DEFAULT_REMINDER_SMS_TEMPLATE;
+      }
       const settings = await upsertSmsReminderSettings(tenantId, patch);
+      const session = getAdminSession(req);
       res.status(200).json({
         ok: true,
         settings,
-        gate: describeSmsAutomationGate(settings),
+        gate: {
+          ...describeSmsAutomationGate(settings),
+          techTestAllowed: isAllowedTechnicalAdmin(session?.email),
+        },
       });
     } catch (error) {
       const message = String(error?.message || error || "");
+      if (error?.code === "unsupported_placeholders" || message === "unsupported_placeholders") {
+        res.status(400).json({
+          ok: false,
+          error: "unsupported_placeholders",
+          unsupported: error?.unsupported || [],
+          message: "התבנית מכילה משתנים שאינם נתמכים",
+        });
+        return;
+      }
+      if (error?.code === "empty_template" || message === "empty_template") {
+        res.status(400).json({ ok: false, error: "empty_template", message: "התבנית ריקה" });
+        return;
+      }
       if (/sms_reminder_settings|Could not find the table|relation/i.test(message)) {
         res.status(503).json({
           ok: false,
-          error: "יש להריץ את supabase/appointment-sms-delivery.sql לפני הפעלת תזכורות SMS",
+          error:
+            "יש להריץ את supabase/appointment-sms-delivery.sql ו־supabase/appointment-sms-templates.sql לפני הפעלת הודעות SMS",
         });
         return;
       }
       res.status(500).json({ ok: false, error: error?.message || "Failed to save SMS settings" });
+    }
+    return;
+  }
+
+  if (req.method === "POST" && action === "sms-template-preview") {
+    try {
+      const body = readBody(req);
+      const kind = body?.kind === "confirm" ? "confirm" : "reminder";
+      const settings = await fetchSmsReminderSettings(tenantId);
+      const template =
+        body?.template != null
+          ? body.template
+          : kind === "confirm"
+            ? settings.confirm_template
+            : settings.reminder_template;
+      const preview = previewSmsTemplate(kind, template, {
+        clinicAddress: body?.clinic_address || settings.clinic_address,
+        patientName: body?.patient_name,
+        date: body?.date,
+        time: body?.time,
+      });
+      res.status(preview.ok ? 200 : 400).json({ ok: Boolean(preview.ok), ...preview });
+    } catch (error) {
+      res.status(500).json({ ok: false, error: error?.message || "Failed to preview SMS template" });
     }
     return;
   }
@@ -605,6 +682,15 @@ export default async function handler(req, res) {
 
   if (req.method === "POST" && action === "sms-test") {
     try {
+      const session = getAdminSession(req);
+      if (!isAllowedTechnicalAdmin(session?.email)) {
+        res.status(403).json({
+          ok: false,
+          error: "technical_admin_required",
+          message: "בדיקות SMS טכניות אינן זמינות למנהלי הקליניקה",
+        });
+        return;
+      }
       const body = readBody(req);
       if (!body?.confirm) {
         res.status(400).json({
@@ -641,6 +727,15 @@ export default async function handler(req, res) {
   // Preview for live allowlisted test (no send). Automation env gate not required.
   if (req.method === "GET" && action === "sms-live-test") {
     try {
+      const session = getAdminSession(req);
+      if (!isAllowedTechnicalAdmin(session?.email)) {
+        res.status(403).json({
+          ok: false,
+          error: "technical_admin_required",
+          message: "בדיקות SMS טכניות אינן זמינות למנהלי הקליניקה",
+        });
+        return;
+      }
       res.status(200).json({ ok: true, preview: getLiveSmsTestPreview() });
     } catch (error) {
       res.status(500).json({ ok: false, error: error?.message || "Failed to load live SMS preview" });
@@ -653,6 +748,14 @@ export default async function handler(req, res) {
     try {
       const body = readBody(req);
       const session = getAdminSession(req);
+      if (!isAllowedTechnicalAdmin(session?.email)) {
+        res.status(403).json({
+          ok: false,
+          error: "technical_admin_required",
+          message: "בדיקות SMS טכניות אינן זמינות למנהלי הקליניקה",
+        });
+        return;
+      }
       const result = await sendAdminLiveTestSms({
         confirm: Boolean(body?.confirm),
         // Server ignores arbitrary destinations; allowlist is enforced inside.

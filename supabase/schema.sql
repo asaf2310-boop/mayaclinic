@@ -62,12 +62,22 @@ alter table appointments add column if not exists reminder_sms_last_error text;
 alter table appointments add column if not exists reminder_sms_claimed_at timestamptz;
 alter table appointments add column if not exists reminder_sms_sent_at timestamptz;
 alter table appointments add column if not exists reminder_sms_shipment_id text;
+alter table appointments add column if not exists confirm_sms_status text;
+alter table appointments add column if not exists confirm_sms_attempts integer not null default 0;
+alter table appointments add column if not exists confirm_sms_last_error text;
+alter table appointments add column if not exists confirm_sms_claimed_at timestamptz;
+alter table appointments add column if not exists confirm_sms_sent_at timestamptz;
+alter table appointments add column if not exists confirm_sms_shipment_id text;
 
--- Prefer supabase/appointment-sms-delivery.sql in production (indexes + seed + revoke).
+-- Prefer supabase/appointment-sms-delivery.sql + appointment-sms-templates.sql in production.
 create table if not exists public.sms_reminder_settings (
   tenant_id text primary key,
   enabled boolean not null default false,
   lead_hours integer not null default 24,
+  booking_confirm_enabled boolean not null default false,
+  clinic_address text,
+  confirm_template text,
+  reminder_template text,
   updated_at timestamptz not null default now()
 );
 alter table public.sms_reminder_settings enable row level security;

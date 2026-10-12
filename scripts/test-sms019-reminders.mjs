@@ -15,19 +15,34 @@ import {
 import {
   buildSms019Payload,
   interpretSms019Response,
+  isSmsBookingConfirmEnvEnabled,
   isSmsRemindersEnvEnabled,
+  isSmsTechTestEnvEnabled,
   sendSms019,
 } from "../server/sms019.js";
 import {
+  buildAppointmentConfirmSms,
   buildAppointmentReminderSms,
+  canSendLiveSmsBookingConfirm,
   canSendLiveSmsReminders,
   getReminderTargetDateIso,
+  isAllowedTechnicalAdmin,
   isSmsReminderAppointmentEligible,
   isSmsReminderIneligibilityTerminal,
   leadHoursToTargetDays,
+  maskIsraeliPhone,
   normalizeSmsLeadHours,
+  previewSmsTemplate,
   sendAdminTestSms,
+  validateSmsTemplate,
 } from "../server/smsReminders.js";
+import {
+  DEFAULT_CLINIC_ADDRESS,
+  DEFAULT_CONFIRM_SMS_TEMPLATE,
+  DEFAULT_REMINDER_SMS_TEMPLATE,
+  buildClinicMapsUrl,
+  estimateSmsSegments,
+} from "../server/smsTemplates.js";
 import {
   LIVE_SMS_TEST_ALLOWED_RECIPIENTS,
   LIVE_SMS_TEST_MESSAGE,
@@ -66,7 +81,18 @@ const read = (rel) => readFileSync(join(root, rel), "utf8");
   assert.match(msg, /10:30/);
   assert.match(msg, /OfirBaby/);
   assert.match(msg, /0549000301/);
+  assert.match(msg, /כתובת/);
+  assert.match(msg, new RegExp(DEFAULT_CLINIC_ADDRESS.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   assert.doesNotMatch(msg, /טיפול|מחיר|₪|עיסוי|מרידיאן/i);
+
+  const confirm = buildAppointmentConfirmSms({
+    patientName: "נועה",
+    date: "2026-10-13",
+    time: "10:30",
+  });
+  assert.match(confirm, /נקבע בהצלחה/);
+  assert.match(confirm, /כתובת/);
+  assert.doesNotMatch(confirm, /טיפול|מחיר|₪/i);
 }
 
 // --- Eligibility: cancel / completed / invalid phone / past ---
@@ -155,19 +181,42 @@ const read = (rel) => readFileSync(join(root, rel), "utf8");
 // --- Env gate defaults OFF; live requires env + admin ---
 {
   const prev = process.env.SMS_REMINDERS_ENABLED;
+  const prevConfirm = process.env.SMS_BOOKING_CONFIRM_ENABLED;
+  const prevTech = process.env.SMS_TECH_TEST_ENABLED;
   delete process.env.SMS_REMINDERS_ENABLED;
+  delete process.env.SMS_BOOKING_CONFIRM_ENABLED;
+  delete process.env.SMS_TECH_TEST_ENABLED;
   assert.equal(isSmsRemindersEnvEnabled(), false);
+  assert.equal(isSmsBookingConfirmEnvEnabled(), false);
+  assert.equal(isSmsTechTestEnvEnabled(), false);
   assert.equal(canSendLiveSmsReminders({ enabled: true }), false);
+  assert.equal(
+    canSendLiveSmsBookingConfirm({ booking_confirm_enabled: true }),
+    false
+  );
+  assert.equal(isAllowedTechnicalAdmin("asaf2310@gmail.com"), false);
+
   process.env.SMS_REMINDERS_ENABLED = "true";
-  // Still false without provider credentials in this env
+  process.env.SMS_BOOKING_CONFIRM_ENABLED = "true";
   assert.equal(isSmsRemindersEnvEnabled(), true);
+  assert.equal(isSmsBookingConfirmEnvEnabled(), true);
   assert.equal(
     canSendLiveSmsReminders({ enabled: false }),
     false,
     "admin toggle must also be on"
   );
+  assert.equal(
+    canSendLiveSmsBookingConfirm({ booking_confirm_enabled: false }),
+    false,
+    "booking confirm admin toggle must also be on"
+  );
+
   if (prev == null) delete process.env.SMS_REMINDERS_ENABLED;
   else process.env.SMS_REMINDERS_ENABLED = prev;
+  if (prevConfirm == null) delete process.env.SMS_BOOKING_CONFIRM_ENABLED;
+  else process.env.SMS_BOOKING_CONFIRM_ENABLED = prevConfirm;
+  if (prevTech == null) delete process.env.SMS_TECH_TEST_ENABLED;
+  else process.env.SMS_TECH_TEST_ENABLED = prevTech;
 }
 
 // --- sendSms019 uses test endpoint when requested; never needs live network ---
@@ -425,6 +474,13 @@ const read = (rel) => readFileSync(join(root, rel), "utf8");
   assert.match(supabase, /fetchAppointmentsNeedingSmsReminder/);
   assert.match(supabase, /reminder_sms_sent_at/);
   assert.match(supabase, /status=not\.in\.\(cancelled,completed\)/);
+  assert.match(supabase, /claimSmsConfirmSend/);
+  assert.match(supabase, /markSmsConfirmOutcome/);
+  assert.match(supabase, /confirm_sms_status\.eq\.pending/);
+  assert.doesNotMatch(
+    supabase.split("buildConfirmSmsClaimOrFilter")[1]?.slice(0, 500) || "",
+    /temporary_failure/
+  );
 
   const admin = read("../api/admin.js");
   assert.match(admin, /reminder_sms_sent_at = null/);
@@ -451,6 +507,8 @@ const read = (rel) => readFileSync(join(root, rel), "utf8");
   const envExample = read("../.env.example");
   assert.match(envExample, /SMS019_API_TOKEN/);
   assert.match(envExample, /SMS_REMINDERS_ENABLED=false/);
+  assert.match(envExample, /SMS_BOOKING_CONFIRM_ENABLED=false/);
+  assert.match(envExample, /SMS_TECH_TEST_ENABLED=false/);
   assert.doesNotMatch(envExample, /VITE_SMS019/);
 
   const clientFiles = [
@@ -464,20 +522,82 @@ const read = (rel) => readFileSync(join(root, rel), "utf8");
     assert.doesNotMatch(src, /SMS019_API_TOKEN|019sms\.co\.il/);
   }
 
-  // Admin dry-run test UI forces useLive:false; live path is separate action.
+  // Clinic admin UI: patient SMS settings only — no technical test buttons.
   const ui = read("../src/components/admin/SmsReminderSettings.jsx");
-  assert.match(ui, /useLive:\s*false/);
-  assert.match(ui, /window\.confirm/);
-  assert.match(ui, /שליחת SMS אמיתי לבדיקה/);
-  assert.match(ui, /action=sms-live-test/);
-  assert.match(ui, /0502677765/);
+  assert.match(ui, /הודעות SMS למטופלים/);
+  assert.match(ui, /שליחת SMS לאחר קביעת תור/);
+  assert.match(ui, /שליחת תזכורת SMS יום לפני התור/);
+  assert.match(ui, /תבנית אישור קביעת תור/);
+  assert.match(ui, /תבנית תזכורת יום לפני/);
   assert.match(ui, /קבלה אצל הספק אינה מאשרת מסירה/);
+  assert.doesNotMatch(ui, /שליחת SMS אמיתי לבדיקה/);
+  assert.doesNotMatch(ui, /action=sms-live-test/);
+  assert.doesNotMatch(ui, /action=sms-test/);
+  assert.doesNotMatch(ui, /0502677765/);
+
+  const adminPage = read("../src/pages/Admin.jsx");
+  assert.match(adminPage, /הודעות SMS למטופלים/);
+  assert.doesNotMatch(adminPage, /תזכורות SMS/);
 
   const liveMod = read("../server/smsLiveTest.js");
   assert.match(liveMod, /https:\/\/019sms\.co\.il\/api/);
   assert.doesNotMatch(liveMod, /isSmsRemindersEnvEnabled/);
   assert.match(liveMod, /useTestEndpoint:\s*false/);
   assert.match(liveMod, /recordAdminAuditEvent/);
+
+  assert.match(admin, /isAllowedTechnicalAdmin/);
+  assert.match(admin, /technical_admin_required/);
+  assert.match(admin, /sms-template-preview/);
+  assert.match(admin, /booking_confirm_enabled/);
+
+  const templatesMigration = read("../supabase/appointment-sms-templates.sql");
+  assert.match(templatesMigration, /confirm_sms_status/);
+  assert.match(templatesMigration, /confirm_template/);
+  assert.match(templatesMigration, /clinic_address/);
+  assert.match(templatesMigration, /booking_confirm_enabled/);
+  assert.match(templatesMigration, /ישראל עידוד 8/);
+  assert.doesNotMatch(templatesMigration, /drop table/i);
+  // Preserve saved settings: only fill null/blank defaults
+  assert.match(templatesMigration, /where clinic_address is null/i);
+  assert.match(templatesMigration, /where confirm_template is null/i);
+
+  const pelecard = read("../server/pelecardPayments.js");
+  assert.match(pelecard, /maybeSendBookingConfirmSms/);
+}
+
+// --- Templates, Unicode segments, maps link, masking ---
+{
+  assert.equal(validateSmsTemplate(DEFAULT_CONFIRM_SMS_TEMPLATE).ok, true);
+  assert.equal(validateSmsTemplate(DEFAULT_REMINDER_SMS_TEMPLATE).ok, true);
+  assert.equal(validateSmsTemplate("שלום {שם} {טיפול}").ok, false);
+  assert.deepEqual(validateSmsTemplate("שלום {שם} {טיפול}").unsupported, ["{טיפול}"]);
+
+  const preview = previewSmsTemplate("confirm", DEFAULT_CONFIRM_SMS_TEMPLATE, {
+    patientName: "דנה",
+    clinicAddress: DEFAULT_CLINIC_ADDRESS,
+  });
+  assert.equal(preview.ok, true);
+  assert.match(preview.message, /דנה/);
+  assert.match(preview.message, /כתובת/);
+  assert.equal(preview.estimate.encoding, "ucs2");
+  assert.ok(preview.estimate.segments >= 1);
+
+  // Hebrew + emoji must use Unicode limits (70/67), not GSM-7 (160/153).
+  const shortHe = estimateSmsSegments("שלום");
+  assert.equal(shortHe.encoding, "ucs2");
+  assert.equal(shortHe.segments, 1);
+  const longHe = "א".repeat(71);
+  const longEst = estimateSmsSegments(longHe);
+  assert.equal(longEst.segments, 2);
+  assert.equal(longEst.singleLimit, 70);
+  assert.equal(longEst.multiLimit, 67);
+
+  const maps = buildClinicMapsUrl(DEFAULT_CLINIC_ADDRESS);
+  assert.match(maps, /^https:\/\/www\.google\.com\/maps\/dir\/\?api=1&destination=/);
+  assert.ok(maps.includes(encodeURIComponent(DEFAULT_CLINIC_ADDRESS)));
+
+  assert.equal(maskIsraeliPhone("0502677765"), "050***7765");
+  assert.equal(maskIsraeliPhone("+972502677765"), "050***7765");
 }
 
 console.log("test-sms019-reminders: OK");

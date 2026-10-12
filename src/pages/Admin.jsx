@@ -145,7 +145,7 @@ export default function Admin() {
     { value: "customers", label: "לקוחות", icon: Users },
     { value: "revenue", label: "דוח הכנסות", icon: BarChart3 },
     { value: "gift-vouchers", label: "שוברי מתנה", icon: Gift },
-    { value: "sms-reminders", label: "תזכורות SMS", icon: MessageSquare },
+    { value: "sms-reminders", label: "הודעות SMS למטופלים", icon: MessageSquare },
   ];
 
   const statusTabs = [

@@ -272,6 +272,8 @@ async function processSmsReminders() {
         patientName: claimed.patient_name,
         date: claimed.date,
         time: claimed.time,
+        clinicAddress: settings.clinic_address,
+        template: settings.reminder_template,
       });
 
       const result = await sendSms019({
