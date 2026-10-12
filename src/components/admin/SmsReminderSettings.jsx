@@ -17,12 +17,55 @@ const TEMPLATE_VARS = [
   "{קישור_ניווט}",
 ];
 
+/** Map technical / English API errors to clinic-owner Hebrew. */
+function friendlySmsAdminError(raw) {
+  const text = String(raw?.message || raw || "").trim();
+  if (!text) return "משהו השתבש. נסו שוב או פנו לתמיכה.";
+
+  if (
+    /SMS_REMINDERS_ENABLED|SMS_BOOKING_CONFIRM_ENABLED|SMS_TECH_|environment|env\b|Vercel|cron|endpoint|API\b/i.test(
+      text
+    )
+  ) {
+    return "שליחת SMS מושהית כרגע — פני לתמיכה להפעלה";
+  }
+  if (
+    /supabase|migration|appointment-sms|\.sql|Could not find the table|relation|column/i.test(
+      text
+    )
+  ) {
+    return "שירות ההודעות עדיין לא מוכן — פני לתמיכה";
+  }
+  if (/Failed to load SMS settings/i.test(text)) {
+    return "לא ניתן לטעון את הגדרות ההודעות. נסו שוב או פנו לתמיכה.";
+  }
+  if (/Failed to save SMS settings/i.test(text)) {
+    return "לא ניתן לשמור את ההגדרות. נסו שוב או פנו לתמיכה.";
+  }
+  if (/Failed to load SMS history/i.test(text)) {
+    return "לא ניתן לטעון את היסטוריית השליחות. נסו שוב או פנו לתמיכה.";
+  }
+  if (/Admin session required/i.test(text)) {
+    return "יש להתחבר מחדש לממשק הניהול.";
+  }
+  if (/unsupported_placeholders/i.test(text)) {
+    return "התבנית מכילה משתנים שאינם נתמכים";
+  }
+  if (/empty_template/i.test(text)) {
+    return "התבנית ריקה";
+  }
+
+  // Already Hebrew / business copy — show as-is.
+  if (/[\u0590-\u05FF]/.test(text)) return text;
+  return "משהו השתבש. נסו שוב או פנו לתמיכה.";
+}
+
 function smsStatusLabel(status) {
   switch (String(status || "")) {
     case "accepted":
       return "התקבל אצל הספק";
     case "delivered":
-      return "נמסר";
+      return "נשלח";
     case "pending":
       return "ממתין";
     case "failed":
@@ -38,8 +81,17 @@ function smsStatusLabel(status) {
     case "cancelled":
       return "נכשל";
     default:
-      return status || "—";
+      return status ? "לא ודאי" : "—";
   }
+}
+
+function channelStatusLabel({ envOn, providerOk, migrationMissing, adminOn, liveAllowed }) {
+  if (migrationMissing) return "לא מוכן — פני לתמיכה";
+  if (!providerOk) return "מושהה — פני לתמיכה להפעלה";
+  if (!envOn) return "מושהה — פני לתמיכה להפעלה";
+  if (liveAllowed) return "פעיל";
+  if (adminOn) return "מושהה — פני לתמיכה להפעלה";
+  return "כבוי";
 }
 
 function estimateLocalSegments(text = "") {
@@ -65,14 +117,18 @@ function formatTs(value) {
 async function loadSettings() {
   const response = await bookingFetch("/api/admin?action=sms-reminder-settings");
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || "לא ניתן לטעון הגדרות SMS");
+  if (!response.ok) {
+    throw new Error(friendlySmsAdminError(data.message || data.error || "לא ניתן לטעון הגדרות SMS"));
+  }
   return data;
 }
 
 async function loadHistory() {
   const response = await bookingFetch("/api/admin?action=sms-reminder-history&limit=40");
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || "לא ניתן לטעון היסטוריית SMS");
+  if (!response.ok) {
+    throw new Error(friendlySmsAdminError(data.message || data.error || "לא ניתן לטעון היסטוריית SMS"));
+  }
   return data.rows || [];
 }
 
@@ -91,7 +147,7 @@ function TemplateEditor({
       <div>
         <h3 className="text-lg font-semibold">{title}</h3>
         <p className="mt-1 text-sm text-muted-foreground">
-          משתנים נתמכים בלבד. תצוגה מקדימה מתעדכנת בזמן אמת.
+          אפשר להוסיף את הפרטים מהרשימה למטה. התצוגה המקדימה מתעדכנת בזמן אמת.
         </p>
       </div>
 
@@ -132,16 +188,16 @@ function TemplateEditor({
         <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
           {preview?.ok === false
             ? preview?.error === "unsupported_placeholders"
-              ? `משתנים לא נתמכים: ${(preview.unsupported || []).join(", ")}`
-              : preview?.error || "תצוגה לא זמינה"
+              ? `פרטים שלא נתמכים בתבנית: ${(preview.unsupported || []).join(", ")}`
+              : friendlySmsAdminError(preview?.error) || "תצוגה לא זמינה"
             : preview?.message || template}
         </pre>
-        <p className="text-xs text-muted-foreground" dir="ltr">
-          {estimate.chars} chars · ~{estimate.segments} Unicode segment
-          {estimate.segments === 1 ? "" : "s"} (UCS-2 / 019)
+        <p className="text-xs text-muted-foreground">
+          כ־{estimate.chars} תווים · כ־{estimate.segments}{" "}
+          {estimate.segments === 1 ? "הודעה" : "חלקי הודעה"}
         </p>
         <p className="text-xs text-muted-foreground">
-          קבלה אצל הספק אינה מאשרת מסירה לטלפון.
+          «התקבל אצל הספק» לא מבטיח שההודעה הגיעה לטלפון של המטופל.
         </p>
       </div>
     </Card>
@@ -251,7 +307,9 @@ export default function SmsReminderSettings() {
         body: JSON.stringify(patch),
       });
       const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(body.message || body.error || "שמירה נכשלה");
+      if (!response.ok) {
+        throw new Error(friendlySmsAdminError(body.message || body.error || "שמירה נכשלה"));
+      }
       return body;
     },
     onSuccess: () => {
@@ -267,14 +325,34 @@ export default function SmsReminderSettings() {
   if (error) {
     return (
       <Card className="p-6 text-center text-red-700" dir="rtl">
-        {error.message}
+        {friendlySmsAdminError(error)}
       </Card>
     );
   }
 
   const reminderEnvOn = Boolean(gate?.envEnabled);
   const confirmEnvOn = Boolean(gate?.bookingConfirmEnvEnabled);
+  const providerOk = Boolean(gate?.providerConfigured);
   const migrationMissing = Boolean(gate?.migrationMissing || gate?.templatesMigrationMissing);
+  const confirmStatus = channelStatusLabel({
+    envOn: confirmEnvOn,
+    providerOk,
+    migrationMissing,
+    adminOn: Boolean(settings?.booking_confirm_enabled),
+    liveAllowed: Boolean(gate?.bookingConfirmLiveAllowed),
+  });
+  const reminderStatus = channelStatusLabel({
+    envOn: reminderEnvOn,
+    providerOk,
+    migrationMissing,
+    adminOn: Boolean(settings?.enabled),
+    liveAllowed: Boolean(gate?.liveAllowed),
+  });
+  const sendingPaused =
+    migrationMissing ||
+    !providerOk ||
+    !confirmEnvOn ||
+    !reminderEnvOn;
 
   return (
     <div className="space-y-6 max-w-3xl pb-8" dir="rtl">
@@ -282,45 +360,31 @@ export default function SmsReminderSettings() {
         <div>
           <h2 className="text-xl font-bold">הודעות SMS למטופלים</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            אישור לאחר קביעת תור ותזכורת כ־24 שעות לפני. האוטומציה דורשת גם מתגי סביבה בשרת — הממשק לא
-            יכול לעקוף אותם.
+            אישור לאחר קביעת תור ותזכורת לפני התור. כאן אפשר לערוך את נוסח ההודעות ולהפעיל או להשהות
+            שליחה.
           </p>
         </div>
 
-        <div className="rounded-lg border bg-muted/40 px-4 py-3 text-sm space-y-1">
-          <p>
-            שער תזכורות (<span dir="ltr">SMS_REMINDERS_ENABLED</span>):{" "}
-            <strong>{reminderEnvOn ? "פתוח" : "סגור"}</strong>
-          </p>
-          <p>
-            שער אישור הזמנה (<span dir="ltr">SMS_BOOKING_CONFIRM_ENABLED</span>):{" "}
-            <strong>{confirmEnvOn ? "פתוח" : "סגור"}</strong>
-          </p>
-          <p>
-            ספק 019 מוגדר: <strong>{gate?.providerConfigured ? "כן" : "לא"}</strong>
-          </p>
-          <p>
-            שליחת אישור חיה אפשרית:{" "}
-            <strong>{gate?.bookingConfirmLiveAllowed ? "כן" : "לא"}</strong>
-          </p>
-          <p>
-            שליחת תזכורת חיה אפשרית: <strong>{gate?.liveAllowed ? "כן" : "לא"}</strong>
-          </p>
+        <div className="rounded-lg border bg-muted/40 px-4 py-3 text-sm space-y-2">
           {migrationMissing ? (
-            <p className="text-destructive">
-              חסרה מיגרציה — הריצו{" "}
-              <span dir="ltr">supabase/appointment-sms-delivery.sql</span> ואז{" "}
-              <span dir="ltr">supabase/appointment-sms-templates.sql</span>
-            </p>
+            <p className="text-destructive">שירות ההודעות עדיין לא מוכן — פני לתמיכה.</p>
           ) : null}
+          {sendingPaused && !migrationMissing ? (
+            <p>שליחת SMS מושהית כרגע — פני לתמיכה להפעלה.</p>
+          ) : null}
+          <p>
+            אישור לאחר קביעת תור: <strong>{confirmStatus}</strong>
+          </p>
+          <p>
+            תזכורת לפני התור: <strong>{reminderStatus}</strong>
+          </p>
         </div>
 
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
             <Label htmlFor="sms-confirm-enabled">שליחת SMS לאחר קביעת תור</Label>
             <p className="text-xs text-muted-foreground mt-1">
-              נשלח פעם אחת אחרי שמירת התור בלבד. דורש גם{" "}
-              <span dir="ltr">SMS_BOOKING_CONFIRM_ENABLED=true</span>.
+              נשלח פעם אחת אחרי שמירת התור. אם השליחה מושהית, פני לתמיכה להפעלה.
             </p>
           </div>
           <Switch
@@ -335,9 +399,9 @@ export default function SmsReminderSettings() {
 
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
-            <Label htmlFor="sms-reminder-enabled">שליחת תזכורת SMS יום לפני התור</Label>
+            <Label htmlFor="sms-reminder-enabled">שליחת תזכורת SMS לפני התור</Label>
             <p className="text-xs text-muted-foreground mt-1">
-              תזכורת אחת לתור פעיל. דורש גם <span dir="ltr">SMS_REMINDERS_ENABLED=true</span>.
+              תזכורת אחת לתור פעיל. אם השליחה מושהית, פני לתמיכה להפעלה.
             </p>
           </div>
           <Switch
@@ -360,7 +424,7 @@ export default function SmsReminderSettings() {
               onChange={(e) => setLeadHours(e.target.value)}
               className="max-w-[140px]"
             />
-            <p className="text-xs text-muted-foreground">ברירת מחדל 24 — לפי יום בלוח ישראל.</p>
+            <p className="text-xs text-muted-foreground">ברירת מחדל 24 שעות לפני התור.</p>
           </div>
           <Button
             type="button"
@@ -373,7 +437,9 @@ export default function SmsReminderSettings() {
         </div>
 
         {saveMutation.isError ? (
-          <p className="text-sm text-destructive">{saveMutation.error.message}</p>
+          <p className="text-sm text-destructive">
+            {friendlySmsAdminError(saveMutation.error)}
+          </p>
         ) : null}
         {saveMutation.isSuccess ? (
           <p className="text-sm text-green-700">ההגדרות נשמרו</p>
@@ -384,8 +450,8 @@ export default function SmsReminderSettings() {
         <div>
           <h3 className="text-lg font-semibold">כתובת הקליניקה</h3>
           <p className="text-sm text-muted-foreground">
-            מוצג ב־<span dir="ltr">{"{כתובת}"}</span>. קישור ניווט נוצר רק אם התבנית כוללת{" "}
-            <span dir="ltr">{"{קישור_ניווט}"}</span>.
+            מוצגת בהודעה במקום <span dir="ltr">{"{כתובת}"}</span>. קישור ניווט נוסף רק אם התבנית
+            כוללת <span dir="ltr">{"{קישור_ניווט}"}</span>.
           </p>
         </div>
         <Input
@@ -435,7 +501,7 @@ export default function SmsReminderSettings() {
       </div>
 
       <TemplateEditor
-        title="תבנית תזכורת יום לפני"
+        title="תבנית תזכורת לפני התור"
         template={effectiveReminder}
         disabled={saveMutation.isPending || migrationMissing}
         preview={reminderPreview}
@@ -464,7 +530,7 @@ export default function SmsReminderSettings() {
         <div className="border-b p-5">
           <h3 className="text-lg font-semibold">היסטוריית שליחות SMS</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            סטטוס אחרון לפי סוג הודעה. קבלה אצל הספק ≠ מסירה לטלפון.
+            סטטוס אחרון לפי סוג הודעה. «התקבל אצל הספק» לא מבטיח שההודעה הגיעה לטלפון.
           </p>
         </div>
         {historyLoading ? (
@@ -472,7 +538,9 @@ export default function SmsReminderSettings() {
             <Skeleton className="h-32 rounded-lg" />
           </div>
         ) : historyError ? (
-          <p className="p-5 text-sm text-destructive">{historyError.message}</p>
+          <p className="p-5 text-sm text-destructive">
+            {friendlySmsAdminError(historyError)}
+          </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] text-right text-sm">
