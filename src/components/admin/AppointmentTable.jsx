@@ -127,6 +127,20 @@ function getEmailDeliveryWarning(appointment) {
   return "";
 }
 
+function getSmsDeliveryWarning(appointment) {
+  const status = String(appointment?.reminder_sms_status || "");
+  if (status === "permanent_failure") {
+    return "שליחת SMS נכשלה — לא יבוצע ניסיון חוזר אוטומטי.";
+  }
+  if (status === "invalid_phone") {
+    return "מספר נייד לא תקין לתזכורת SMS — תקני את הטלפון.";
+  }
+  if (status === "temporary_failure") {
+    return "שליחת SMS הופסקה / לא ודאית — ללא ניסיון חוזר אוטומטי.";
+  }
+  return "";
+}
+
 function emailDeliveryStatusLabel(status) {
   switch (String(status || "")) {
     case "accepted":
@@ -145,6 +159,8 @@ function emailDeliveryStatusLabel(status) {
       return "בוטל";
     case "pending":
       return "ממתין";
+    case "invalid_phone":
+      return "מספר לא תקין";
     default:
       return "";
   }
@@ -374,9 +390,14 @@ export default function AppointmentTable({
                         (apt.confirmation_sent_at ? "התקבל לשליחה" : "-")
                     )}
                     {renderField(
-                      "סטטוס תזכורת",
+                      "סטטוס תזכורת אימייל",
                       emailDeliveryStatusLabel(apt.reminder_email_status) ||
                         (apt.reminder_sent_at ? "התקבל לשליחה" : "-")
+                    )}
+                    {renderField(
+                      "סטטוס תזכורת SMS",
+                      emailDeliveryStatusLabel(apt.reminder_sms_status) ||
+                        (apt.reminder_sms_sent_at ? "התקבל אצל הספק" : "-")
                     )}
                   </div>
                   {getEmailDeliveryWarning(apt) ? (
@@ -385,6 +406,14 @@ export default function AppointmentTable({
                       role="status"
                     >
                       {getEmailDeliveryWarning(apt)}
+                    </div>
+                  ) : null}
+                  {getSmsDeliveryWarning(apt) ? (
+                    <div
+                      className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+                      role="status"
+                    >
+                      {getSmsDeliveryWarning(apt)}
                     </div>
                   ) : null}
                 </div>

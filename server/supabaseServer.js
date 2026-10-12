@@ -210,6 +210,136 @@ export async function markReminderSent(id) {
   await markReminderOutcome(id, { status: "accepted" });
 }
 
+function isMissingReminderSmsColumnError(error) {
+  const message = String(error?.message || error || "");
+  return (
+    /reminder_sms_/i.test(message) ||
+    (/column/i.test(message) && /reminder_sms/i.test(message))
+  );
+}
+
+/**
+ * Appointments needing an SMS reminder for the target calendar day (Israel TZ).
+ * Independent of email reminder_* columns / reminder_sent_at.
+ */
+export async function fetchAppointmentsNeedingSmsReminder(targetDateIso) {
+  const date = String(targetDateIso || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    throw new Error("invalid_sms_reminder_target_date");
+  }
+
+  const baseFilter =
+    `appointments?date=eq.${date}&status=not.in.(cancelled,completed)` +
+    `&patient_phone=not.is.null&reminder_sms_sent_at=is.null`;
+  const select =
+    "id,patient_name,patient_phone,date,time,status," +
+    "reminder_sms_status,reminder_sms_attempts,reminder_sms_claimed_at,reminder_sms_sent_at";
+
+  let rows;
+  try {
+    rows = (await supabaseRequest(`${baseFilter}&select=${select}`)) || [];
+  } catch (error) {
+    if (!isMissingReminderSmsColumnError(error)) throw error;
+    console.warn(
+      "reminder sms columns missing — run supabase/appointment-sms-delivery.sql"
+    );
+    return [];
+  }
+
+  return rows.filter((row) => {
+    if (!String(row.patient_phone || "").trim()) return false;
+    const status = String(row.reminder_sms_status || "");
+    // Never auto-retry accepted / permanent / invalid / cancelled SMS outcomes.
+    // temporary_failure is also excluded (uncertain delivery → no retry).
+    if (
+      status === "permanent_failure" ||
+      status === "temporary_failure" ||
+      status === "accepted" ||
+      status === "delivered" ||
+      status === "cancelled" ||
+      status === "invalid_phone"
+    ) {
+      return false;
+    }
+    if (
+      status === "sending" &&
+      !canClaimEmailDelivery({
+        status,
+        claimedAt: row.reminder_sms_claimed_at,
+        sentAt: row.reminder_sms_sent_at,
+      })
+    ) {
+      return false;
+    }
+    const attempts = Number(row.reminder_sms_attempts || 0);
+    // Fresh pending (or null) only; stale `sending` reclaim allowed above.
+    return attempts < 1 || status === "sending";
+  });
+}
+
+/**
+ * Atomic SMS reminder claim (separate from email claim).
+ * Only one concurrent cron worker receives a representation.
+ */
+export async function claimSmsReminderSend(id, now = new Date()) {
+  const orFilter = buildEmailClaimOrFilter(
+    "reminder_sms_status",
+    "reminder_sms_claimed_at",
+    now
+  );
+  try {
+    const rows = await supabaseRequest(
+      `appointments?id=eq.${encodeURIComponent(id)}&reminder_sms_sent_at=is.null&${orFilter}`,
+      {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({
+          reminder_sms_status: "sending",
+          reminder_sms_claimed_at: now.toISOString(),
+        }),
+      }
+    );
+    return Array.isArray(rows) && rows[0] ? rows[0] : null;
+  } catch (error) {
+    if (!isMissingReminderSmsColumnError(error)) throw error;
+    console.warn(
+      "reminder sms columns missing — run supabase/appointment-sms-delivery.sql"
+    );
+    return null;
+  }
+}
+
+export async function markSmsReminderOutcome(
+  id,
+  { status, error = null, attempts = null, shipmentId = null } = {}
+) {
+  const patch = {
+    reminder_sms_status: status,
+    reminder_sms_claimed_at: null,
+  };
+  if (error != null) patch.reminder_sms_last_error = String(error).slice(0, 240);
+  if (attempts != null) patch.reminder_sms_attempts = attempts;
+  if (shipmentId != null && String(shipmentId).trim()) {
+    patch.reminder_sms_shipment_id = String(shipmentId).trim().slice(0, 120);
+  }
+  if (status === "accepted" || status === "delivered") {
+    patch.reminder_sms_sent_at = new Date().toISOString();
+    if (error == null) patch.reminder_sms_last_error = null;
+  }
+  try {
+    await supabaseRequest(`appointments?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify(patch),
+    });
+  } catch (err) {
+    if (!isMissingReminderSmsColumnError(err)) throw err;
+    console.warn(
+      "reminder sms columns missing — run supabase/appointment-sms-delivery.sql"
+    );
+  }
+}
+
 export async function claimConfirmationSend(id, now = new Date()) {
   const orFilter = buildEmailClaimOrFilter(
     "confirmation_email_status",
