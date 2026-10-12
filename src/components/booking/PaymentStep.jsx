@@ -372,14 +372,21 @@ export default function PaymentStep({
         appointments: formData.appointments || [],
       });
 
+      const persistedAppointments = (created.appointments || []).filter((row) =>
+        String(row?.id || "").trim()
+      );
+      if (!persistedAppointments.length) {
+        throw new Error("לא ניתן לשמור את התור");
+      }
+
       setCashSuccess({
-        appointments: created.appointments || [],
+        appointments: persistedAppointments,
         treatment_name:
-          created.appointments?.[0]?.treatment_name ||
+          persistedAppointments[0]?.treatment_name ||
           treatment?.name ||
           formData.treatment_name,
         treatment_price:
-          created.appointments?.[0]?.treatment_price ??
+          persistedAppointments[0]?.treatment_price ??
           treatment?.price ??
           formData.treatment_price ??
           null,

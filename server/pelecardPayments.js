@@ -22,6 +22,7 @@ import {
 } from "./paymentSessionToken.js";
 import { hasAppointmentTimeConflict } from "../src/lib/bookingSlots.js";
 import { activateGiftVoucher, appendVoucherAppointments, redeemVoucherAtomic, restoreVoucherBalance } from "./giftVouchers.js";
+import { isCalendarMutationConfigured } from "./googleCalendarMutation.js";
 import { syncClinicCalendarForAppointments } from "./syncClinicCalendar.js";
 import {
   hasSuccessfulInvoice4u,
@@ -283,15 +284,65 @@ export async function assertBookingSlotsAvailable(booking, { bookingDurationMinu
   }
 }
 
+/** Require every requested slot to come back with a persisted appointment id. */
+export function assertPersistedAppointmentResult({
+  expectedCount = 0,
+  createdIds = [],
+  createdRows = [],
+} = {}) {
+  const ids = [...new Set(
+    (Array.isArray(createdIds) ? createdIds : [])
+      .map((id) => String(id || "").trim())
+      .filter(Boolean)
+  )];
+  const rows = (Array.isArray(createdRows) ? createdRows : []).filter((row) =>
+    String(row?.id || "").trim()
+  );
+  const expected = Number(expectedCount) || 0;
+
+  if (!expected || ids.length !== expected || rows.length !== expected) {
+    const error = new Error("לא ניתן לשמור את התור במערכת");
+    error.status = 500;
+    error.code = "appointments_not_persisted";
+    throw error;
+  }
+
+  return { createdIds: ids, createdRows: rows };
+}
+
+async function deleteAppointmentsByIds(ids = []) {
+  for (const id of ids) {
+    const encoded = encodeURIComponent(String(id || "").trim());
+    if (!encoded) continue;
+    try {
+      await supabaseRequest(`appointments?id=eq.${encoded}`, { method: "DELETE" });
+    } catch (error) {
+      console.error(
+        "rollback appointment delete failed:",
+        encoded,
+        String(error?.message || error).slice(0, 200)
+      );
+    }
+  }
+}
+
 export async function createAppointmentsFromBooking(
   booking,
-  { paymentNote = "", paid = true, status = "confirmed", bookingDurationMinutes = 60, analytics } = {}
+  {
+    paymentNote = "",
+    paid = true,
+    status = "confirmed",
+    bookingDurationMinutes = 60,
+    analytics,
+    requireCalendarSync = false,
+  } = {}
 ) {
   await assertBookingSlotsAvailable(booking, { bookingDurationMinutes });
 
   const notes = [String(booking.notes || "").trim(), paymentNote].filter(Boolean).join("\n");
   const createdIds = [];
   const createdRows = [];
+  const expectedCount = (booking.appointments || []).length;
 
   for (const appointment of booking.appointments) {
     const row = {
@@ -337,11 +388,32 @@ export async function createAppointmentsFromBooking(
     }
   }
 
+  try {
+    assertPersistedAppointmentResult({ expectedCount, createdIds, createdRows });
+  } catch (error) {
+    await deleteAppointmentsByIds(createdIds);
+    throw error;
+  }
+
   if (createdRows.length) {
-    await syncClinicCalendarForAppointments(
+    const syncResults = await syncClinicCalendarForAppointments(
       createdRows.map((row) => ({ ...row, duration_minutes: bookingDurationMinutes })),
       { action: "create" }
     );
+
+    if (requireCalendarSync && isCalendarMutationConfigured()) {
+      const syncFailed = (Array.isArray(syncResults) ? syncResults : []).some(
+        (result) => result?.error
+      );
+      if (syncFailed) {
+        await syncClinicCalendarForAppointments(createdRows, { action: "delete" });
+        await deleteAppointmentsByIds(createdIds);
+        const error = new Error("לא ניתן לשמור את התור ביומן. נסו שוב.");
+        error.status = 502;
+        error.code = "calendar_sync_failed";
+        throw error;
+      }
+    }
   }
 
   await recordConversion(analytics, createdIds);
@@ -538,16 +610,25 @@ export async function createCashBooking(rawBooking = {}) {
     paid: false,
     status: "confirmed",
     analytics: rawBooking,
+    // Cash confirmations must not fire if clinic calendar write failed.
+    requireCalendarSync: true,
   });
 
-  await maybeSendConfirmationEmail(createdRows);
-  await maybeSendBookingConfirmSms(createdRows);
-  await maybeSendClinicBookingNotify(createdRows, {
+  // Confirmations only after every slot is persisted with an id.
+  const persisted = assertPersistedAppointmentResult({
+    expectedCount: booking.appointments.length,
+    createdIds,
+    createdRows,
+  });
+
+  await maybeSendConfirmationEmail(persisted.createdRows);
+  await maybeSendBookingConfirmSms(persisted.createdRows);
+  await maybeSendClinicBookingNotify(persisted.createdRows, {
     sourceLabel: "מזומן בהגעה",
     extraNote: "התשלום יתבצע במזומן בהגעה לקליניקה",
   });
 
-  return { createdIds, appointments: createdRows };
+  return { createdIds: persisted.createdIds, appointments: persisted.createdRows };
 }
 
 export async function redeemGiftVoucher({ rawBooking, code, tenantId }) {
