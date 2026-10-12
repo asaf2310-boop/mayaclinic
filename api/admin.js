@@ -352,11 +352,39 @@ async function updateEntity(entity, id, row, tenantId) {
     `id=eq.${encodeURIComponent(id)}&select=*`
   );
 
-  const updated = await supabaseRequest(path, {
+  const patchOpts = {
     method: "PATCH",
     headers: { Prefer: "return=representation" },
-    body: JSON.stringify(payload),
-  });
+  };
+
+  let updated;
+  try {
+    updated = await supabaseRequest(path, {
+      ...patchOpts,
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    // Pre-SMS-migration DBs: never block cancel/reschedule on missing reminder_sms_* columns.
+    const message = String(error?.message || error || "");
+    const smsKeys = Object.keys(payload).filter((key) => key.startsWith("reminder_sms_"));
+    if (
+      smsKeys.length > 0 &&
+      (/reminder_sms_/i.test(message) ||
+        (/column/i.test(message) && /reminder_sms/i.test(message)))
+    ) {
+      console.warn(
+        "reminder sms columns missing on appointment update — run supabase/appointment-sms-delivery.sql"
+      );
+      const stripped = { ...payload };
+      for (const key of smsKeys) delete stripped[key];
+      updated = await supabaseRequest(path, {
+        ...patchOpts,
+        body: JSON.stringify(stripped),
+      });
+    } else {
+      throw error;
+    }
+  }
   const rowOut = Array.isArray(updated) ? updated[0] : updated;
   if (!rowOut) {
     throw new Error("Record not found for this clinic tenant");

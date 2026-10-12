@@ -330,6 +330,9 @@ const read = (rel) => readFileSync(join(root, rel), "utf8");
   assert.match(admin, /action === "sms-test"/);
   assert.match(admin, /action === "sms-reminder-settings"/);
   assert.match(admin, /useLive: Boolean\(body\.useLive\)/);
+  // Cancel/reschedule must not hard-fail before SMS migration is applied.
+  assert.match(admin, /reminder sms columns missing on appointment update/);
+  assert.match(admin, /key\.startsWith\("reminder_sms_"\)/);
 
   const migration = read("../supabase/appointment-sms-delivery.sql");
   assert.match(migration, /reminder_sms_status/);
