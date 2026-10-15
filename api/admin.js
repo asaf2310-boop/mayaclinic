@@ -23,6 +23,7 @@ import {
 import { getRequestBookingBasePath, resolveAdminAppOrigin, resolveAdminFrontPath } from "../server/bookingMount.js";
 import { resolveClinicTenantFromHost } from "../server/clinicTenant.js";
 import { supabaseRequest } from "../server/supabaseServer.js";
+import { attachInvoicesToAppointments } from "../server/appointmentInvoices.js";
 import { probeMeridianMailbox } from "../server/meridianEmail.js";
 import { notifyClinicAppointmentCancelled } from "../server/clinicCancellationNotify.js";
 import { syncClinicCalendarForAppointment } from "../server/syncClinicCalendar.js";
@@ -157,27 +158,38 @@ async function listEntity(entity, query = {}, tenantId) {
     ? `tenant_id=eq.${encodeURIComponent(tenantId)}&`
     : "";
 
+  let rows;
   if (entity === "appointments" && query.date) {
-    return (
+    rows =
       (await supabaseRequest(
         `appointments?${tenantClause}date=eq.${encodeURIComponent(query.date)}&select=*&order=time.asc&limit=${limit}&offset=${offset}`
-      )) || []
-    );
-  }
-
-  if (entity === "patient_profiles" && query.customer_key) {
-    return (
+      )) || [];
+  } else if (entity === "patient_profiles" && query.customer_key) {
+    rows =
       (await supabaseRequest(
         `patient_profiles?${tenantClause}customer_key=eq.${encodeURIComponent(query.customer_key)}&select=*&limit=5`
-      )) || []
-    );
+      )) || [];
+  } else {
+    rows =
+      (await supabaseRequest(
+        `${entity}?${tenantClause}select=*&order=${column}.${desc ? "desc" : "asc"}&limit=${limit}&offset=${offset}`
+      )) || [];
   }
 
-  return (
-    (await supabaseRequest(
-      `${entity}?${tenantClause}select=*&order=${column}.${desc ? "desc" : "asc"}&limit=${limit}&offset=${offset}`
-    )) || []
-  );
+  // Invoice4U copies live on pelecard_payments.result_payload — attach for admin cards.
+  if (entity === "appointments" && Array.isArray(rows) && rows.length) {
+    try {
+      return await attachInvoicesToAppointments(rows);
+    } catch (error) {
+      console.error(
+        "Failed to attach Invoice4U summaries to appointments:",
+        error?.message || error
+      );
+      return rows;
+    }
+  }
+
+  return rows;
 }
 
 async function findTenantRow(entity, tenantId, filters = {}) {

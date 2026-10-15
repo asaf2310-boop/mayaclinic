@@ -33,7 +33,7 @@ import {
   bookingEmailErrorMessage,
   validateBookingEmail,
 } from "@/lib/bookingEmailValidation";
-import { CheckCircle2, Circle, Loader2, Pencil, Trash2 } from "lucide-react";
+import { CheckCircle2, Circle, ExternalLink, Loader2, Pencil, Trash2 } from "lucide-react";
 import { verifyMeridianTreatmentId } from "@/lib/meridianBooking";
 
 const STATUS_MAP = {
@@ -164,6 +164,63 @@ function emailDeliveryStatusLabel(status) {
     default:
       return "";
   }
+}
+
+/** Label for Invoice4U summary attached by /api/admin appointment list. */
+function invoice4uDisplayLabel(invoice) {
+  if (!invoice) return "";
+  if (invoice.ok) {
+    if (invoice.documentNumber != null && invoice.documentNumber !== "") {
+      return `מס׳ ${invoice.documentNumber}`;
+    }
+    if (invoice.id) return `מסמך ${invoice.id}`;
+    return "הופקה";
+  }
+  if (invoice.status === "issuing") return "בהפקה…";
+  if (invoice.reason === "not_configured") return "לא הוגדר Invoice4U";
+  if (invoice.reason === "zero_amount") return "סכום אפס — לא הופקה";
+  if (invoice.skipped && invoice.reason) return `דולג: ${invoice.reason}`;
+  if (invoice.error) return `שגיאה: ${String(invoice.error).slice(0, 120)}`;
+  if (invoice.reason) return String(invoice.reason);
+  return "לא הופקה";
+}
+
+function renderInvoiceField(invoice) {
+  const label = invoice4uDisplayLabel(invoice);
+  if (!label) {
+    return (
+      <div className="space-y-1">
+        <p className="text-xs text-muted-foreground">חשבונית Invoice4U</p>
+        <p className="text-sm font-medium text-foreground">-</p>
+      </div>
+    );
+  }
+
+  const pdfUrl = invoice?.ok && invoice?.pdfUrl ? String(invoice.pdfUrl).trim() : "";
+
+  return (
+    <div className="space-y-1">
+      <p className="text-xs text-muted-foreground">חשבונית Invoice4U</p>
+      <p
+        className={`text-sm font-medium ${
+          invoice?.ok ? "text-foreground" : "text-amber-800"
+        }`}
+      >
+        {label}
+      </p>
+      {pdfUrl ? (
+        <a
+          href={pdfUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-2 hover:underline"
+        >
+          <ExternalLink className="h-3 w-3" aria-hidden />
+          פתח העתק PDF
+        </a>
+      ) : null}
+    </div>
+  );
 }
 
 export default function AppointmentTable({
@@ -384,6 +441,7 @@ export default function AppointmentTable({
                     )}
                     {renderField("שעה", apt.time, "tabular-nums")}
                     {renderField("הערות", formatNotesForDisplay(apt.notes))}
+                    {renderInvoiceField(apt.invoice4u)}
                     {renderField(
                       "סטטוס אימייל אישור",
                       emailDeliveryStatusLabel(apt.confirmation_email_status) ||
