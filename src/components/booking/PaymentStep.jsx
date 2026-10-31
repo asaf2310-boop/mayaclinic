@@ -26,6 +26,7 @@ import {
 } from "@/lib/meridianBooking";
 import { createMovementBooking } from "@/lib/movementBooking";
 import { createCashBooking } from "@/lib/cashBooking";
+import { createPayboxBooking } from "@/lib/payboxBooking";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import {
@@ -96,6 +97,9 @@ export default function PaymentStep({
   const [isCashConfirming, setIsCashConfirming] = useState(false);
   const [cashError, setCashError] = useState("");
   const [cashSuccess, setCashSuccess] = useState(null);
+  const [isPayboxConfirming, setIsPayboxConfirming] = useState(false);
+  const [payboxError, setPayboxError] = useState("");
+  const [payboxSuccess, setPayboxSuccess] = useState(null);
   const [voucherCode, setVoucherCode] = useState("");
   const [voucherLoading, setVoucherLoading] = useState(false);
   const [voucherError, setVoucherError] = useState("");
@@ -250,14 +254,79 @@ export default function PaymentStep({
     setShowCheckout(true);
   };
 
-  const handleStartPayboxPayment = () => {
-    const result = openPayboxLink(resolvePayboxLink(treatment, clinicSite));
-    if (result.missingConfig) {
+  const handleStartPayboxPayment = async () => {
+    const payboxLink = resolvePayboxLink(treatment, clinicSite);
+    const linkDetails = getPayboxPaymentDetails(payboxLink, totalPrice);
+    if (!linkDetails.isConfigured) {
       toast({
         title: "קישור PayBox חסר",
         description: "לא הוגדר קישור PayBox עבור טיפול זה.",
         variant: "destructive",
       });
+      return;
+    }
+
+    const emailCheck = validateBookingEmail(formData.patient_email, { required: true });
+    if (!emailCheck.ok) {
+      setPayboxError(bookingEmailErrorMessage(emailCheck.error));
+      toast({
+        title: "נדרש אימייל תקין",
+        description: "חזרו לשלב הפרטים והשלימו כתובת אימייל לקבלת אישור התור.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsPayboxConfirming(true);
+    setPayboxError("");
+    try {
+      // Create appointment + emails first — PayBox links have no webhook/return.
+      const created = await createPayboxBooking({
+        patient_name: formData.patient_name,
+        patient_phone: formData.patient_phone,
+        patient_email: emailCheck.normalized,
+        notes: formData.notes,
+        marketing_consent: formData.marketing_consent,
+        treatment_id: formData.treatment_id || treatment?.id,
+        treatment_name: formData.treatment_name || treatment?.name,
+        treatment_price: treatment?.price ?? formData.treatment_price ?? null,
+        tenant_id: getClinicTenantId() || clinicSite?.id || "maya",
+        appointments: formData.appointments || [],
+      });
+
+      const persistedAppointments = (created.appointments || []).filter((row) =>
+        String(row?.id || "").trim()
+      );
+      if (!persistedAppointments.length) {
+        throw new Error("לא ניתן לשמור את התור");
+      }
+
+      // Open PayBox after the booking is persisted (mobile may leave this page).
+      openPayboxLink(payboxLink);
+
+      setPayboxSuccess({
+        appointments: persistedAppointments,
+        treatment_name:
+          persistedAppointments[0]?.treatment_name ||
+          treatment?.name ||
+          formData.treatment_name,
+        treatment_price:
+          persistedAppointments[0]?.treatment_price ??
+          treatment?.price ??
+          formData.treatment_price ??
+          null,
+        patient_email: emailCheck.normalized,
+        payment_note: "תשלום ב-PayBox (קישור חיצוני)",
+      });
+    } catch (error) {
+      const raw = String(error?.message || "").trim();
+      const looksLikeJsError =
+        /is not defined|ReferenceError|TypeError|Cannot read propert/i.test(raw);
+      setPayboxError(
+        looksLikeJsError || !raw ? "לא ניתן לאשר את התור. נסו שוב." : raw
+      );
+    } finally {
+      setIsPayboxConfirming(false);
     }
   };
 
@@ -443,6 +512,15 @@ export default function PaymentStep({
     return (
       <BookingSuccess
         appointment={cashSuccess}
+        onReset={() => navigate("/book", { replace: true })}
+      />
+    );
+  }
+
+  if (payboxSuccess) {
+    return (
+      <BookingSuccess
+        appointment={payboxSuccess}
         onReset={() => navigate("/book", { replace: true })}
       />
     );
@@ -682,7 +760,7 @@ export default function PaymentStep({
               <button
                 type="button"
                 onClick={handleStartPayboxPayment}
-                disabled={!payboxDetails.isConfigured}
+                disabled={!payboxDetails.isConfigured || isPayboxConfirming}
                 className={`mb-2.5 flex w-full items-center justify-center gap-2.5 border px-4 py-3.5 text-[15px] font-semibold transition-transform active:scale-[0.99] disabled:opacity-60 sm:gap-3 sm:px-6 sm:py-4 sm:text-base ${
                   clinicSite
                     ? "rounded-2xl border-[#D5E0D8] bg-white/90 text-[#2F3E35] hover:bg-[var(--ofir-f7faf8,#F7FAF8)]"
@@ -690,9 +768,20 @@ export default function PaymentStep({
                 }`}
                 aria-label={`תשלום בפייבוקס על סך ${payboxDetails.amountDisplay}`}
               >
-                <Wallet className="h-5 w-5 shrink-0" />
-                <span className="leading-none">תשלום בפייבוקס · {payboxDetails.amountDisplay}</span>
+                {isPayboxConfirming ? (
+                  <Loader2 className="h-5 w-5 shrink-0 animate-spin" />
+                ) : (
+                  <Wallet className="h-5 w-5 shrink-0" />
+                )}
+                <span className="leading-none">
+                  {isPayboxConfirming
+                    ? "מאשרים תור ופותחים PayBox…"
+                    : `תשלום בפייבוקס · ${payboxDetails.amountDisplay}`}
+                </span>
               </button>
+              {payboxError && (
+                <p className="mb-2 text-center text-sm text-[#9B2C2C]">{payboxError}</p>
+              )}
               <button
                 type="button"
                 onClick={handleConfirmCashBooking}
@@ -723,7 +812,7 @@ export default function PaymentStep({
               </p>
               {payboxDetails.isConfigured && (
                 <p className={`text-center text-xs sm:text-[13px] ${mutedClass}`}>
-                  או תשלום ישיר דרך PayBox
+                  או אישור תור + פתיחת קישור תשלום PayBox (יישלח אימייל אישור)
                 </p>
               )}
               <p className={`text-center text-xs sm:text-[13px] ${mutedClass}`}>

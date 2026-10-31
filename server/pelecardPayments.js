@@ -631,6 +631,48 @@ export async function createCashBooking(rawBooking = {}) {
   return { createdIds: persisted.createdIds, appointments: persisted.createdRows };
 }
 
+/**
+ * PayBox external payment link — reserve the appointment now, then the client
+ * opens the clinic's PayBox URL. There is no PayBox webhook/return for these
+ * static links.payboxapp.com URLs, so payment is NOT verified server-side
+ * (paid remains false; no Invoice4U). Patient + clinic emails still fire after
+ * persistence, same as cash-on-arrival.
+ */
+export async function createPayboxBooking(rawBooking = {}) {
+  const booking = normalizeBookingPayload(rawBooking);
+  if (!isBookingPayloadValid(booking)) {
+    const error = new Error("booking payload is required (patient, treatment, appointments)");
+    error.status = 400;
+    throw error;
+  }
+
+  assertBookingEmail(booking, { required: true });
+
+  const { createdIds, createdRows } = await createAppointmentsFromBooking(booking, {
+    paymentNote: "תשלום ב-PayBox (קישור חיצוני — לא אומת בשרת)",
+    paid: false,
+    status: "confirmed",
+    analytics: rawBooking,
+    requireCalendarSync: true,
+  });
+
+  const persisted = assertPersistedAppointmentResult({
+    expectedCount: booking.appointments.length,
+    createdIds,
+    createdRows,
+  });
+
+  await maybeSendConfirmationEmail(persisted.createdRows);
+  await maybeSendBookingConfirmSms(persisted.createdRows);
+  await maybeSendClinicBookingNotify(persisted.createdRows, {
+    sourceLabel: "PayBox",
+    extraNote:
+      "הלקוח בחר תשלום ב-PayBox. הקישור חיצוני — אין webhook; יש לוודא שהתשלום התקבל באפליקציית PayBox.",
+  });
+
+  return { createdIds: persisted.createdIds, appointments: persisted.createdRows };
+}
+
 export async function redeemGiftVoucher({ rawBooking, code, tenantId }) {
   const booking = normalizeBookingPayload({ ...rawBooking, tenant_id: tenantId });
   if (!isBookingPayloadValid(booking)) throw Object.assign(new Error("פרטי ההזמנה אינם תקינים"), { status: 400 });
