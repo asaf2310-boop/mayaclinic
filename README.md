@@ -155,8 +155,8 @@ INVOICE4U_TOKEN=your-org-api-guid
 - תאריכי תשלום נשלחים בפורמט WCF `/Date(<ms>)/` (ISO מתוך הדוקומנטציה נדחה ע״י ה־API עם HTTP 500).
 - הפקה דרך `CreateDocumentWithIdentifierValidation` עם `ApiIdentifier=booking-{ref}` — מניעת כפילות ב־Invoice4U; מקומית מדלגים אם `result_payload.invoice4u.ok` כבר שמור (כולל retries של Pelecard אחרי `paid`).
 - בדיקת ₪1 ידנית: `INVOICE4U_TOKEN=... node scripts/live-test-invoice4u.mjs`
-- קישור PayBox החיצוני (לא דרך Pelecard) אינו מאשר תשלום בשרת ולכן לא מפיק חשבונית אוטומטית.
-- שובר מתנה / מרידיאן / מזומן בהגעה — לא מפיקים חשבונית בנתיב הזה.
+- קישור PayBox החיצוני (`links.payboxapp.com`) **אין לו webhook/return לשרת**. בלחיצה על «תשלום בפייבוקס» השרת יוצר תור (`paid=false`), שולח אימייל ללקוח + לקליניקה (כמו מזומן בהגעה), ואז נפתח קישור PayBox. התשלום עצמו לא מאומת בשרת ולכן **לא** מפיק חשבונית Invoice4U אוטומטית — יש לאשר ידנית ב־PayBox.
+- שובר מתנה / מרידיאן / מזומן בהגעה / PayBox — לא מפיקים חשבונית בנתיב Invoice4U של Pelecard.
 
 איפה להגדיר: Vercel → Project `mayaclinic` → Settings → Environment Variables → **Production** → `INVOICE4U_TOKEN` = ה־API GUID מ־Invoice4U (Settings → API). אחרי שמירה: **Redeploy** ל־Production.
 
