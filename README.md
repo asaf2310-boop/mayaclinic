@@ -172,6 +172,28 @@ INVOICE4U_TOKEN=your-org-api-guid
 
 > אם הרצתם בעבר גרסה ישנה של `multi-tenant.sql` / `pelecard-payments.sql`, הריצו שוב את הקבצים המעודכנים כדי להחליף policies פתוחים.
 
+## עדכון / ביטול תור ע״י הלקוח (`/manage`)
+
+לקוחות מאמתים נייד בקוד SMS (019), רואים תורים קרובים, ומעדכנים/מבטלים רק אם נותרו ≥24 שעות לפני מועד התור (Asia/Jerusalem).
+
+ב־Supabase SQL Editor הריצו:
+
+```text
+supabase/customer-self-service.sql
+```
+
+ב־Vercel (Production) נדרשים לפחות:
+
+```env
+SMS019_USERNAME=...
+SMS019_API_TOKEN=...
+SMS019_SENDER=0549000301
+```
+
+אופציונלי: `SELF_SERVICE_SESSION_SECRET`, `SELF_SERVICE_OTP_PEPPER`, `CLINIC_PUBLIC_PHONE`.
+אין להגדיר `SELF_SERVICE_OTP_BYPASS` בפרודקשן (מתעלמים ממנו שם בכל מקרה).
+אין להפעיל `SMS_REMINDERS_ENABLED=true` כחלק מהפיצ׳ר הזה.
+
 ## Demo deployment
 
 הדמו לא צריך GitHub repo נפרד. משתמשים באותו repo של `mayaclinic`, ויוצרים ממנו Project נוסף ב־Vercel.

@@ -211,3 +211,88 @@ export function buildClinicCancellationNotifyEmail({
     html: baseLayout({ title: `תור ${actionLabel}`, bodyHtml, clinicName }),
   };
 }
+
+export function buildCustomerRescheduleEmail({
+  patientName,
+  previous,
+  appointment,
+  clinicName,
+}) {
+  const bodyHtml = `
+    <p style="font-size:16px;line-height:1.6;">שלום ${escapeHtml(patientName || "יקיר/ה")},</p>
+    <p style="font-size:16px;line-height:1.6;">התור שלך עודכן בהצלחה. להלן הפרטים:</p>
+    <p style="font-size:15px;line-height:1.7;margin:12px 0;"><strong>מועד קודם:</strong></p>
+    ${formatAppointmentsTable([previous].filter(Boolean))}
+    <p style="font-size:15px;line-height:1.7;margin:12px 0;"><strong>מועד חדש:</strong></p>
+    ${formatAppointmentsTable([appointment].filter(Boolean))}
+    ${formatVisitInstructionsBlock()}
+    <p style="font-size:14px;line-height:1.6;margin-top:18px;color:#666;">לשינוי או ביטול נוסף (עד 24 שעות לפני התור) ניתן דרך האתר או מול הקליניקה.</p>`;
+
+  const when = appointment
+    ? `${formatDateHe(appointment.date)} ${appointment.time || ""}`.trim()
+    : "";
+
+  return {
+    subject: when
+      ? `עדכון תור — ${when} · ${clinicName}`
+      : `עדכון תור — ${clinicName}`,
+    html: baseLayout({ title: "התור עודכן", bodyHtml, clinicName }),
+  };
+}
+
+export function buildCustomerCancellationEmail({
+  patientName,
+  appointment,
+  clinicName,
+}) {
+  const bodyHtml = `
+    <p style="font-size:16px;line-height:1.6;">שלום ${escapeHtml(patientName || "יקיר/ה")},</p>
+    <p style="font-size:16px;line-height:1.6;">התור שלך בוטל בהצלחה.</p>
+    ${formatAppointmentsTable([appointment].filter(Boolean))}
+    <p style="font-size:14px;line-height:1.6;margin-top:18px;color:#666;">נשמח לראותך שוב — ניתן לקבוע תור חדש באתר.</p>`;
+
+  const when = appointment
+    ? `${formatDateHe(appointment.date)} ${appointment.time || ""}`.trim()
+    : "";
+
+  return {
+    subject: when
+      ? `ביטול תור — ${when} · ${clinicName}`
+      : `ביטול תור — ${clinicName}`,
+    html: baseLayout({ title: "התור בוטל", bodyHtml, clinicName }),
+  };
+}
+
+export function buildClinicRescheduleNotifyEmail({
+  patientName,
+  patientPhone,
+  patientEmail,
+  previous,
+  appointment,
+  clinicName,
+}) {
+  const phone = String(patientPhone || "").trim() || "—";
+  const email = String(patientEmail || "").trim() || "—";
+  const bodyHtml = `
+    <p style="font-size:16px;line-height:1.6;">הלקוח עדכן תור דרך האתר (שירות עצמי).</p>
+    <p style="font-size:15px;line-height:1.7;margin:12px 0;">
+      <strong>שם:</strong> ${escapeHtml(patientName || "—")}<br/>
+      <strong>טלפון:</strong> ${escapeHtml(phone)}<br/>
+      <strong>אימייל:</strong> ${escapeHtml(email)}
+    </p>
+    <p style="font-size:15px;margin:12px 0 4px;"><strong>מועד קודם:</strong></p>
+    ${formatAppointmentsTable([previous].filter(Boolean))}
+    <p style="font-size:15px;margin:12px 0 4px;"><strong>מועד חדש:</strong></p>
+    ${formatAppointmentsTable([appointment].filter(Boolean))}`;
+
+  const when = appointment
+    ? `${formatDateHe(appointment.date)} ${appointment.time || ""}`.trim()
+    : "";
+
+  return {
+    subject: when
+      ? `עדכון תור ע״י לקוח — ${patientName || "לקוח"} · ${when}`
+      : `עדכון תור ע״י לקוח — ${patientName || "לקוח"} · ${clinicName}`,
+    html: baseLayout({ title: "עדכון תור ע״י לקוח", bodyHtml, clinicName }),
+  };
+}

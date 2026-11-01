@@ -3,7 +3,7 @@ import { markBookingJourneyComplete } from "@/lib/ofirbabyAnalytics";
 import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Home, CalendarPlus } from "lucide-react";
+import { CheckCircle2, Home, CalendarPlus, CalendarClock } from "lucide-react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { getClinicSite } from "@/lib/clinicSite";
@@ -118,7 +118,7 @@ export default function BookingSuccess({ appointment, onReset, hidePrices = fals
         </div>
       </div>
 
-      <div className="flex w-full flex-col justify-center gap-3 sm:flex-row">
+      <div className="flex w-full flex-col justify-center gap-3 sm:flex-row sm:flex-wrap">
         <Button
           asChild
           variant="outline"
@@ -131,6 +131,16 @@ export default function BookingSuccess({ appointment, onReset, hidePrices = fals
             <Home className="w-4 h-4" />
             חזרה לעמוד הבית
           </Link>}
+        </Button>
+        <Button
+          asChild
+          variant="outline"
+          className={`w-full gap-2 sm:w-auto ${clinicSite ? clinicOutlineBtn : "rounded-xl"}`}
+        >
+          <Link to="/manage">
+            <CalendarClock className="w-4 h-4" />
+            עדכון או ביטול תור
+          </Link>
         </Button>
         <Button
           asChild

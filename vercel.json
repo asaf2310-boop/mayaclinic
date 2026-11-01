@@ -66,6 +66,10 @@
       "dest": "/api/share/$1"
     },
     {
+      "src": "/api/self-service/?",
+      "dest": "/api/public-data"
+    },
+    {
       "src": "/api/(.*)",
       "dest": "/api/$1"
     },
