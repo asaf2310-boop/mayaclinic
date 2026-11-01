@@ -3,7 +3,8 @@ import { emitBookingFunnelEvent } from "@/lib/ofirbabyAnalytics";
 import { Button } from "@/components/ui/button";
 import React, { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+import { CalendarClock } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import AllInCenterAttribution from "@/components/AllInCenterAttribution";
 import Navbar from "../components/layout/Navbar";
@@ -172,6 +173,14 @@ export default function Book() {
                     {pageSubtitle}
                   </p>
                 ) : null}
+                <div className="mt-4">
+                  <Button asChild variant="outline" className="gap-2 rounded-xl">
+                    <Link to="/manage">
+                      <CalendarClock className="h-4 w-4" />
+                      עדכון או ביטול תור
+                    </Link>
+                  </Button>
+                </div>
               </div>
 
               {showMeridianGate ? (
