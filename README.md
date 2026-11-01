@@ -190,7 +190,12 @@ SMS019_API_TOKEN=...
 SMS019_SENDER=0549000301
 ```
 
-אופציונלי: `SELF_SERVICE_SESSION_SECRET`, `SELF_SERVICE_OTP_PEPPER`, `CLINIC_PUBLIC_PHONE`.
+אחרי עדכון/ביטול תור (ממשק ניהול **או** שירות עצמי) השרת שולח:
+- אימייל ללקוח + אימייל לקליניקה (`GMAIL_*` + `BOOKING_NOTIFY_EMAILS`)
+- SMS ללקוח (טרנזקציוני — דורש `SMS019_*`; נשלט ב־`SMS_CHANGE_NOTIFY_ENABLED`, ברירת מחדל פעיל כשלא מוגדר; **לא** תלוי ב־`SMS_REMINDERS_ENABLED` / `SMS_BOOKING_CONFIRM_ENABLED`)
+- עדכון/מחיקה ביומן Google (`GOOGLE_SERVICE_ACCOUNT_KEY_JSON` + `GOOGLE_CALENDAR_ID`)
+
+אופציונלי: `SELF_SERVICE_SESSION_SECRET`, `SELF_SERVICE_OTP_PEPPER`, `CLINIC_PUBLIC_PHONE`, `SMS_CHANGE_NOTIFY_ENABLED=false` לכיבוי SMS על שינויים.
 אין להגדיר `SELF_SERVICE_OTP_BYPASS` בפרודקשן (מתעלמים ממנו שם בכל מקרה).
 אין להפעיל `SMS_REMINDERS_ENABLED=true` כחלק מהפיצ׳ר הזה.
 

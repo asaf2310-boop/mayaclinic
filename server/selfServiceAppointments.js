@@ -17,7 +17,10 @@ import {
   POLICY_MESSAGE_HE,
   publicAppointmentView,
 } from "./selfServicePolicy.js";
-import { notifySelfServiceChange } from "./selfServiceNotify.js";
+import {
+  notifySelfServiceChange,
+  recordAppointmentChangeEvent,
+} from "./selfServiceNotify.js";
 
 const APPOINTMENT_SELECT =
   "id,patient_name,patient_phone,patient_email,treatment_id,treatment_name,treatment_price," +
@@ -249,30 +252,15 @@ async function insertChangeEvent({
   beforeSnapshot,
   afterSnapshot,
 }) {
-  try {
-    const rows = await supabaseRequest("appointment_change_events", {
-      method: "POST",
-      headers: { Prefer: "return=representation" },
-      body: JSON.stringify({
-        appointment_id: appointmentId,
-        tenant_id: tenantId || null,
-        event_type: eventType,
-        actor: "customer",
-        phone_normalized: phoneNormalized,
-        before_snapshot: beforeSnapshot,
-        after_snapshot: afterSnapshot,
-        customer_email_status: "pending",
-        clinic_email_status: "pending",
-      }),
-    });
-    return Array.isArray(rows) ? rows[0] : rows;
-  } catch (error) {
-    console.warn(
-      "[self-service] change event insert failed (run customer-self-service.sql):",
-      error?.message || error
-    );
-    return null;
-  }
+  return recordAppointmentChangeEvent({
+    appointmentId,
+    tenantId,
+    eventType,
+    actor: "customer",
+    phoneNormalized,
+    beforeSnapshot,
+    afterSnapshot,
+  });
 }
 
 export async function listUpcomingAppointmentsForPhone({

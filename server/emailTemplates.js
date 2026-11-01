@@ -270,11 +270,19 @@ export function buildClinicRescheduleNotifyEmail({
   previous,
   appointment,
   clinicName,
+  actor = "customer",
 }) {
   const phone = String(patientPhone || "").trim() || "—";
   const email = String(patientEmail || "").trim() || "—";
+  const byAdmin = String(actor || "") === "admin";
+  const lead = byAdmin
+    ? "תור עודכן ידנית במערכת הניהול."
+    : "הלקוח עדכן תור דרך האתר (שירות עצמי).";
+  const title = byAdmin ? "עדכון תור (מערכת ניהול)" : "עדכון תור ע״י לקוח";
+  const subjectPrefix = byAdmin ? "עדכון תור" : "עדכון תור ע״י לקוח";
+
   const bodyHtml = `
-    <p style="font-size:16px;line-height:1.6;">הלקוח עדכן תור דרך האתר (שירות עצמי).</p>
+    <p style="font-size:16px;line-height:1.6;">${escapeHtml(lead)}</p>
     <p style="font-size:15px;line-height:1.7;margin:12px 0;">
       <strong>שם:</strong> ${escapeHtml(patientName || "—")}<br/>
       <strong>טלפון:</strong> ${escapeHtml(phone)}<br/>
@@ -291,8 +299,8 @@ export function buildClinicRescheduleNotifyEmail({
 
   return {
     subject: when
-      ? `עדכון תור ע״י לקוח — ${patientName || "לקוח"} · ${when}`
-      : `עדכון תור ע״י לקוח — ${patientName || "לקוח"} · ${clinicName}`,
-    html: baseLayout({ title: "עדכון תור ע״י לקוח", bodyHtml, clinicName }),
+      ? `${subjectPrefix} — ${patientName || "לקוח"} · ${when}`
+      : `${subjectPrefix} — ${patientName || "לקוח"} · ${clinicName}`,
+    html: baseLayout({ title, bodyHtml, clinicName }),
   };
 }
