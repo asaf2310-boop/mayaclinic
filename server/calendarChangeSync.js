@@ -1,9 +1,11 @@
 /**
- * Durable Google Calendar sync for appointment_change_events (reschedule/cancel).
+ * Durable Google Calendar sync for appointment_change_events
+ * (create / reschedule / cancel).
  *
  * Immediate sync still runs after DB commit; failures are persisted on the change
  * event and retried from /api/send-reminders. Retries are idempotent: they never
- * overwrite a newer slot or recreate a cancelled appointment.
+ * create duplicate events, overwrite a newer slot, or recreate a cancelled
+ * appointment.
  */
 
 import { canClaimEmailDelivery, buildEmailClaimOrFilter } from "./emailClaim.js";
@@ -50,7 +52,7 @@ function normStatus(value) {
  *
  * @returns {{
  *   apply: boolean,
- *   action?: 'reschedule' | 'delete',
+ *   action?: 'create' | 'reschedule' | 'delete',
  *   reason?: string,
  *   terminalStatus?: 'skipped_stale' | 'synced',
  *   appointment?: object,
@@ -68,7 +70,7 @@ export function resolveCalendarRetryDecision(event, appointment) {
       ? event.before_snapshot
       : {};
 
-  if (eventType !== "reschedule" && eventType !== "cancel") {
+  if (eventType !== "create" && eventType !== "reschedule" && eventType !== "cancel") {
     return { apply: false, reason: "unsupported_event_type", terminalStatus: "skipped_stale" };
   }
 
@@ -96,6 +98,32 @@ export function resolveCalendarRetryDecision(event, appointment) {
   const afterDate = normDate(after.date);
   const afterTime = normTime(after.time);
   const afterStatus = normStatus(after.status);
+
+  if (eventType === "create") {
+    // Never recreate calendar for a cancelled / deleted booking.
+    if (currentStatus === "cancelled") {
+      return { apply: false, reason: "now_cancelled", terminalStatus: "skipped_stale" };
+    }
+    // Newer reschedule moved the slot — create job must not insert at the old time.
+    if (
+      (afterDate && currentDate && currentDate !== afterDate) ||
+      (afterTime && currentTime && currentTime !== afterTime)
+    ) {
+      return { apply: false, reason: "newer_slot", terminalStatus: "skipped_stale" };
+    }
+
+    return {
+      apply: true,
+      action: "create",
+      appointment: {
+        ...appointment,
+        // Prefer live google_event_id so retries patch instead of inserting duplicates.
+        google_event_id:
+          appointment.google_event_id || after.google_event_id || before.google_event_id || null,
+      },
+      previous: null,
+    };
+  }
 
   if (eventType === "reschedule") {
     // Do not recreate / move calendar for a cancelled appointment.
@@ -248,13 +276,16 @@ export async function syncCalendarForChangeEvent({
   action = null,
 } = {}) {
   const eventId = event?.id || null;
+  const eventType = String(event?.event_type || "").trim();
   const resolvedAction =
     action ||
-    (String(event?.event_type || "") === "cancel"
+    (eventType === "cancel"
       ? "delete"
-      : String(event?.event_type || "") === "reschedule"
+      : eventType === "reschedule"
         ? "reschedule"
-        : "sync");
+        : eventType === "create"
+          ? "create"
+          : "sync");
 
   if (eventId) {
     const claimable =

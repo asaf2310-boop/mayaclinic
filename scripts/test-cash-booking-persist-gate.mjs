@@ -69,6 +69,16 @@ assert.match(
 );
 assert.match(
   serverSrc,
+  /eventType:\s*"create"/,
+  "cash/booking create must persist durable calendar sync job"
+);
+assert.match(
+  serverSrc,
+  /syncCalendarForChangeEvent/,
+  "cash/booking create must sync via durable calendar change path"
+);
+assert.match(
+  serverSrc,
   /assertPersistedAppointmentResult/,
   "cash booking must gate notifications on persisted ids"
 );

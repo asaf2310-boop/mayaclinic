@@ -65,7 +65,7 @@ create table if not exists public.appointment_change_events (
   id uuid primary key default gen_random_uuid(),
   appointment_id uuid references public.appointments(id) on delete set null,
   tenant_id text,
-  event_type text not null check (event_type in ('reschedule', 'cancel')),
+  event_type text not null check (event_type in ('create', 'reschedule', 'cancel')),
   actor text not null default 'customer',
   phone_normalized text,
   before_snapshot jsonb,
@@ -112,6 +112,43 @@ alter table public.appointment_change_events
   add column if not exists calendar_sync_last_error text;
 alter table public.appointment_change_events
   add column if not exists calendar_sync_attempts integer not null default 0;
+
+-- Allow durable GCal create jobs (PayBox/cash/booking) alongside reschedule/cancel.
+do $$
+declare
+  constraint_name text;
+begin
+  select con.conname into constraint_name
+  from pg_constraint con
+  join pg_class rel on rel.oid = con.conrelid
+  join pg_namespace nsp on nsp.oid = rel.relnamespace
+  where nsp.nspname = 'public'
+    and rel.relname = 'appointment_change_events'
+    and con.contype = 'c'
+    and pg_get_constraintdef(con.oid) ilike '%event_type%'
+  limit 1;
+
+  if constraint_name is not null then
+    execute format(
+      'alter table public.appointment_change_events drop constraint %I',
+      constraint_name
+    );
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint con
+    join pg_class rel on rel.oid = con.conrelid
+    join pg_namespace nsp on nsp.oid = rel.relnamespace
+    where nsp.nspname = 'public'
+      and rel.relname = 'appointment_change_events'
+      and con.conname = 'appointment_change_events_event_type_check'
+  ) then
+    alter table public.appointment_change_events
+      add constraint appointment_change_events_event_type_check
+      check (event_type in ('create', 'reschedule', 'cancel'));
+  end if;
+end $$;
 
 -- Existing DBs may still cascade-delete change events with the appointment.
 -- Switch to SET NULL so notify/calendar retries survive admin hard-delete.

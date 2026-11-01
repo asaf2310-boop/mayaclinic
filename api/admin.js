@@ -244,7 +244,32 @@ async function createEntity(entity, row, tenantId) {
     });
     const row = Array.isArray(created) ? created[0] : created;
     if (entity === "appointments" && row) {
-      await syncClinicCalendarForAppointment(row, { action: "create" });
+      const event = await recordAppointmentChangeEvent({
+        appointmentId: row.id,
+        tenantId: row.tenant_id || tenantId || null,
+        eventType: "create",
+        actor: "admin",
+        phoneNormalized: null,
+        beforeSnapshot: null,
+        afterSnapshot: {
+          date: row.date,
+          time: row.time,
+          status: row.status || "confirmed",
+          patient_name: row.patient_name,
+          patient_phone: row.patient_phone,
+          patient_email: row.patient_email,
+          treatment_name: row.treatment_name,
+          treatment_id: row.treatment_id,
+          google_event_id: row.google_event_id || null,
+          notes: row.notes || null,
+        },
+        calendarOnly: true,
+      });
+      if (event?.id) {
+        await syncCalendarForChangeEvent({ event, appointment: row, action: "create" });
+      } else {
+        await syncClinicCalendarForAppointment(row, { action: "create" });
+      }
     }
     return row;
   } catch (error) {

@@ -203,6 +203,7 @@ GOOGLE_CALENDAR_ID=...
 - עדכון/מחיקה ביומן Google (`GOOGLE_SERVICE_ACCOUNT_KEY_JSON` + `GOOGLE_CALENDAR_ID`)
 
 כשל ביומן/התראות **לא** מבטל את עדכון התור ב־DB. כשלונות נשמרים ב־`appointment_change_events` ומנסים שוב ב־`/api/send-reminders` (cron יומי).
+גם יצירת תור חדש (PayBox / מזומן / נתיבי הזמנה דומים) נשמרת כ־`event_type=create` עם `calendar_sync_*` ל־retry — בלי כפילות אירועים, בלי לשחזר תור מבוטל, ובלי לדרוס שיבוץ חדש יותר.
 
 אופציונלי: `SELF_SERVICE_SESSION_SECRET`, `SELF_SERVICE_OTP_PEPPER`, `CLINIC_PUBLIC_PHONE`, `SMS_CHANGE_NOTIFY_ENABLED=false` לכיבוי SMS על שינויים.
 אין להגדיר `SELF_SERVICE_OTP_BYPASS` בפרודקשן (מתעלמים ממנו שם בכל מקרה).

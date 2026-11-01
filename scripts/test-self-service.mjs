@@ -579,6 +579,60 @@ process.env.SELF_SERVICE_OTP_PEPPER =
   assert.equal(rescheduleMissing.apply, false);
   assert.equal(rescheduleMissing.reason, "appointment_missing");
 
+  // --- Booking create durable retry guards ---
+  const createEvent = {
+    id: "evt-create-1",
+    appointment_id: "appt-new",
+    event_type: "create",
+    created_at: "2026-03-01T09:00:00.000Z",
+    before_snapshot: null,
+    after_snapshot: {
+      date: "2026-03-10",
+      time: "11:00",
+      status: "confirmed",
+      google_event_id: null,
+    },
+  };
+
+  const createApply = resolveCalendarRetryDecision(createEvent, {
+    id: "appt-new",
+    date: "2026-03-10",
+    time: "11:00",
+    status: "confirmed",
+    google_event_id: "gcal-created",
+    updated_at: "2026-03-01T09:00:00.000Z",
+  });
+  assert.equal(createApply.apply, true);
+  assert.equal(createApply.action, "create");
+  assert.equal(
+    createApply.appointment.google_event_id,
+    "gcal-created",
+    "create retry must reuse existing google_event_id (no duplicate insert)"
+  );
+
+  const createCancelled = resolveCalendarRetryDecision(createEvent, {
+    id: "appt-new",
+    date: "2026-03-10",
+    time: "11:00",
+    status: "cancelled",
+  });
+  assert.equal(createCancelled.apply, false);
+  assert.equal(createCancelled.reason, "now_cancelled");
+  assert.equal(createCancelled.terminalStatus, "skipped_stale");
+
+  const createNewerSlot = resolveCalendarRetryDecision(createEvent, {
+    id: "appt-new",
+    date: "2026-03-12",
+    time: "15:00",
+    status: "confirmed",
+  });
+  assert.equal(createNewerSlot.apply, false);
+  assert.equal(createNewerSlot.reason, "newer_slot");
+
+  const createMissing = resolveCalendarRetryDecision(createEvent, null);
+  assert.equal(createMissing.apply, false);
+  assert.equal(createMissing.reason, "appointment_missing");
+
   const scrubbed = sanitizeCalendarSyncError(
     "Request failed Bearer ya29.a0AfH6SMC-secret AIzaSyC_testkey client_secret=abc123"
   );
@@ -586,6 +640,23 @@ process.env.SELF_SERVICE_OTP_PEPPER =
   assert.doesNotMatch(scrubbed, /AIza/);
   assert.doesNotMatch(scrubbed, /abc123/);
   assert.match(scrubbed, /redacted/i);
+}
+
+// --- Booking create uses durable calendar jobs ---
+{
+  const payments = read("../server/pelecardPayments.js");
+  assert.match(payments, /eventType:\s*"create"/);
+  assert.match(payments, /calendarOnly:\s*true/);
+  assert.match(payments, /syncCalendarForChangeEvent/);
+  assert.match(payments, /recordAppointmentChangeEvent/);
+
+  const changeSql = read("../supabase/customer-self-service.sql");
+  assert.match(changeSql, /'create',\s*'reschedule',\s*'cancel'/);
+  assert.match(changeSql, /appointment_change_events_event_type_check/);
+
+  const notify = read("../server/appointmentChangeNotify.js");
+  assert.match(notify, /event_type \|\| ""\) === "create"/);
+  assert.match(notify, /calendarOnly/);
 }
 
 console.log("self-service tests passed");

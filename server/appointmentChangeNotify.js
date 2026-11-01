@@ -251,6 +251,8 @@ export async function recordAppointmentChangeEvent({
   beforeSnapshot = null,
   afterSnapshot = null,
   idempotencyKey = null,
+  /** When true, only calendar_sync_* is pending — email/SMS are skipped (booking creates). */
+  calendarOnly = false,
 } = {}) {
   if (!appointmentId || !eventType) return null;
 
@@ -267,6 +269,8 @@ export async function recordAppointmentChangeEvent({
   const existing = await fetchChangeEventByIdempotencyKey(key);
   if (existing) return existing;
 
+  const notifyStatus = calendarOnly || eventType === "create" ? "skipped" : "pending";
+
   const baseRow = {
     appointment_id: appointmentId,
     tenant_id: tenantId || null,
@@ -275,9 +279,9 @@ export async function recordAppointmentChangeEvent({
     phone_normalized: phoneNormalized || null,
     before_snapshot: beforeSnapshot,
     after_snapshot: afterSnapshot,
-    customer_email_status: "pending",
-    clinic_email_status: "pending",
-    customer_sms_status: "pending",
+    customer_email_status: notifyStatus,
+    clinic_email_status: notifyStatus,
+    customer_sms_status: notifyStatus,
     calendar_sync_status: "pending",
     calendar_sync_attempts: 0,
   };
@@ -660,6 +664,9 @@ export async function retryFailedAppointmentChangeNotifies({
   let failed = 0;
 
   for (const event of events) {
+    // Booking-create rows are calendar-only; never send reschedule/cancel emails.
+    if (String(event.event_type || "") === "create") continue;
+
     const needs =
       channelNeedsRetry(event.customer_email_status) ||
       channelNeedsRetry(event.clinic_email_status) ||
