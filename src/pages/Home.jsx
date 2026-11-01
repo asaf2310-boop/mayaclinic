@@ -149,6 +149,7 @@ export default function Home() {
                     {clinicSite.heroCtaPrimary}
                   </Link>
                   <Link to="/gift" className={clinicHeroCtaSecondaryBtn}>רכישת שובר מתנה</Link>
+                  <Link to="/manage" className={clinicHeroCtaSecondaryBtn}>עדכון או ביטול תור</Link>
                   {clinicSite.momentBooking && (
                     <Link
                       to={`/book?channel=${clinicSite.momentBooking.channel || "movement"}`}
