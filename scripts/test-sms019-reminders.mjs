@@ -508,6 +508,7 @@ const read = (rel) => readFileSync(join(root, rel), "utf8");
   assert.match(envExample, /SMS019_API_TOKEN/);
   assert.match(envExample, /SMS_REMINDERS_ENABLED=false/);
   assert.match(envExample, /SMS_BOOKING_CONFIRM_ENABLED=false/);
+  assert.match(envExample, /SMS_CHANGE_NOTIFY_ENABLED=true/);
   assert.match(envExample, /SMS_TECH_TEST_ENABLED=false/);
   assert.doesNotMatch(envExample, /VITE_SMS019/);
 

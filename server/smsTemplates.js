@@ -26,6 +26,14 @@ export const DEFAULT_REMINDER_SMS_TEMPLATE =
   "לשינוי או ביטול התור: 0549000301.\n\n" +
   "נתראה בקרוב!";
 
+/** Short transactional SMS after reschedule (admin or self-service). */
+export const DEFAULT_RESCHEDULE_SMS_TEMPLATE =
+  "שלום {שם}, התור שלך עודכן ל־{תאריך} בשעה {שעה}. לשינוי או ביטול: 0549000301";
+
+/** Short transactional SMS after cancel (admin or self-service). */
+export const DEFAULT_CANCEL_SMS_TEMPLATE =
+  "שלום {שם}, התור שלך בתאריך {תאריך} בשעה {שעה} בוטל. לתיאום מחדש: 0549000301";
+
 const PLACEHOLDER_RE = /\{[^{}]+\}/g;
 
 export function buildClinicMapsUrl(address = DEFAULT_CLINIC_ADDRESS) {

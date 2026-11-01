@@ -25,7 +25,10 @@ import { resolveClinicTenantFromHost } from "../server/clinicTenant.js";
 import { supabaseRequest } from "../server/supabaseServer.js";
 import { attachInvoicesToAppointments } from "../server/appointmentInvoices.js";
 import { probeMeridianMailbox } from "../server/meridianEmail.js";
-import { notifyClinicAppointmentCancelled } from "../server/clinicCancellationNotify.js";
+import {
+  notifyAppointmentChange,
+  recordAppointmentChangeEvent,
+} from "../server/appointmentChangeNotify.js";
 import { syncClinicCalendarForAppointment } from "../server/syncClinicCalendar.js";
 import { clearEmailSuppression } from "../server/emailDelivery.js";
 import {
@@ -323,31 +326,23 @@ async function updateEntity(entity, id, row, tenantId) {
     }
   }
 
-  // Date change = new reminder occurrence. Invalidate prior reminder claim/sent state.
+  // Date or time change = new reminder occurrence. Invalidate prior reminder claim/sent state.
   // Do not touch confirmation_* audit fields or auto-resend confirmations.
-  if (
-    entity === "appointments" &&
-    previous &&
-    Object.prototype.hasOwnProperty.call(payload, "date") &&
-    String(payload.date || "") !== String(previous.date || "")
-  ) {
-    payload.reminder_sent_at = null;
-    payload.reminder_email_status = "pending";
-    payload.reminder_email_attempts = 0;
-    payload.reminder_email_last_error = null;
-    payload.reminder_email_claimed_at = null;
-  }
-
-  // Date or time change = new SMS reminder occurrence. Clear SMS claim so the new slot can remind.
-  // Cancelled appointments are never SMS'd (cron + eligibility skip status=cancelled).
-  if (
+  const appointmentSlotChanging =
     entity === "appointments" &&
     previous &&
     ((Object.prototype.hasOwnProperty.call(payload, "date") &&
       String(payload.date || "") !== String(previous.date || "")) ||
       (Object.prototype.hasOwnProperty.call(payload, "time") &&
-        String(payload.time || "") !== String(previous.time || "")))
-  ) {
+        String(payload.time || "") !== String(previous.time || "")));
+
+  if (appointmentSlotChanging) {
+    payload.reminder_sent_at = null;
+    payload.reminder_email_status = "pending";
+    payload.reminder_email_attempts = 0;
+    payload.reminder_email_last_error = null;
+    payload.reminder_email_claimed_at = null;
+    // Clear SMS reminder claim so the new slot can remind (cron).
     payload.reminder_sms_sent_at = null;
     payload.reminder_sms_status = "pending";
     payload.reminder_sms_attempts = 0;
@@ -361,10 +356,13 @@ async function updateEntity(entity, id, row, tenantId) {
     Object.prototype.hasOwnProperty.call(payload, "status") &&
     String(payload.status || "") === "cancelled"
   ) {
-    // Stop in-flight / pending SMS; do not send after cancel.
+    // Stop in-flight / pending reminders; do not send after cancel.
     payload.reminder_sms_status = "cancelled";
     payload.reminder_sms_claimed_at = null;
     payload.reminder_sms_last_error = "appointment_cancelled";
+    payload.reminder_email_status = "cancelled";
+    payload.reminder_email_claimed_at = null;
+    payload.reminder_email_last_error = "appointment_cancelled";
   }
 
   const path = withTenantFilter(
@@ -414,17 +412,12 @@ async function updateEntity(entity, id, row, tenantId) {
 
   const previousStatus = String(previous?.status || "");
   const nextStatus = String(rowOut.status || "");
-  if (
-    entity === "appointments" &&
-    nextStatus === "cancelled" &&
-    previousStatus &&
-    previousStatus !== "cancelled"
-  ) {
-    void notifyClinicAppointmentCancelled(rowOut, {
-      previousStatus,
-      reason: "cancelled",
-    });
-  }
+  const dateTimeChanged =
+    Boolean(previous) &&
+    (String(previous.date || "") !== String(rowOut.date || "") ||
+      String(previous.time || "") !== String(rowOut.time || ""));
+  const becameCancelled =
+    nextStatus === "cancelled" && previousStatus && previousStatus !== "cancelled";
 
   if (entity === "appointments" && rowOut) {
     const merged = {
@@ -432,10 +425,6 @@ async function updateEntity(entity, id, row, tenantId) {
       ...rowOut,
       google_event_id: rowOut.google_event_id || previous?.google_event_id,
     };
-    const dateTimeChanged =
-      previous &&
-      (String(previous.date || "") !== String(rowOut.date || "") ||
-        String(previous.time || "") !== String(rowOut.time || ""));
     await syncClinicCalendarForAppointment(merged, {
       action:
         nextStatus === "cancelled"
@@ -445,6 +434,50 @@ async function updateEntity(entity, id, row, tenantId) {
             : "sync",
       previous: dateTimeChanged ? previous : null,
     });
+
+    // Customer email + clinic email + SMS after admin reschedule / cancel.
+    if (becameCancelled || dateTimeChanged) {
+      const eventType = becameCancelled ? "cancel" : "reschedule";
+      const beforeSnapshot = previous
+        ? {
+            date: previous.date,
+            time: previous.time,
+            status: previous.status,
+            treatment_name: previous.treatment_name,
+          }
+        : null;
+      const afterSnapshot = {
+        date: rowOut.date,
+        time: rowOut.time,
+        status: rowOut.status,
+        treatment_name: rowOut.treatment_name,
+      };
+      void (async () => {
+        const event = await recordAppointmentChangeEvent({
+          appointmentId: rowOut.id,
+          tenantId,
+          eventType,
+          actor: "admin",
+          phoneNormalized: rowOut.patient_phone || previous?.patient_phone || null,
+          beforeSnapshot,
+          afterSnapshot,
+        });
+        await notifyAppointmentChange({
+          event,
+          eventType,
+          appointment: rowOut,
+          previous: previous || null,
+          actor: "admin",
+          reason: becameCancelled ? "cancelled" : undefined,
+          extraNote: becameCancelled ? "התור בוטל במערכת הניהול." : "",
+        });
+      })().catch((error) => {
+        console.error(
+          "[admin] appointment change notify failed:",
+          error?.message || error
+        );
+      });
+    }
   }
 
   return rowOut;
@@ -454,19 +487,51 @@ async function deleteEntity(entity, id, tenantId) {
   const previous =
     entity === "appointments" ? await getEntityById(entity, id, tenantId) : null;
 
+  // Notify before DELETE: change_events FK cascades away with the appointment row.
+  if (
+    entity === "appointments" &&
+    previous &&
+    String(previous.status || "") !== "cancelled"
+  ) {
+    try {
+      const event = await recordAppointmentChangeEvent({
+        appointmentId: previous.id,
+        tenantId,
+        eventType: "cancel",
+        actor: "admin",
+        phoneNormalized: previous.patient_phone || null,
+        beforeSnapshot: {
+          date: previous.date,
+          time: previous.time,
+          status: previous.status,
+          treatment_name: previous.treatment_name,
+        },
+        afterSnapshot: {
+          date: previous.date,
+          time: previous.time,
+          status: "cancelled",
+          treatment_name: previous.treatment_name,
+        },
+      });
+      await notifyAppointmentChange({
+        event,
+        eventType: "cancel",
+        appointment: { ...previous, status: "cancelled" },
+        previous,
+        actor: "admin",
+        reason: "deleted",
+        extraNote: "התור נמחק מהמערכת.",
+      });
+    } catch (error) {
+      console.error("[admin] appointment delete notify failed:", error?.message || error);
+    }
+  }
+
   const path = withTenantFilter(entity, entity, tenantId, `id=eq.${encodeURIComponent(id)}`);
   await supabaseRequest(path, {
     method: "DELETE",
     headers: { Prefer: "return=minimal" },
   });
-
-  if (previous && String(previous.status || "") !== "cancelled") {
-    void notifyClinicAppointmentCancelled(previous, {
-      previousStatus: previous.status || "",
-      reason: "deleted",
-      extraNote: "התור נמחק מהמערכת.",
-    });
-  }
 
   if (previous) {
     await syncClinicCalendarForAppointment(previous, { action: "delete" });

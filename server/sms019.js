@@ -46,6 +46,23 @@ export function isSmsTechTestEnvEnabled() {
   return envFlagEnabled("SMS_TECH_TEST_ENABLED");
 }
 
+/**
+ * Transactional SMS after appointment reschedule/cancel (admin or self-service).
+ * Independent of SMS_REMINDERS_ENABLED and SMS_BOOKING_CONFIRM_ENABLED.
+ * Defaults ON when unset (like OTP delivery). Set SMS_CHANGE_NOTIFY_ENABLED=false to kill.
+ * Still requires SMS019_* credentials.
+ */
+export function isSmsChangeNotifyEnvEnabled() {
+  const raw = cleanEnv(process.env.SMS_CHANGE_NOTIFY_ENABLED).toLowerCase();
+  if (!raw) return true;
+  if (raw === "0" || raw === "false" || raw === "no" || raw === "off") return false;
+  return raw === "1" || raw === "true" || raw === "yes" || raw === "on";
+}
+
+export function canSendSmsChangeNotify() {
+  return isSms019Configured() && isSmsChangeNotifyEnvEnabled();
+}
+
 export function getSms019Config() {
   const username = cleanEnv(process.env.SMS019_USERNAME);
   const apiToken = cleanEnv(process.env.SMS019_API_TOKEN);

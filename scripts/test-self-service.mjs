@@ -30,6 +30,11 @@ import {
   buildCustomerRescheduleEmail,
   buildClinicRescheduleNotifyEmail,
 } from "../server/emailTemplates.js";
+import { buildAppointmentChangeSms } from "../server/appointmentChangeNotify.js";
+import {
+  canSendSmsChangeNotify,
+  isSmsChangeNotifyEnvEnabled,
+} from "../server/sms019.js";
 import { hasAppointmentTimeConflict } from "../src/lib/bookingSlots.js";
 import { isAppointmentReminderEligible } from "../server/emailDelivery.js";
 import { isSmsReminderAppointmentEligible } from "../server/smsReminders.js";
@@ -47,6 +52,7 @@ process.env.SELF_SERVICE_OTP_PEPPER =
   const sql = read("../supabase/customer-self-service.sql");
   assert.match(sql, /appointment_otp_challenges/);
   assert.match(sql, /appointment_change_events/);
+  assert.match(sql, /customer_sms_status/);
   assert.match(sql, /updated_at/);
   assert.doesNotMatch(sql, /SMS_REMINDERS_ENABLED\s*=\s*true/);
 }
@@ -269,6 +275,63 @@ process.env.SELF_SERVICE_OTP_PEPPER =
   });
   assert.match(clinic.subject, /עדכון תור/);
   assert.match(clinic.html, /שירות עצמי/);
+
+  const clinicAdmin = buildClinicRescheduleNotifyEmail({
+    patientName: "נועה",
+    patientPhone: "0549000301",
+    patientEmail: "n@example.com",
+    previous: { treatment_name: "עיסוי", date: "2026-03-01", time: "10:00" },
+    appointment: { treatment_name: "עיסוי", date: "2026-03-08", time: "12:00" },
+    clinicName: "אופיר",
+    actor: "admin",
+  });
+  assert.match(clinicAdmin.html, /מערכת הניהול/);
+  assert.doesNotMatch(clinicAdmin.html, /שירות עצמי/);
+}
+
+// --- Change SMS templates + env gate (transactional, default on) ---
+{
+  const rescheduleSms = buildAppointmentChangeSms({
+    eventType: "reschedule",
+    patientName: "נועה",
+    date: "2026-03-08",
+    time: "12:00",
+  });
+  assert.match(rescheduleSms, /נועה/);
+  assert.match(rescheduleSms, /08\/03\/2026/);
+  assert.match(rescheduleSms, /12:00/);
+  assert.match(rescheduleSms, /עודכן/);
+
+  const cancelSms = buildAppointmentChangeSms({
+    eventType: "cancel",
+    patientName: "נועה",
+    date: "2026-03-01",
+    time: "10:00",
+  });
+  assert.match(cancelSms, /בוטל/);
+  assert.match(cancelSms, /01\/03\/2026/);
+
+  const prevChange = process.env.SMS_CHANGE_NOTIFY_ENABLED;
+  const prevUser = process.env.SMS019_USERNAME;
+  const prevToken = process.env.SMS019_API_TOKEN;
+  const prevSender = process.env.SMS019_SENDER;
+  delete process.env.SMS_CHANGE_NOTIFY_ENABLED;
+  process.env.SMS019_USERNAME = "unit-test-user";
+  process.env.SMS019_API_TOKEN = "unit-test-token";
+  process.env.SMS019_SENDER = "0549000301";
+  assert.equal(isSmsChangeNotifyEnvEnabled(), true, "change SMS defaults ON");
+  assert.equal(canSendSmsChangeNotify(), true);
+  process.env.SMS_CHANGE_NOTIFY_ENABLED = "false";
+  assert.equal(isSmsChangeNotifyEnvEnabled(), false);
+  assert.equal(canSendSmsChangeNotify(), false);
+  if (prevChange == null) delete process.env.SMS_CHANGE_NOTIFY_ENABLED;
+  else process.env.SMS_CHANGE_NOTIFY_ENABLED = prevChange;
+  if (prevUser == null) delete process.env.SMS019_USERNAME;
+  else process.env.SMS019_USERNAME = prevUser;
+  if (prevToken == null) delete process.env.SMS019_API_TOKEN;
+  else process.env.SMS019_API_TOKEN = prevToken;
+  if (prevSender == null) delete process.env.SMS019_SENDER;
+  else process.env.SMS019_SENDER = prevSender;
 }
 
 // --- API + UI entry wired ---
@@ -305,6 +368,27 @@ process.env.SELF_SERVICE_OTP_PEPPER =
 
   const success = read("../src/components/booking/BookingSuccess.jsx");
   assert.match(success, /עדכון או ביטול תור/);
+
+  const appointments = read("../server/selfServiceAppointments.js");
+  assert.match(appointments, /notifySelfServiceChange/);
+  assert.match(appointments, /syncClinicCalendarForAppointment/);
+  assert.match(appointments, /buildReminderResetPatch/);
+
+  const admin = read("../api/admin.js");
+  assert.match(admin, /notifyAppointmentChange/);
+  assert.match(admin, /recordAppointmentChangeEvent/);
+  assert.match(admin, /actor: "admin"/);
+  assert.match(admin, /becameCancelled \? "cancel" : "reschedule"/);
+  assert.match(admin, /syncClinicCalendarForAppointment/);
+  // Admin must notify customer+clinic+SMS on reschedule — not clinic-cancel-only.
+  assert.doesNotMatch(admin, /notifyClinicAppointmentCancelled/);
+
+  const changeNotify = read("../server/appointmentChangeNotify.js");
+  assert.match(changeNotify, /buildAppointmentChangeSms/);
+  assert.match(changeNotify, /canSendSmsChangeNotify/);
+  assert.match(changeNotify, /sendSms019/);
+  // Must not gate change SMS on reminder/confirm env (comment may mention them).
+  assert.doesNotMatch(changeNotify, /isSmsRemindersEnvEnabled|isSmsBookingConfirmEnvEnabled/);
 }
 
 console.log("self-service tests passed");

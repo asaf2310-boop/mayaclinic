@@ -58,7 +58,7 @@ create table if not exists public.appointment_otp_rate_limits (
 
 alter table public.appointment_otp_rate_limits enable row level security;
 
--- Audit + idempotent notify delivery for customer reschedule/cancel
+-- Audit + idempotent notify delivery for customer/admin reschedule/cancel
 create table if not exists public.appointment_change_events (
   id uuid primary key default gen_random_uuid(),
   appointment_id uuid not null references public.appointments(id) on delete cascade,
@@ -76,8 +76,22 @@ create table if not exists public.appointment_change_events (
   clinic_email_claimed_at timestamptz,
   clinic_email_sent_at timestamptz,
   clinic_email_last_error text,
+  customer_sms_status text,
+  customer_sms_claimed_at timestamptz,
+  customer_sms_sent_at timestamptz,
+  customer_sms_last_error text,
   created_at timestamptz not null default now()
 );
+
+-- Safe re-run on DBs that already created the table without SMS claim columns
+alter table public.appointment_change_events
+  add column if not exists customer_sms_status text;
+alter table public.appointment_change_events
+  add column if not exists customer_sms_claimed_at timestamptz;
+alter table public.appointment_change_events
+  add column if not exists customer_sms_sent_at timestamptz;
+alter table public.appointment_change_events
+  add column if not exists customer_sms_last_error text;
 
 create index if not exists idx_appointment_change_events_appointment
   on public.appointment_change_events (appointment_id, created_at desc);
