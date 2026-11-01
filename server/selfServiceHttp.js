@@ -1,27 +1,37 @@
 /**
- * Customer self-service API: OTP → list → reschedule / cancel.
- * Public endpoint (no admin session). Ownership enforced via OTP session + phone match.
+ * Customer self-service HTTP handler: OTP → list → reschedule / cancel.
+ * Mounted on /api/public-data (Hobby plan function-count limit) and rewritten
+ * from /api/self-service. Ownership enforced via OTP session + phone match.
  */
 
-import { resolveClinicTenantFromHost } from "../server/clinicTenant.js";
+import { resolveClinicTenantFromHost } from "./clinicTenant.js";
 import {
   requestAppointmentOtp,
   verifyAppointmentOtp,
-} from "../server/appointmentOtp.js";
+} from "./appointmentOtp.js";
 import {
   createSelfServiceSessionToken,
   verifySelfServiceSessionToken,
-} from "../server/selfServiceSession.js";
+} from "./selfServiceSession.js";
 import {
   cancelOwnedAppointment,
   getOwnedAppointmentPublic,
   listUpcomingAppointmentsForPhone,
   rescheduleOwnedAppointment,
-} from "../server/selfServiceAppointments.js";
+} from "./selfServiceAppointments.js";
 
-export const config = {
-  maxDuration: 30,
-};
+export const SELF_SERVICE_ACTIONS = new Set([
+  "requestOtp",
+  "verifyOtp",
+  "listAppointments",
+  "getAppointment",
+  "reschedule",
+  "cancel",
+]);
+
+export function isSelfServiceAction(action) {
+  return SELF_SERVICE_ACTIONS.has(String(action || "").trim());
+}
 
 function readBody(req) {
   if (!req.body) return {};
@@ -72,16 +82,21 @@ function sendError(res, error) {
   res.status(status).json(payload);
 }
 
-export default async function handler(req, res) {
+/** Handle a self-service POST. Returns true when the request was handled. */
+export async function handleSelfServiceRequest(req, res) {
   if (req.method !== "POST") {
     res.status(405).json({ error: "Method not allowed" });
-    return;
+    return true;
   }
 
   try {
     const tenantId = resolveClinicTenantFromHost(req) || "maya";
     const body = readBody(req);
     const action = String(body.action || "").trim();
+
+    if (!isSelfServiceAction(action)) {
+      return false;
+    }
 
     if (action === "requestOtp") {
       const result = await requestAppointmentOtp({
@@ -91,10 +106,10 @@ export default async function handler(req, res) {
       });
       if (!result.ok) {
         res.status(result.error === "rate_limited" ? 429 : 400).json(result);
-        return;
+        return true;
       }
       res.status(200).json(result);
-      return;
+      return true;
     }
 
     if (action === "verifyOtp") {
@@ -105,7 +120,7 @@ export default async function handler(req, res) {
       });
       if (!verified.ok) {
         res.status(400).json(verified);
-        return;
+        return true;
       }
 
       let sessionToken;
@@ -114,13 +129,13 @@ export default async function handler(req, res) {
           phoneNormalized: verified.phoneNormalized,
           tenantId,
         });
-      } catch (error) {
+      } catch {
         res.status(503).json({
           ok: false,
           error: "session_misconfigured",
           message: "שירות האימות אינו מוגדר במלואו בשרת",
         });
-        return;
+        return true;
       }
 
       const appointments = await listUpcomingAppointmentsForPhone({
@@ -138,7 +153,7 @@ export default async function handler(req, res) {
             ? "לא נמצאו תורים קרובים למספר זה"
             : undefined,
       });
-      return;
+      return true;
     }
 
     if (action === "listAppointments") {
@@ -152,7 +167,7 @@ export default async function handler(req, res) {
         appointments,
         empty: appointments.length === 0,
       });
-      return;
+      return true;
     }
 
     if (action === "getAppointment") {
@@ -163,7 +178,7 @@ export default async function handler(req, res) {
         tenantId: session.tenantId || tenantId,
       });
       res.status(200).json({ ok: true, appointment });
-      return;
+      return true;
     }
 
     if (action === "reschedule") {
@@ -177,7 +192,7 @@ export default async function handler(req, res) {
         expectedUpdatedAt: body.updated_at || body.expectedUpdatedAt || null,
       });
       res.status(200).json({ ok: true, ...result });
-      return;
+      return true;
     }
 
     if (action === "cancel") {
@@ -189,12 +204,14 @@ export default async function handler(req, res) {
         expectedUpdatedAt: body.updated_at || body.expectedUpdatedAt || null,
       });
       res.status(200).json({ ok: true, ...result });
-      return;
+      return true;
     }
 
     res.status(400).json({ ok: false, error: "unsupported_action", message: "פעולה לא נתמכת" });
+    return true;
   } catch (error) {
     console.error("[self-service]", error?.message || error);
     sendError(res, error);
+    return true;
   }
 }

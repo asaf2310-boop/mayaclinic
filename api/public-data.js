@@ -9,8 +9,14 @@ import {
   verifyMeridianTreatmentId,
   redeemGiftVoucher,
 } from "../server/pelecardPayments.js";
+import {
+  handleSelfServiceRequest,
+  isSelfServiceAction,
+} from "../server/selfServiceHttp.js";
 
 // IMAP inbox search for Meridian verification can exceed the default 10s.
+// Also serves customer self-service (OTP/reschedule/cancel) to stay within
+// Hobby's 12 serverless-function limit — see /api/self-service rewrite.
 export const config = {
   maxDuration: 30,
 };
@@ -99,6 +105,15 @@ export default async function handler(req, res) {
   }
 
   try {
+    if (req.method === "POST") {
+      const body = readBody(req);
+      const action = String(body.action || "").trim();
+      if (isSelfServiceAction(action)) {
+        await handleSelfServiceRequest(req, res);
+        return;
+      }
+    }
+
     const tenantId = resolveClinicTenantFromHost(req);
     if (!tenantId) {
       res.status(400).json({ error: "Unknown clinic tenant" });

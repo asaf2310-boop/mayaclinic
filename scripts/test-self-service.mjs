@@ -273,11 +273,21 @@ process.env.SELF_SERVICE_OTP_PEPPER =
 
 // --- API + UI entry wired ---
 {
-  const api = read("../api/self-service.js");
-  assert.match(api, /requestOtp/);
-  assert.match(api, /verifyOtp/);
-  assert.match(api, /reschedule/);
-  assert.match(api, /cancel/);
+  // Hobby plan allows ≤12 serverless functions; self-service mounts on public-data
+  // with a /api/self-service rewrite (must not add api/self-service.js).
+  const http = read("../server/selfServiceHttp.js");
+  assert.match(http, /requestOtp/);
+  assert.match(http, /verifyOtp/);
+  assert.match(http, /reschedule/);
+  assert.match(http, /cancel/);
+
+  const publicData = read("../api/public-data.js");
+  assert.match(publicData, /handleSelfServiceRequest/);
+  assert.match(publicData, /isSelfServiceAction/);
+
+  const vercel = read("../vercel.json");
+  assert.match(vercel, /\/api\/self-service/);
+  assert.match(vercel, /\/api\/public-data/);
 
   const app = read("../src/App.jsx");
   assert.match(app, /ManageAppointment/);
