@@ -275,6 +275,8 @@ process.env.SELF_SERVICE_OTP_PEPPER =
 {
   // Hobby plan allows ≤12 serverless functions; self-service mounts on public-data
   // with a /api/self-service rewrite (must not add api/self-service.js).
+  // Production ofirbaby.com /booking only proxies real api/*.js paths — client
+  // must call /api/public-data (bookingFetch prefixes /booking).
   const http = read("../server/selfServiceHttp.js");
   assert.match(http, /requestOtp/);
   assert.match(http, /verifyOtp/);
@@ -288,6 +290,10 @@ process.env.SELF_SERVICE_OTP_PEPPER =
   const vercel = read("../vercel.json");
   assert.match(vercel, /\/api\/self-service/);
   assert.match(vercel, /\/api\/public-data/);
+
+  const clientApi = read("../src/lib/selfServiceApi.js");
+  assert.match(clientApi, /bookingFetch\("\/api\/public-data"/);
+  assert.doesNotMatch(clientApi, /bookingFetch\("\/api\/self-service"/);
 
   const app = read("../src/App.jsx");
   assert.match(app, /ManageAppointment/);

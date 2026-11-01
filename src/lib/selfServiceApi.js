@@ -30,22 +30,41 @@ export function clearSelfServiceSession() {
 }
 
 async function postSelfService(body) {
-  const response = await bookingFetch("/api/self-service", {
+  // Call the public-data handler directly. On ofirbaby.com the /booking mount
+  // only proxies real api/*.js paths; a dedicated self-service alias is not
+  // forwarded there, so OTP would 404 as HTML and show a generic failure.
+  const response = await bookingFetch("/api/public-data", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
 
+  const contentType = String(response.headers?.get?.("content-type") || "");
   let data = null;
-  try {
-    data = await response.json();
-  } catch {
-    data = null;
+  if (contentType.includes("application/json")) {
+    try {
+      data = await response.json();
+    } catch {
+      data = null;
+    }
   }
 
   if (!response.ok) {
-    const error = new Error(data?.message || "הבקשה נכשלה");
+    const error = new Error(
+      data?.message ||
+        (response.status === 404
+          ? "שירות העדכון אינו זמין כרגע. נסו לרענן או צרו קשר עם הקליניקה."
+          : "הבקשה נכשלה")
+    );
     error.code = data?.error || `http_${response.status}`;
+    error.status = response.status;
+    error.payload = data;
+    throw error;
+  }
+
+  if (!data || data.ok === false) {
+    const error = new Error(data?.message || "הבקשה נכשלה");
+    error.code = data?.error || "invalid_response";
     error.status = response.status;
     error.payload = data;
     throw error;
