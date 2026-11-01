@@ -3,19 +3,19 @@ import { cva } from "class-variance-authority";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const ToastProvider = React.forwardRef(({ ...props }, ref) => (
-  <div
-    ref={ref}
-    className="fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]"
-    {...props}
-  />
-));
+/** Context-only wrapper — must NOT be a fixed viewport (nested fixed + p-4 caused 16px mobile overflow). */
+const ToastProvider = ({ children, ...props }) => (
+  <div {...props}>{children}</div>
+);
 ToastProvider.displayName = "ToastProvider";
 
-const ToastViewport = React.forwardRef(({ ...props }, ref) => (
+const ToastViewport = React.forwardRef(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className="fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]"
+    className={cn(
+      "fixed left-0 top-0 z-[100] flex max-h-dvh w-full flex-col-reverse p-4 sm:bottom-0 sm:left-auto sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]",
+      className
+    )}
     {...props}
   />
 ));
