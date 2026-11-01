@@ -110,8 +110,8 @@ create index if not exists idx_appointment_change_events_created
 
 create index if not exists idx_appointment_change_events_retry
   on public.appointment_change_events (created_at desc)
-  where customer_email_status in ('pending', 'temporary_failure')
-     or clinic_email_status in ('pending', 'temporary_failure')
-     or customer_sms_status in ('pending', 'temporary_failure');
+  where customer_email_status in ('pending', 'temporary_failure', 'sending')
+     or clinic_email_status in ('pending', 'temporary_failure', 'sending')
+     or customer_sms_status in ('pending', 'temporary_failure', 'sending');
 
 alter table public.appointment_change_events enable row level security;

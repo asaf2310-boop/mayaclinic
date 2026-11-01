@@ -379,212 +379,221 @@ export async function notifyAppointmentChange({
   const results = { customer: null, clinic: null, sms: null };
   const actorKey = actor === "admin" ? "admin" : "customer";
 
-  // --- Customer email ---
-  if (isEmailConfigured()) {
+  // Run channels independently — one hang/failure must not block the others.
+  async function sendCustomerEmail() {
+    if (!isEmailConfigured()) {
+      results.customer = { skipped: true, reason: "email_not_configured" };
+      return;
+    }
     const patientEmail = String(
       appointment.patient_email || previous?.patient_email || ""
     ).trim();
-    if (patientEmail) {
-      const claimable =
-        !event ||
-        canClaimEmailDelivery({
-          status: event.customer_email_status,
-          claimedAt: event.customer_email_claimed_at,
-          sentAt: event.customer_email_sent_at,
-        });
-
-      if (claimable && (await claimEventChannel(eventId, "customer"))) {
-        try {
-          const built =
-            eventType === "cancel"
-              ? buildCustomerCancellationEmail({
-                  patientName: appointment.patient_name || previous?.patient_name,
-                  appointment,
-                  clinicName,
-                })
-              : buildCustomerRescheduleEmail({
-                  patientName: appointment.patient_name || previous?.patient_name,
-                  previous,
-                  appointment,
-                  clinicName,
-                });
-          await sendEmail({ to: patientEmail, subject: built.subject, html: built.html });
-          await markEventChannel(eventId, "customer", { status: "sent" });
-          results.customer = { ok: true };
-        } catch (error) {
-          await markEventChannel(eventId, "customer", {
-            status: "temporary_failure",
-            error: error?.message || error,
-          });
-          results.customer = { ok: false, error: error?.message || String(error) };
-          console.error(
-            "[appointment-change-notify] customer email failed:",
-            error?.message || error
-          );
-        }
-      } else if (event?.customer_email_sent_at || event?.customer_email_status === "sent") {
-        results.customer = { ok: true, already: true };
-      }
-    } else {
+    if (!patientEmail) {
       results.customer = { ok: false, skipped: true, reason: "no_customer_email" };
+      return;
     }
+    const claimable =
+      !event ||
+      canClaimEmailDelivery({
+        status: event.customer_email_status,
+        claimedAt: event.customer_email_claimed_at,
+        sentAt: event.customer_email_sent_at,
+      });
 
-    // --- Clinic email ---
-    const recipients = getBookingNotifyEmails();
-    if (recipients.length) {
-      const claimable =
-        !event ||
-        canClaimEmailDelivery({
-          status: event.clinic_email_status,
-          claimedAt: event.clinic_email_claimed_at,
-          sentAt: event.clinic_email_sent_at,
+    if (claimable && (await claimEventChannel(eventId, "customer"))) {
+      try {
+        const built =
+          eventType === "cancel"
+            ? buildCustomerCancellationEmail({
+                patientName: appointment.patient_name || previous?.patient_name,
+                appointment,
+                clinicName,
+              })
+            : buildCustomerRescheduleEmail({
+                patientName: appointment.patient_name || previous?.patient_name,
+                previous,
+                appointment,
+                clinicName,
+              });
+        await sendEmail({ to: patientEmail, subject: built.subject, html: built.html });
+        await markEventChannel(eventId, "customer", { status: "sent" });
+        results.customer = { ok: true };
+      } catch (error) {
+        await markEventChannel(eventId, "customer", {
+          status: "temporary_failure",
+          error: error?.message || error,
         });
-
-      if (claimable && (await claimEventChannel(eventId, "clinic"))) {
-        try {
-          const built =
-            eventType === "cancel"
-              ? buildClinicCancellationNotifyEmail({
-                  patientName: appointment.patient_name || previous?.patient_name || "",
-                  patientPhone: appointment.patient_phone || previous?.patient_phone || "",
-                  patientEmail: appointment.patient_email || previous?.patient_email || "",
-                  appointments: [appointment],
-                  clinicName,
-                  actionLabel: resolveCancelActionLabel({ actor: actorKey, reason }),
-                  previousStatus: previous?.status || "",
-                  extraNote:
-                    extraNote ||
-                    (actorKey === "customer"
-                      ? "הלקוח ביטל את התור דרך האתר (שירות עצמי)."
-                      : reason === "deleted"
-                        ? "התור נמחק מהמערכת."
-                        : "התור בוטל במערכת הניהול."),
-                })
-              : buildClinicRescheduleNotifyEmail({
-                  patientName: appointment.patient_name || previous?.patient_name || "",
-                  patientPhone: appointment.patient_phone || previous?.patient_phone || "",
-                  patientEmail: appointment.patient_email || previous?.patient_email || "",
-                  previous,
-                  appointment,
-                  clinicName,
-                  actor: actorKey,
-                });
-
-          const settled = await Promise.allSettled(
-            recipients.map((to) => sendEmail({ to, subject: built.subject, html: built.html }))
-          );
-          const failures = settled.filter((r) => r.status === "rejected");
-          if (failures.length === settled.length) {
-            throw failures[0]?.reason || new Error("clinic_email_failed");
-          }
-          await markEventChannel(eventId, "clinic", { status: "sent" });
-          results.clinic = { ok: true, sent: settled.length - failures.length };
-        } catch (error) {
-          await markEventChannel(eventId, "clinic", {
-            status: "temporary_failure",
-            error: error?.message || error,
-          });
-          results.clinic = { ok: false, error: error?.message || String(error) };
-          console.error(
-            "[appointment-change-notify] clinic email failed:",
-            error?.message || error
-          );
-        }
-      } else if (event?.clinic_email_sent_at || event?.clinic_email_status === "sent") {
-        results.clinic = { ok: true, already: true };
+        results.customer = { ok: false, error: error?.message || String(error) };
+        console.error(
+          "[appointment-change-notify] customer email failed:",
+          error?.message || error
+        );
       }
-    } else {
-      results.clinic = { ok: false, skipped: true, reason: "no_clinic_recipients" };
+    } else if (event?.customer_email_sent_at || event?.customer_email_status === "sent") {
+      results.customer = { ok: true, already: true };
     }
-  } else {
-    results.customer = { skipped: true, reason: "email_not_configured" };
-    results.clinic = { skipped: true, reason: "email_not_configured" };
   }
 
-  // --- Customer SMS (transactional) ---
-  if (!canSendSmsChangeNotify()) {
-    results.sms = {
-      skipped: true,
-      reason: "sms_change_notify_disabled_or_unconfigured",
-    };
-  } else {
+  async function sendClinicEmail() {
+    if (!isEmailConfigured()) {
+      results.clinic = { skipped: true, reason: "email_not_configured" };
+      return;
+    }
+    const recipients = getBookingNotifyEmails();
+    if (!recipients.length) {
+      results.clinic = { ok: false, skipped: true, reason: "no_clinic_recipients" };
+      return;
+    }
+    const claimable =
+      !event ||
+      canClaimEmailDelivery({
+        status: event.clinic_email_status,
+        claimedAt: event.clinic_email_claimed_at,
+        sentAt: event.clinic_email_sent_at,
+      });
+
+    if (claimable && (await claimEventChannel(eventId, "clinic"))) {
+      try {
+        const built =
+          eventType === "cancel"
+            ? buildClinicCancellationNotifyEmail({
+                patientName: appointment.patient_name || previous?.patient_name || "",
+                patientPhone: appointment.patient_phone || previous?.patient_phone || "",
+                patientEmail: appointment.patient_email || previous?.patient_email || "",
+                appointments: [appointment],
+                clinicName,
+                actionLabel: resolveCancelActionLabel({ actor: actorKey, reason }),
+                previousStatus: previous?.status || "",
+                extraNote:
+                  extraNote ||
+                  (actorKey === "customer"
+                    ? "הלקוח ביטל את התור דרך האתר (שירות עצמי)."
+                    : reason === "deleted"
+                      ? "התור נמחק מהמערכת."
+                      : "התור בוטל במערכת הניהול."),
+              })
+            : buildClinicRescheduleNotifyEmail({
+                patientName: appointment.patient_name || previous?.patient_name || "",
+                patientPhone: appointment.patient_phone || previous?.patient_phone || "",
+                patientEmail: appointment.patient_email || previous?.patient_email || "",
+                previous,
+                appointment,
+                clinicName,
+                actor: actorKey,
+              });
+
+        const settled = await Promise.allSettled(
+          recipients.map((to) => sendEmail({ to, subject: built.subject, html: built.html }))
+        );
+        const failures = settled.filter((r) => r.status === "rejected");
+        if (failures.length === settled.length) {
+          throw failures[0]?.reason || new Error("clinic_email_failed");
+        }
+        await markEventChannel(eventId, "clinic", { status: "sent" });
+        results.clinic = { ok: true, sent: settled.length - failures.length };
+      } catch (error) {
+        await markEventChannel(eventId, "clinic", {
+          status: "temporary_failure",
+          error: error?.message || error,
+        });
+        results.clinic = { ok: false, error: error?.message || String(error) };
+        console.error(
+          "[appointment-change-notify] clinic email failed:",
+          error?.message || error
+        );
+      }
+    } else if (event?.clinic_email_sent_at || event?.clinic_email_status === "sent") {
+      results.clinic = { ok: true, already: true };
+    }
+  }
+
+  async function sendCustomerSms() {
+    if (!canSendSmsChangeNotify()) {
+      results.sms = {
+        skipped: true,
+        reason: "sms_change_notify_disabled_or_unconfigured",
+      };
+      return;
+    }
     const phoneRaw = appointment.patient_phone || previous?.patient_phone || "";
     const normalized = normalizeIsraeliMobile(phoneRaw);
     if (!normalized.ok) {
       results.sms = { ok: false, skipped: true, reason: normalized.error || "invalid_phone" };
-    } else {
-      const smsClaimable =
-        !event ||
-        canClaimEmailDelivery({
-          status: event.customer_sms_status,
-          claimedAt: event.customer_sms_claimed_at,
-          sentAt: event.customer_sms_sent_at,
-        });
+      return;
+    }
+    const smsClaimable =
+      !event ||
+      canClaimEmailDelivery({
+        status: event.customer_sms_status,
+        claimedAt: event.customer_sms_claimed_at,
+        sentAt: event.customer_sms_sent_at,
+      });
 
-      if (smsClaimable && (await claimEventChannel(eventId, "sms"))) {
-        try {
-          const smsDate =
-            eventType === "cancel"
-              ? appointment.date || previous?.date
-              : appointment.date;
-          const smsTime =
-            eventType === "cancel"
-              ? appointment.time || previous?.time
-              : appointment.time;
-          const message = buildAppointmentChangeSms({
-            eventType,
-            patientName: appointment.patient_name || previous?.patient_name,
-            date: smsDate,
-            time: smsTime,
-            previousDate: eventType === "reschedule" ? previous?.date : null,
-            previousTime: eventType === "reschedule" ? previous?.time : null,
-            treatmentName: appointment.treatment_name || previous?.treatment_name || "",
-            clinicPhone: clinicPhoneFromEnv(),
-          });
-          // Stable external id per change-event (not Date.now) so provider retries stay idempotent.
-          const externalId = eventId
-            ? `chg-${eventType}-${String(eventId).slice(0, 24)}`
-            : `chg-${eventType}-${String(appointment.id || "").slice(0, 8)}-${String(smsDate)}-${String(smsTime).slice(0, 5)}`;
-          const smsResult = await sendSms019({
-            phone: normalized.normalized,
-            message,
-            externalId,
-            campaignName:
-              eventType === "cancel" ? "appointment-cancel" : "appointment-reschedule",
-          });
-          if (!smsResult?.ok) {
-            throw new Error(smsResult?.error || "sms_send_failed");
-          }
-          // Provider accepted — not confirmed delivered.
-          await markEventChannel(eventId, "sms", { status: "accepted" });
-          results.sms = { ok: true, accepted: true };
-        } catch (error) {
-          await markEventChannel(eventId, "sms", {
-            status: "temporary_failure",
-            error: error?.message || error,
-          });
-          results.sms = { ok: false, error: error?.message || String(error) };
-          console.error(
-            "[appointment-change-notify] customer SMS failed:",
-            error?.message || error
-          );
+    if (smsClaimable && (await claimEventChannel(eventId, "sms"))) {
+      try {
+        const smsDate =
+          eventType === "cancel"
+            ? appointment.date || previous?.date
+            : appointment.date;
+        const smsTime =
+          eventType === "cancel"
+            ? appointment.time || previous?.time
+            : appointment.time;
+        const message = buildAppointmentChangeSms({
+          eventType,
+          patientName: appointment.patient_name || previous?.patient_name,
+          date: smsDate,
+          time: smsTime,
+          previousDate: eventType === "reschedule" ? previous?.date : null,
+          previousTime: eventType === "reschedule" ? previous?.time : null,
+          treatmentName: appointment.treatment_name || previous?.treatment_name || "",
+          clinicPhone: clinicPhoneFromEnv(),
+        });
+        // Stable external id per change-event (not Date.now) so provider retries stay idempotent.
+        const externalId = eventId
+          ? `chg-${eventType}-${String(eventId).slice(0, 24)}`
+          : `chg-${eventType}-${String(appointment.id || "").slice(0, 8)}-${String(smsDate)}-${String(smsTime).slice(0, 5)}`;
+        const smsResult = await sendSms019({
+          phone: normalized.normalized,
+          message,
+          externalId,
+          campaignName:
+            eventType === "cancel" ? "appointment-cancel" : "appointment-reschedule",
+        });
+        if (!smsResult?.ok) {
+          throw new Error(smsResult?.error || "sms_send_failed");
         }
-      } else if (
-        event?.customer_sms_sent_at ||
-        event?.customer_sms_status === "accepted" ||
-        event?.customer_sms_status === "sent"
-      ) {
-        results.sms = { ok: true, already: true };
+        // Provider accepted — not confirmed delivered.
+        await markEventChannel(eventId, "sms", { status: "accepted" });
+        results.sms = { ok: true, accepted: true };
+      } catch (error) {
+        await markEventChannel(eventId, "sms", {
+          status: "temporary_failure",
+          error: error?.message || error,
+        });
+        results.sms = { ok: false, error: error?.message || String(error) };
+        console.error(
+          "[appointment-change-notify] customer SMS failed:",
+          error?.message || error
+        );
       }
+    } else if (
+      event?.customer_sms_sent_at ||
+      event?.customer_sms_status === "accepted" ||
+      event?.customer_sms_status === "sent"
+    ) {
+      results.sms = { ok: true, already: true };
     }
   }
 
+  await Promise.allSettled([sendCustomerEmail(), sendClinicEmail(), sendCustomerSms()]);
   return results;
 }
 
 function channelNeedsRetry(status) {
   const s = String(status || "");
-  return !s || s === "pending" || s === "temporary_failure";
+  // Include stuck `sending` — claim layer reclaims only after STALE_EMAIL_CLAIM_MS.
+  return !s || s === "pending" || s === "temporary_failure" || s === "sending";
 }
 
 /**
@@ -606,9 +615,9 @@ export async function retryFailedAppointmentChangeNotifies({
       (await supabaseRequest(
         `appointment_change_events?created_at=gte.${encodeURIComponent(createdAfter)}` +
           `&created_at=lte.${encodeURIComponent(createdBefore)}` +
-          `&or=(customer_email_status.in.(pending,temporary_failure),` +
-          `clinic_email_status.in.(pending,temporary_failure),` +
-          `customer_sms_status.in.(pending,temporary_failure),` +
+          `&or=(customer_email_status.in.(pending,temporary_failure,sending),` +
+          `clinic_email_status.in.(pending,temporary_failure,sending),` +
+          `customer_sms_status.in.(pending,temporary_failure,sending),` +
           `customer_email_status.is.null,clinic_email_status.is.null,customer_sms_status.is.null)` +
           `&select=*&order=created_at.asc&limit=${Math.max(1, Math.min(100, Number(limit) || 25))}`
       )) || [];

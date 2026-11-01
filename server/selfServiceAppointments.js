@@ -430,28 +430,46 @@ export async function rescheduleOwnedAppointment({
     google_event_id: updated.google_event_id || appointment.google_event_id,
   };
 
-  let calendar = null;
-  try {
-    calendar = await syncClinicCalendarForAppointment(mergedForCalendar, {
+  // Calendar + notify in parallel — one hang must not starve the other.
+  const [calendarSettled, notifySettled] = await Promise.allSettled([
+    syncClinicCalendarForAppointment(mergedForCalendar, {
       action: "reschedule",
       previous: appointment,
-    });
-  } catch (error) {
-    calendar = { error: true, message: error?.message || String(error) };
-    console.error("[self-service] calendar reschedule failed:", error?.message || error);
-  }
-
-  let notify = null;
-  try {
-    notify = await notifySelfServiceChange({
+    }),
+    notifySelfServiceChange({
       event,
       eventType: "reschedule",
       appointment: updated,
       previous: appointment,
-    });
-  } catch (error) {
-    notify = { error: true, message: error?.message || String(error) };
-    console.error("[self-service] notify reschedule failed:", error?.message || error);
+    }),
+  ]);
+
+  const calendar =
+    calendarSettled.status === "fulfilled"
+      ? calendarSettled.value
+      : {
+          error: true,
+          message: calendarSettled.reason?.message || String(calendarSettled.reason),
+        };
+  if (calendarSettled.status === "rejected") {
+    console.error(
+      "[self-service] calendar reschedule failed:",
+      calendarSettled.reason?.message || calendarSettled.reason
+    );
+  }
+
+  const notify =
+    notifySettled.status === "fulfilled"
+      ? notifySettled.value
+      : {
+          error: true,
+          message: notifySettled.reason?.message || String(notifySettled.reason),
+        };
+  if (notifySettled.status === "rejected") {
+    console.error(
+      "[self-service] notify reschedule failed:",
+      notifySettled.reason?.message || notifySettled.reason
+    );
   }
 
   return {
@@ -540,27 +558,44 @@ export async function cancelOwnedAppointment({
     google_event_id: updated.google_event_id || appointment.google_event_id,
   };
 
-  let calendar = null;
-  try {
-    calendar = await syncClinicCalendarForAppointment(mergedForCalendar, {
+  const [calendarSettled, notifySettled] = await Promise.allSettled([
+    syncClinicCalendarForAppointment(mergedForCalendar, {
       action: "delete",
-    });
-  } catch (error) {
-    calendar = { error: true, message: error?.message || String(error) };
-    console.error("[self-service] calendar cancel failed:", error?.message || error);
-  }
-
-  let notify = null;
-  try {
-    notify = await notifySelfServiceChange({
+    }),
+    notifySelfServiceChange({
       event,
       eventType: "cancel",
       appointment: updated,
       previous: appointment,
-    });
-  } catch (error) {
-    notify = { error: true, message: error?.message || String(error) };
-    console.error("[self-service] notify cancel failed:", error?.message || error);
+    }),
+  ]);
+
+  const calendar =
+    calendarSettled.status === "fulfilled"
+      ? calendarSettled.value
+      : {
+          error: true,
+          message: calendarSettled.reason?.message || String(calendarSettled.reason),
+        };
+  if (calendarSettled.status === "rejected") {
+    console.error(
+      "[self-service] calendar cancel failed:",
+      calendarSettled.reason?.message || calendarSettled.reason
+    );
+  }
+
+  const notify =
+    notifySettled.status === "fulfilled"
+      ? notifySettled.value
+      : {
+          error: true,
+          message: notifySettled.reason?.message || String(notifySettled.reason),
+        };
+  if (notifySettled.status === "rejected") {
+    console.error(
+      "[self-service] notify cancel failed:",
+      notifySettled.reason?.message || notifySettled.reason
+    );
   }
 
   return {

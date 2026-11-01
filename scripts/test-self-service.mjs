@@ -385,8 +385,10 @@ process.env.SELF_SERVICE_OTP_PEPPER =
   assert.match(appointments, /syncClinicCalendarForAppointment/);
   assert.match(appointments, /buildReminderResetPatch/);
   // Must await calendar+notify on Vercel (fire-and-forget dies after response).
-  assert.match(appointments, /await syncClinicCalendarForAppointment/);
-  assert.match(appointments, /await notifySelfServiceChange/);
+  // Parallel so one hang cannot starve the other.
+  assert.match(appointments, /Promise\.allSettled/);
+  assert.match(appointments, /syncClinicCalendarForAppointment/);
+  assert.match(appointments, /notifySelfServiceChange/);
   assert.doesNotMatch(appointments, /void syncClinicCalendarForAppointment/);
   assert.doesNotMatch(appointments, /void notifySelfServiceChange/);
   assert.match(appointments, /booking:\s*\{\s*ok:\s*true\s*\}/);
@@ -397,7 +399,8 @@ process.env.SELF_SERVICE_OTP_PEPPER =
   assert.match(admin, /actor: "admin"/);
   assert.match(admin, /becameCancelled \? "cancel" : "reschedule"/);
   assert.match(admin, /syncClinicCalendarForAppointment/);
-  assert.match(admin, /await notifyAppointmentChange/);
+  assert.match(admin, /notifyAppointmentChange/);
+  assert.match(admin, /Promise\.allSettled/);
   assert.match(admin, /maxDuration:\s*30/);
   assert.doesNotMatch(admin, /void \(async/);
   // Admin must notify customer+clinic+SMS on reschedule — not clinic-cancel-only.
@@ -410,12 +413,17 @@ process.env.SELF_SERVICE_OTP_PEPPER =
   assert.match(changeNotify, /buildChangeIdempotencyKey/);
   assert.match(changeNotify, /idempotency_key/);
   assert.match(changeNotify, /retryFailedAppointmentChangeNotifies/);
+  // Channels independent: parallel send + reclaim stuck sending on cron.
+  assert.match(changeNotify, /Promise\.allSettled\(\[sendCustomerEmail/);
+  assert.match(changeNotify, /pending,temporary_failure,sending/);
+  assert.match(changeNotify, /s === "sending"/);
   // Must not gate change SMS on reminder/confirm env (comment may mention them).
   assert.doesNotMatch(changeNotify, /isSmsRemindersEnvEnabled|isSmsBookingConfirmEnvEnabled/);
 
   const changeSql = read("../supabase/customer-self-service.sql");
   assert.match(changeSql, /idempotency_key/);
   assert.match(changeSql, /uq_appointment_change_events_idempotency/);
+  assert.match(changeSql, /'sending'/);
 
   const sendReminders = read("../api/send-reminders.js");
   assert.match(sendReminders, /retryFailedAppointmentChangeNotifies/);

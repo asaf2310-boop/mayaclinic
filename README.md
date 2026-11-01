@@ -42,7 +42,9 @@ Run the app: `npm run dev`
 פרויקטים כמו `ofirbaby.vercel.app` ו-`maya-clinic.vercel.app` חייבים Supabase בפרויקט Vercel (Settings → Environment Variables):
 
 ```env
-VITE_SUPABASE_URL=https://furrjspvtmyvjikynkfj.supabase.co
+# Production OFIRBABY / Maya booking (ofirbaby.vercel.app + www.ofirbaby.com/booking)
+# ref: famjpsewerxnmihwgpgv — NOT Radar MCP xfxmrvckxeupdrjljiay
+VITE_SUPABASE_URL=https://famjpsewerxnmihwgpgv.supabase.co
 VITE_SUPABASE_ANON_KEY=<anon public key from Supabase Dashboard → API>
 ```
 

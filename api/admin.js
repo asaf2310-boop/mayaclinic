@@ -430,19 +430,18 @@ async function updateEntity(entity, id, row, tenantId) {
       ...rowOut,
       google_event_id: rowOut.google_event_id || previous?.google_event_id,
     };
-    await syncClinicCalendarForAppointment(merged, {
-      action:
-        nextStatus === "cancelled"
-          ? "delete"
-          : dateTimeChanged
-            ? "reschedule"
-            : "sync",
-      previous: dateTimeChanged ? previous : null,
-    });
+    const calendarAction =
+      nextStatus === "cancelled"
+        ? "delete"
+        : dateTimeChanged
+          ? "reschedule"
+          : "sync";
+    const calendarPrevious = dateTimeChanged ? previous : null;
 
     // Customer email + clinic email + SMS after admin reschedule / cancel.
     // Must await on Vercel — fire-and-forget dies when the response finishes.
-    // Booking already committed: notify failures must not fail the PATCH.
+    // Booking already committed: calendar/notify failures must not fail the PATCH.
+    // Calendar + notify run in parallel so one hang cannot starve the other.
     if (becameCancelled || dateTimeChanged) {
       const eventType = becameCancelled ? "cancel" : "reschedule";
       const beforeSnapshot = previous
@@ -469,16 +468,47 @@ async function updateEntity(entity, id, row, tenantId) {
           beforeSnapshot,
           afterSnapshot,
         });
-        const notify = await notifyAppointmentChange({
-          event,
-          eventType,
-          appointment: rowOut,
-          previous: previous || null,
-          actor: "admin",
-          reason: becameCancelled ? "cancelled" : undefined,
-          extraNote: becameCancelled ? "התור בוטל במערכת הניהול." : "",
-        });
-        rowOut._notify = notify;
+        const [calendarSettled, notifySettled] = await Promise.allSettled([
+          syncClinicCalendarForAppointment(merged, {
+            action: calendarAction,
+            previous: calendarPrevious,
+          }),
+          notifyAppointmentChange({
+            event,
+            eventType,
+            appointment: rowOut,
+            previous: previous || null,
+            actor: "admin",
+            reason: becameCancelled ? "cancelled" : undefined,
+            extraNote: becameCancelled ? "התור בוטל במערכת הניהול." : "",
+          }),
+        ]);
+        rowOut._calendar =
+          calendarSettled.status === "fulfilled"
+            ? calendarSettled.value
+            : {
+                error: true,
+                message: calendarSettled.reason?.message || String(calendarSettled.reason),
+              };
+        if (calendarSettled.status === "rejected") {
+          console.error(
+            "[admin] appointment calendar sync failed:",
+            calendarSettled.reason?.message || calendarSettled.reason
+          );
+        }
+        rowOut._notify =
+          notifySettled.status === "fulfilled"
+            ? notifySettled.value
+            : {
+                error: true,
+                message: notifySettled.reason?.message || String(notifySettled.reason),
+              };
+        if (notifySettled.status === "rejected") {
+          console.error(
+            "[admin] appointment change notify failed:",
+            notifySettled.reason?.message || notifySettled.reason
+          );
+        }
         rowOut._booking = { ok: true };
       } catch (error) {
         console.error(
@@ -487,7 +517,23 @@ async function updateEntity(entity, id, row, tenantId) {
         );
         rowOut._notify = { error: true, message: error?.message || String(error) };
         rowOut._booking = { ok: true };
+        try {
+          rowOut._calendar = await syncClinicCalendarForAppointment(merged, {
+            action: calendarAction,
+            previous: calendarPrevious,
+          });
+        } catch (calendarError) {
+          rowOut._calendar = {
+            error: true,
+            message: calendarError?.message || String(calendarError),
+          };
+        }
       }
+    } else {
+      await syncClinicCalendarForAppointment(merged, {
+        action: calendarAction,
+        previous: calendarPrevious,
+      });
     }
   }
 
