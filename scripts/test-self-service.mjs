@@ -53,6 +53,7 @@ process.env.SELF_SERVICE_OTP_PEPPER =
   assert.match(sql, /appointment_otp_challenges/);
   assert.match(sql, /appointment_change_events/);
   assert.match(sql, /customer_sms_status/);
+  assert.match(sql, /calendar_sync_status/);
   assert.match(sql, /idempotency_key/);
   assert.match(sql, /updated_at/);
   assert.doesNotMatch(sql, /SMS_REMINDERS_ENABLED\s*=\s*true/);
@@ -382,23 +383,25 @@ process.env.SELF_SERVICE_OTP_PEPPER =
 
   const appointments = read("../server/selfServiceAppointments.js");
   assert.match(appointments, /notifySelfServiceChange/);
-  assert.match(appointments, /syncClinicCalendarForAppointment/);
+  assert.match(appointments, /syncCalendarForChangeEvent/);
   assert.match(appointments, /buildReminderResetPatch/);
   // Must await calendar+notify on Vercel (fire-and-forget dies after response).
   // Parallel so one hang cannot starve the other.
   assert.match(appointments, /Promise\.allSettled/);
-  assert.match(appointments, /syncClinicCalendarForAppointment/);
+  assert.match(appointments, /syncCalendarForChangeEvent/);
   assert.match(appointments, /notifySelfServiceChange/);
   assert.doesNotMatch(appointments, /void syncClinicCalendarForAppointment/);
   assert.doesNotMatch(appointments, /void notifySelfServiceChange/);
+  assert.doesNotMatch(appointments, /void syncCalendarForChangeEvent/);
   assert.match(appointments, /booking:\s*\{\s*ok:\s*true\s*\}/);
+  assert.match(appointments, /google_event_id/);
 
   const admin = read("../api/admin.js");
   assert.match(admin, /notifyAppointmentChange/);
   assert.match(admin, /recordAppointmentChangeEvent/);
   assert.match(admin, /actor: "admin"/);
   assert.match(admin, /becameCancelled \? "cancel" : "reschedule"/);
-  assert.match(admin, /syncClinicCalendarForAppointment/);
+  assert.match(admin, /syncCalendarForChangeEvent/);
   assert.match(admin, /notifyAppointmentChange/);
   assert.match(admin, /Promise\.allSettled/);
   assert.match(admin, /maxDuration:\s*30/);
@@ -413,6 +416,7 @@ process.env.SELF_SERVICE_OTP_PEPPER =
   assert.match(changeNotify, /buildChangeIdempotencyKey/);
   assert.match(changeNotify, /idempotency_key/);
   assert.match(changeNotify, /retryFailedAppointmentChangeNotifies/);
+  assert.match(changeNotify, /calendar_sync_status/);
   // Channels independent: parallel send + reclaim stuck sending on cron.
   assert.match(changeNotify, /Promise\.allSettled\(\[sendCustomerEmail/);
   assert.match(changeNotify, /pending,temporary_failure,sending/);
@@ -424,9 +428,22 @@ process.env.SELF_SERVICE_OTP_PEPPER =
   assert.match(changeSql, /idempotency_key/);
   assert.match(changeSql, /uq_appointment_change_events_idempotency/);
   assert.match(changeSql, /'sending'/);
+  assert.match(changeSql, /calendar_sync_status/);
+  assert.match(changeSql, /calendar_sync_claimed_at/);
+  assert.match(changeSql, /calendar_sync_attempts/);
 
   const sendReminders = read("../api/send-reminders.js");
   assert.match(sendReminders, /retryFailedAppointmentChangeNotifies/);
+  assert.match(sendReminders, /retryFailedCalendarSyncs/);
+  assert.match(sendReminders, /calendarSync/);
+
+  const calendarSync = read("../server/calendarChangeSync.js");
+  assert.match(calendarSync, /resolveCalendarRetryDecision/);
+  assert.match(calendarSync, /sanitizeCalendarSyncError/);
+  assert.match(calendarSync, /retryFailedCalendarSyncs/);
+  assert.match(calendarSync, /newer_slot/);
+  assert.match(calendarSync, /now_cancelled/);
+  assert.match(calendarSync, /\[redacted/);
 
   const adminUi = read("../src/pages/Admin.jsx");
   assert.match(adminUi, /refetchInterval/);
@@ -464,6 +481,111 @@ process.env.SELF_SERVICE_OTP_PEPPER =
   // 12:00 Jerusalem in winter is UTC+2 → 10:00Z
   const iso = new Date(ms).toISOString();
   assert.match(iso, /2026-03-08T10:00:00/);
+}
+
+// --- Calendar sync retry idempotency guards ---
+{
+  const {
+    resolveCalendarRetryDecision,
+    sanitizeCalendarSyncError,
+  } = await import("../server/calendarChangeSync.js");
+
+  const baseEvent = {
+    id: "evt-1",
+    appointment_id: "appt-1",
+    event_type: "reschedule",
+    created_at: "2026-03-01T10:00:00.000Z",
+    before_snapshot: {
+      date: "2026-03-01",
+      time: "10:00",
+      status: "confirmed",
+      google_event_id: "gcal-old",
+    },
+    after_snapshot: {
+      date: "2026-03-08",
+      time: "12:00",
+      status: "confirmed",
+      google_event_id: "gcal-old",
+    },
+  };
+
+  const apply = resolveCalendarRetryDecision(baseEvent, {
+    id: "appt-1",
+    date: "2026-03-08",
+    time: "12:00",
+    status: "confirmed",
+    google_event_id: "gcal-old",
+    updated_at: "2026-03-01T10:00:00.000Z",
+  });
+  assert.equal(apply.apply, true);
+  assert.equal(apply.action, "reschedule");
+
+  const newerSlot = resolveCalendarRetryDecision(baseEvent, {
+    id: "appt-1",
+    date: "2026-03-09",
+    time: "14:00",
+    status: "confirmed",
+    updated_at: "2026-03-01T11:00:00.000Z",
+  });
+  assert.equal(newerSlot.apply, false);
+  assert.equal(newerSlot.reason, "newer_slot");
+  assert.equal(newerSlot.terminalStatus, "skipped_stale");
+
+  const cancelled = resolveCalendarRetryDecision(baseEvent, {
+    id: "appt-1",
+    date: "2026-03-08",
+    time: "12:00",
+    status: "cancelled",
+    updated_at: "2026-03-01T11:00:00.000Z",
+  });
+  assert.equal(cancelled.apply, false);
+  assert.equal(cancelled.reason, "now_cancelled");
+
+  const cancelEvent = {
+    ...baseEvent,
+    event_type: "cancel",
+    after_snapshot: {
+      date: "2026-03-01",
+      time: "10:00",
+      status: "cancelled",
+      google_event_id: "gcal-old",
+    },
+  };
+  const cancelOk = resolveCalendarRetryDecision(cancelEvent, {
+    id: "appt-1",
+    date: "2026-03-01",
+    time: "10:00",
+    status: "cancelled",
+    google_event_id: "gcal-old",
+  });
+  assert.equal(cancelOk.apply, true);
+  assert.equal(cancelOk.action, "delete");
+
+  const cancelReactivated = resolveCalendarRetryDecision(cancelEvent, {
+    id: "appt-1",
+    date: "2026-03-01",
+    time: "10:00",
+    status: "confirmed",
+  });
+  assert.equal(cancelReactivated.apply, false);
+  assert.equal(cancelReactivated.reason, "not_cancelled_anymore");
+
+  const deletedRow = resolveCalendarRetryDecision(cancelEvent, null);
+  assert.equal(deletedRow.apply, true);
+  assert.equal(deletedRow.action, "delete");
+  assert.equal(deletedRow.appointment.google_event_id, "gcal-old");
+
+  const rescheduleMissing = resolveCalendarRetryDecision(baseEvent, null);
+  assert.equal(rescheduleMissing.apply, false);
+  assert.equal(rescheduleMissing.reason, "appointment_missing");
+
+  const scrubbed = sanitizeCalendarSyncError(
+    "Request failed Bearer ya29.a0AfH6SMC-secret AIzaSyC_testkey client_secret=abc123"
+  );
+  assert.doesNotMatch(scrubbed, /ya29/);
+  assert.doesNotMatch(scrubbed, /AIza/);
+  assert.doesNotMatch(scrubbed, /abc123/);
+  assert.match(scrubbed, /redacted/i);
 }
 
 console.log("self-service tests passed");

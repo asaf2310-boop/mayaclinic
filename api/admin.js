@@ -29,6 +29,7 @@ import {
   notifyAppointmentChange,
   recordAppointmentChangeEvent,
 } from "../server/appointmentChangeNotify.js";
+import { syncCalendarForChangeEvent } from "../server/calendarChangeSync.js";
 import { syncClinicCalendarForAppointment } from "../server/syncClinicCalendar.js";
 
 // Calendar sync + change emails/SMS after appointment edits need headroom.
@@ -450,6 +451,10 @@ async function updateEntity(entity, id, row, tenantId) {
             time: previous.time,
             status: previous.status,
             treatment_name: previous.treatment_name,
+            patient_name: previous.patient_name || null,
+            patient_phone: previous.patient_phone || null,
+            patient_email: previous.patient_email || null,
+            google_event_id: previous.google_event_id || null,
           }
         : null;
       const afterSnapshot = {
@@ -457,6 +462,10 @@ async function updateEntity(entity, id, row, tenantId) {
         time: rowOut.time,
         status: rowOut.status,
         treatment_name: rowOut.treatment_name,
+        patient_name: rowOut.patient_name || previous?.patient_name || null,
+        patient_phone: rowOut.patient_phone || previous?.patient_phone || null,
+        patient_email: rowOut.patient_email || previous?.patient_email || null,
+        google_event_id: rowOut.google_event_id || previous?.google_event_id || null,
       };
       try {
         const event = await recordAppointmentChangeEvent({
@@ -469,9 +478,11 @@ async function updateEntity(entity, id, row, tenantId) {
           afterSnapshot,
         });
         const [calendarSettled, notifySettled] = await Promise.allSettled([
-          syncClinicCalendarForAppointment(merged, {
-            action: calendarAction,
+          syncCalendarForChangeEvent({
+            event,
+            appointment: merged,
             previous: calendarPrevious,
+            action: calendarAction,
           }),
           notifyAppointmentChange({
             event,
@@ -518,9 +529,11 @@ async function updateEntity(entity, id, row, tenantId) {
         rowOut._notify = { error: true, message: error?.message || String(error) };
         rowOut._booking = { ok: true };
         try {
-          rowOut._calendar = await syncClinicCalendarForAppointment(merged, {
-            action: calendarAction,
+          rowOut._calendar = await syncCalendarForChangeEvent({
+            event: null,
+            appointment: merged,
             previous: calendarPrevious,
+            action: calendarAction,
           });
         } catch (calendarError) {
           rowOut._calendar = {
@@ -562,25 +575,60 @@ async function deleteEntity(entity, id, tenantId) {
           time: previous.time,
           status: previous.status,
           treatment_name: previous.treatment_name,
+          patient_name: previous.patient_name || null,
+          patient_phone: previous.patient_phone || null,
+          patient_email: previous.patient_email || null,
+          google_event_id: previous.google_event_id || null,
         },
         afterSnapshot: {
           date: previous.date,
           time: previous.time,
           status: "cancelled",
           treatment_name: previous.treatment_name,
+          patient_name: previous.patient_name || null,
+          patient_phone: previous.patient_phone || null,
+          patient_email: previous.patient_email || null,
+          google_event_id: previous.google_event_id || null,
         },
       });
-      await notifyAppointmentChange({
-        event,
-        eventType: "cancel",
-        appointment: { ...previous, status: "cancelled" },
-        previous,
-        actor: "admin",
-        reason: "deleted",
-        extraNote: "התור נמחק מהמערכת.",
-      });
+      const [notifySettled, calendarSettled] = await Promise.allSettled([
+        notifyAppointmentChange({
+          event,
+          eventType: "cancel",
+          appointment: { ...previous, status: "cancelled" },
+          previous,
+          actor: "admin",
+          reason: "deleted",
+          extraNote: "התור נמחק מהמערכת.",
+        }),
+        syncCalendarForChangeEvent({
+          event,
+          appointment: previous,
+          action: "delete",
+        }),
+      ]);
+      if (notifySettled.status === "rejected") {
+        console.error(
+          "[admin] appointment delete notify failed:",
+          notifySettled.reason?.message || notifySettled.reason
+        );
+      }
+      if (calendarSettled.status === "rejected") {
+        console.error(
+          "[admin] appointment delete calendar sync failed:",
+          calendarSettled.reason?.message || calendarSettled.reason
+        );
+      }
     } catch (error) {
       console.error("[admin] appointment delete notify failed:", error?.message || error);
+      try {
+        await syncClinicCalendarForAppointment(previous, { action: "delete" });
+      } catch (calendarError) {
+        console.error(
+          "[admin] appointment delete calendar fallback failed:",
+          calendarError?.message || calendarError
+        );
+      }
     }
   }
 
@@ -590,7 +638,9 @@ async function deleteEntity(entity, id, tenantId) {
     headers: { Prefer: "return=minimal" },
   });
 
-  if (previous) {
+  // Calendar delete already attempted above (with durable retry). If notify block
+  // was skipped (already cancelled), still best-effort clear GCal once.
+  if (previous && String(previous.status || "") === "cancelled") {
     await syncClinicCalendarForAppointment(previous, { action: "delete" });
   }
 

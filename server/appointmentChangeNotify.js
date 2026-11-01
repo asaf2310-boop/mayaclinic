@@ -278,6 +278,8 @@ export async function recordAppointmentChangeEvent({
     customer_email_status: "pending",
     clinic_email_status: "pending",
     customer_sms_status: "pending",
+    calendar_sync_status: "pending",
+    calendar_sync_attempts: 0,
   };
 
   const tryInsert = async (body) => {
@@ -313,11 +315,33 @@ export async function recordAppointmentChangeEvent({
 
     const insertMessage = String(insertError?.message || insertError || "");
 
+    // Retry without calendar sync columns (pre-migration DBs).
+    if (
+      /calendar_sync_/i.test(insertMessage) ||
+      (/column/i.test(insertMessage) && /calendar/i.test(insertMessage))
+    ) {
+      try {
+        const withoutCalendar = { ...baseRow };
+        delete withoutCalendar.calendar_sync_status;
+        delete withoutCalendar.calendar_sync_attempts;
+        return await tryInsert({ ...withoutCalendar, idempotency_key: key });
+      } catch (retryError) {
+        insertError = retryError;
+      }
+    }
+
+    const afterCalendarMessage = String(insertError?.message || insertError || "");
+
     // Retry without SMS claim columns (pre-migration DBs).
-    if (/customer_sms_/i.test(insertMessage) || (/column/i.test(insertMessage) && /sms/i.test(insertMessage))) {
+    if (
+      /customer_sms_/i.test(afterCalendarMessage) ||
+      (/column/i.test(afterCalendarMessage) && /sms/i.test(afterCalendarMessage))
+    ) {
       try {
         const withoutSms = { ...baseRow };
         delete withoutSms.customer_sms_status;
+        delete withoutSms.calendar_sync_status;
+        delete withoutSms.calendar_sync_attempts;
         return await tryInsert({ ...withoutSms, idempotency_key: key });
       } catch (retryError) {
         const retryMsg = String(retryError?.message || "");
@@ -325,6 +349,8 @@ export async function recordAppointmentChangeEvent({
           try {
             const withoutSms = { ...baseRow };
             delete withoutSms.customer_sms_status;
+            delete withoutSms.calendar_sync_status;
+            delete withoutSms.calendar_sync_attempts;
             return await tryInsert(withoutSms);
           } catch (finalError) {
             console.warn(
@@ -641,25 +667,40 @@ export async function retryFailedAppointmentChangeNotifies({
     if (!needs) continue;
 
     let appointment = null;
-    try {
-      const rows = await supabaseRequest(
-        `appointments?id=eq.${encodeURIComponent(event.appointment_id)}&select=*&limit=1`
-      );
-      appointment = Array.isArray(rows) ? rows[0] : rows;
-    } catch (error) {
-      console.warn(
-        "[appointment-change-notify] retry load appointment failed:",
-        error?.message || error
-      );
-      failed += 1;
-      continue;
+    if (event.appointment_id) {
+      try {
+        const rows = await supabaseRequest(
+          `appointments?id=eq.${encodeURIComponent(event.appointment_id)}&select=*&limit=1`
+        );
+        appointment = Array.isArray(rows) ? rows[0] : rows;
+      } catch (error) {
+        console.warn(
+          "[appointment-change-notify] retry load appointment failed:",
+          error?.message || error
+        );
+        failed += 1;
+        continue;
+      }
     }
 
+    // Hard-deleted appointment (FK SET NULL) or missing row — use snapshots.
     if (!appointment && event.after_snapshot) {
       appointment = {
         id: event.appointment_id,
         ...(typeof event.after_snapshot === "object" ? event.after_snapshot : {}),
-        patient_phone: event.phone_normalized,
+        patient_phone:
+          event.phone_normalized ||
+          event.after_snapshot?.patient_phone ||
+          event.before_snapshot?.patient_phone ||
+          null,
+        patient_email:
+          event.after_snapshot?.patient_email ||
+          event.before_snapshot?.patient_email ||
+          null,
+        patient_name:
+          event.after_snapshot?.patient_name ||
+          event.before_snapshot?.patient_name ||
+          null,
       };
     }
     if (!appointment) {

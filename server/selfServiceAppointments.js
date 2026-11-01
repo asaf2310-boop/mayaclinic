@@ -5,7 +5,7 @@
 
 import { hasAppointmentTimeConflict } from "../src/lib/bookingSlots.js";
 import { supabaseRequest } from "./supabaseServer.js";
-import { syncClinicCalendarForAppointment } from "./syncClinicCalendar.js";
+import { syncCalendarForChangeEvent } from "./calendarChangeSync.js";
 import { recordAdminAuditEvent } from "./adminAuditLog.js";
 import {
   canModifyAppointmentWithinPolicy,
@@ -379,6 +379,10 @@ export async function rescheduleOwnedAppointment({
     time: appointment.time,
     status: appointment.status,
     treatment_name: appointment.treatment_name,
+    patient_name: appointment.patient_name || null,
+    patient_phone: appointment.patient_phone || null,
+    patient_email: appointment.patient_email || null,
+    google_event_id: appointment.google_event_id || null,
   };
 
   const patch = {
@@ -408,6 +412,10 @@ export async function rescheduleOwnedAppointment({
       time: updated.time,
       status: updated.status,
       treatment_name: updated.treatment_name,
+      patient_name: updated.patient_name || appointment.patient_name || null,
+      patient_phone: updated.patient_phone || appointment.patient_phone || null,
+      patient_email: updated.patient_email || appointment.patient_email || null,
+      google_event_id: updated.google_event_id || appointment.google_event_id || null,
     },
   });
 
@@ -431,10 +439,13 @@ export async function rescheduleOwnedAppointment({
   };
 
   // Calendar + notify in parallel — one hang must not starve the other.
+  // Calendar failures persist on the change event for cron retry.
   const [calendarSettled, notifySettled] = await Promise.allSettled([
-    syncClinicCalendarForAppointment(mergedForCalendar, {
-      action: "reschedule",
+    syncCalendarForChangeEvent({
+      event,
+      appointment: mergedForCalendar,
       previous: appointment,
+      action: "reschedule",
     }),
     notifySelfServiceChange({
       event,
@@ -524,6 +535,10 @@ export async function cancelOwnedAppointment({
     time: appointment.time,
     status: appointment.status,
     treatment_name: appointment.treatment_name,
+    patient_name: appointment.patient_name || null,
+    patient_phone: appointment.patient_phone || null,
+    patient_email: appointment.patient_email || null,
+    google_event_id: appointment.google_event_id || null,
   };
 
   const updated = await conditionalPatchAppointment(appointment, {
@@ -542,6 +557,10 @@ export async function cancelOwnedAppointment({
       time: updated.time,
       status: updated.status,
       treatment_name: updated.treatment_name,
+      patient_name: updated.patient_name || appointment.patient_name || null,
+      patient_phone: updated.patient_phone || appointment.patient_phone || null,
+      patient_email: updated.patient_email || appointment.patient_email || null,
+      google_event_id: updated.google_event_id || appointment.google_event_id || null,
     },
   });
 
@@ -559,7 +578,9 @@ export async function cancelOwnedAppointment({
   };
 
   const [calendarSettled, notifySettled] = await Promise.allSettled([
-    syncClinicCalendarForAppointment(mergedForCalendar, {
+    syncCalendarForChangeEvent({
+      event,
+      appointment: mergedForCalendar,
       action: "delete",
     }),
     notifySelfServiceChange({

@@ -58,10 +58,12 @@ create table if not exists public.appointment_otp_rate_limits (
 
 alter table public.appointment_otp_rate_limits enable row level security;
 
--- Audit + idempotent notify delivery for customer/admin reschedule/cancel
+-- Audit + idempotent notify delivery for customer/admin reschedule/cancel.
+-- appointment_id is nullable + ON DELETE SET NULL so hard-delete still leaves
+-- email/SMS/calendar retry rows (snapshots carry enough to finish delivery).
 create table if not exists public.appointment_change_events (
   id uuid primary key default gen_random_uuid(),
-  appointment_id uuid not null references public.appointments(id) on delete cascade,
+  appointment_id uuid references public.appointments(id) on delete set null,
   tenant_id text,
   event_type text not null check (event_type in ('reschedule', 'cancel')),
   actor text not null default 'customer',
@@ -81,6 +83,11 @@ create table if not exists public.appointment_change_events (
   customer_sms_claimed_at timestamptz,
   customer_sms_sent_at timestamptz,
   customer_sms_last_error text,
+  calendar_sync_status text,
+  calendar_sync_claimed_at timestamptz,
+  calendar_sync_synced_at timestamptz,
+  calendar_sync_last_error text,
+  calendar_sync_attempts integer not null default 0,
   created_at timestamptz not null default now()
 );
 
@@ -93,6 +100,60 @@ alter table public.appointment_change_events
   add column if not exists customer_sms_sent_at timestamptz;
 alter table public.appointment_change_events
   add column if not exists customer_sms_last_error text;
+
+-- Durable Google Calendar sync claim/retry (same pattern as email/SMS)
+alter table public.appointment_change_events
+  add column if not exists calendar_sync_status text;
+alter table public.appointment_change_events
+  add column if not exists calendar_sync_claimed_at timestamptz;
+alter table public.appointment_change_events
+  add column if not exists calendar_sync_synced_at timestamptz;
+alter table public.appointment_change_events
+  add column if not exists calendar_sync_last_error text;
+alter table public.appointment_change_events
+  add column if not exists calendar_sync_attempts integer not null default 0;
+
+-- Existing DBs may still cascade-delete change events with the appointment.
+-- Switch to SET NULL so notify/calendar retries survive admin hard-delete.
+alter table public.appointment_change_events
+  alter column appointment_id drop not null;
+
+do $$
+declare
+  fk_name text;
+begin
+  select tc.constraint_name into fk_name
+  from information_schema.table_constraints tc
+  join information_schema.key_column_usage kcu
+    on tc.constraint_name = kcu.constraint_name
+   and tc.table_schema = kcu.table_schema
+  where tc.table_schema = 'public'
+    and tc.table_name = 'appointment_change_events'
+    and tc.constraint_type = 'FOREIGN KEY'
+    and kcu.column_name = 'appointment_id'
+  limit 1;
+
+  if fk_name is not null then
+    execute format(
+      'alter table public.appointment_change_events drop constraint %I',
+      fk_name
+    );
+  end if;
+
+  if not exists (
+    select 1
+    from information_schema.table_constraints
+    where table_schema = 'public'
+      and table_name = 'appointment_change_events'
+      and constraint_name = 'appointment_change_events_appointment_id_fkey'
+  ) then
+    alter table public.appointment_change_events
+      add constraint appointment_change_events_appointment_id_fkey
+      foreign key (appointment_id)
+      references public.appointments(id)
+      on delete set null;
+  end if;
+end $$;
 
 -- Per-change idempotency (retries / double-submit reuse one notify row)
 alter table public.appointment_change_events
@@ -112,6 +173,7 @@ create index if not exists idx_appointment_change_events_retry
   on public.appointment_change_events (created_at desc)
   where customer_email_status in ('pending', 'temporary_failure', 'sending')
      or clinic_email_status in ('pending', 'temporary_failure', 'sending')
-     or customer_sms_status in ('pending', 'temporary_failure', 'sending');
+     or customer_sms_status in ('pending', 'temporary_failure', 'sending')
+     or calendar_sync_status in ('pending', 'temporary_failure', 'sending');
 
 alter table public.appointment_change_events enable row level security;

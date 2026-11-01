@@ -26,6 +26,7 @@ import {
   markSmsReminderOutcome,
 } from "../server/supabaseServer.js";
 import { retryFailedAppointmentChangeNotifies } from "../server/appointmentChangeNotify.js";
+import { retryFailedCalendarSyncs } from "../server/calendarChangeSync.js";
 
 function isAuthorized(req) {
   const secret = process.env.CRON_SECRET;
@@ -371,8 +372,9 @@ export default async function handler(req, res) {
   const smsMayRun = canSendLiveSmsReminders(smsSettings);
 
   try {
-    // Always attempt change-notify retries (independent of reminder env gates).
+    // Always attempt change-notify + calendar sync retries (independent of reminder env gates).
     let changeNotify = { ok: true, skipped: true, reason: "not_run", retried: 0 };
+    let calendarSync = { ok: true, skipped: true, reason: "not_run", retried: 0 };
     try {
       changeNotify = await retryFailedAppointmentChangeNotifies({ limit: 25 });
     } catch (error) {
@@ -381,6 +383,19 @@ export default async function handler(req, res) {
         error?.message || error
       );
       changeNotify = {
+        ok: false,
+        error: error?.message || String(error),
+        retried: 0,
+      };
+    }
+    try {
+      calendarSync = await retryFailedCalendarSyncs({ limit: 25 });
+    } catch (error) {
+      console.error(
+        "[send-reminders] calendar-sync retry failed:",
+        error?.message || error
+      );
+      calendarSync = {
         ok: false,
         error: error?.message || String(error),
         retried: 0,
@@ -395,6 +410,7 @@ export default async function handler(req, res) {
         emailConfigured: false,
         smsRemindersEnabled: false,
         changeNotify,
+        calendarSync,
       });
       return;
     }
@@ -414,6 +430,7 @@ export default async function handler(req, res) {
       email,
       sms,
       changeNotify,
+      calendarSync,
     });
   } catch (error) {
     res.status(500).json({ error: error.message || "Failed to send reminders" });
