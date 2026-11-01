@@ -73,6 +73,11 @@ export default function Admin() {
   const { data: appointments = [], isLoading } = useQuery({
     queryKey: ["appointments"],
     queryFn: () => base44.entities.Appointment.list("date", 1000),
+    // Customer self-service reschedules update Supabase directly — keep admin
+    // calendar fresh without requiring a hard reload.
+    staleTime: 15_000,
+    refetchInterval: activeAdminTab === "appointments" ? 30_000 : false,
+    refetchOnWindowFocus: true,
   });
 
   const { data: treatments = [] } = useQuery({

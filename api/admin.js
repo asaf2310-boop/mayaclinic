@@ -30,6 +30,11 @@ import {
   recordAppointmentChangeEvent,
 } from "../server/appointmentChangeNotify.js";
 import { syncClinicCalendarForAppointment } from "../server/syncClinicCalendar.js";
+
+// Calendar sync + change emails/SMS after appointment edits need headroom.
+export const config = {
+  maxDuration: 30,
+};
 import { clearEmailSuppression } from "../server/emailDelivery.js";
 import {
   DEFAULT_CLINIC_ADDRESS,
@@ -436,6 +441,8 @@ async function updateEntity(entity, id, row, tenantId) {
     });
 
     // Customer email + clinic email + SMS after admin reschedule / cancel.
+    // Must await on Vercel — fire-and-forget dies when the response finishes.
+    // Booking already committed: notify failures must not fail the PATCH.
     if (becameCancelled || dateTimeChanged) {
       const eventType = becameCancelled ? "cancel" : "reschedule";
       const beforeSnapshot = previous
@@ -452,7 +459,7 @@ async function updateEntity(entity, id, row, tenantId) {
         status: rowOut.status,
         treatment_name: rowOut.treatment_name,
       };
-      void (async () => {
+      try {
         const event = await recordAppointmentChangeEvent({
           appointmentId: rowOut.id,
           tenantId,
@@ -462,7 +469,7 @@ async function updateEntity(entity, id, row, tenantId) {
           beforeSnapshot,
           afterSnapshot,
         });
-        await notifyAppointmentChange({
+        const notify = await notifyAppointmentChange({
           event,
           eventType,
           appointment: rowOut,
@@ -471,12 +478,16 @@ async function updateEntity(entity, id, row, tenantId) {
           reason: becameCancelled ? "cancelled" : undefined,
           extraNote: becameCancelled ? "התור בוטל במערכת הניהול." : "",
         });
-      })().catch((error) => {
+        rowOut._notify = notify;
+        rowOut._booking = { ok: true };
+      } catch (error) {
         console.error(
           "[admin] appointment change notify failed:",
           error?.message || error
         );
-      });
+        rowOut._notify = { error: true, message: error?.message || String(error) };
+        rowOut._booking = { ok: true };
+      }
     }
   }
 

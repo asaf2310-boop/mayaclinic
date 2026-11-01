@@ -68,6 +68,7 @@ create table if not exists public.appointment_change_events (
   phone_normalized text,
   before_snapshot jsonb,
   after_snapshot jsonb,
+  idempotency_key text,
   customer_email_status text,
   customer_email_claimed_at timestamptz,
   customer_email_sent_at timestamptz,
@@ -93,10 +94,24 @@ alter table public.appointment_change_events
 alter table public.appointment_change_events
   add column if not exists customer_sms_last_error text;
 
+-- Per-change idempotency (retries / double-submit reuse one notify row)
+alter table public.appointment_change_events
+  add column if not exists idempotency_key text;
+
+create unique index if not exists uq_appointment_change_events_idempotency
+  on public.appointment_change_events (idempotency_key)
+  where idempotency_key is not null;
+
 create index if not exists idx_appointment_change_events_appointment
   on public.appointment_change_events (appointment_id, created_at desc);
 
 create index if not exists idx_appointment_change_events_created
   on public.appointment_change_events (created_at desc);
+
+create index if not exists idx_appointment_change_events_retry
+  on public.appointment_change_events (created_at desc)
+  where customer_email_status in ('pending', 'temporary_failure')
+     or clinic_email_status in ('pending', 'temporary_failure')
+     or customer_sms_status in ('pending', 'temporary_failure');
 
 alter table public.appointment_change_events enable row level security;

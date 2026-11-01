@@ -53,6 +53,7 @@ process.env.SELF_SERVICE_OTP_PEPPER =
   assert.match(sql, /appointment_otp_challenges/);
   assert.match(sql, /appointment_change_events/);
   assert.match(sql, /customer_sms_status/);
+  assert.match(sql, /idempotency_key/);
   assert.match(sql, /updated_at/);
   assert.doesNotMatch(sql, /SMS_REMINDERS_ENABLED\s*=\s*true/);
 }
@@ -296,20 +297,30 @@ process.env.SELF_SERVICE_OTP_PEPPER =
     patientName: "נועה",
     date: "2026-03-08",
     time: "12:00",
+    previousDate: "2026-03-01",
+    previousTime: "10:00",
+    treatmentName: "עיסוי",
+    clinicPhone: "0549000301",
   });
   assert.match(rescheduleSms, /נועה/);
+  assert.match(rescheduleSms, /עיסוי/);
+  assert.match(rescheduleSms, /01\/03\/2026/);
+  assert.match(rescheduleSms, /10:00/);
   assert.match(rescheduleSms, /08\/03\/2026/);
   assert.match(rescheduleSms, /12:00/);
   assert.match(rescheduleSms, /עודכן/);
+  assert.match(rescheduleSms, /0549000301/);
 
   const cancelSms = buildAppointmentChangeSms({
     eventType: "cancel",
     patientName: "נועה",
     date: "2026-03-01",
     time: "10:00",
+    treatmentName: "עיסוי",
   });
   assert.match(cancelSms, /בוטל/);
   assert.match(cancelSms, /01\/03\/2026/);
+  assert.match(cancelSms, /עיסוי/);
 
   const prevChange = process.env.SMS_CHANGE_NOTIFY_ENABLED;
   const prevUser = process.env.SMS019_USERNAME;
@@ -373,6 +384,12 @@ process.env.SELF_SERVICE_OTP_PEPPER =
   assert.match(appointments, /notifySelfServiceChange/);
   assert.match(appointments, /syncClinicCalendarForAppointment/);
   assert.match(appointments, /buildReminderResetPatch/);
+  // Must await calendar+notify on Vercel (fire-and-forget dies after response).
+  assert.match(appointments, /await syncClinicCalendarForAppointment/);
+  assert.match(appointments, /await notifySelfServiceChange/);
+  assert.doesNotMatch(appointments, /void syncClinicCalendarForAppointment/);
+  assert.doesNotMatch(appointments, /void notifySelfServiceChange/);
+  assert.match(appointments, /booking:\s*\{\s*ok:\s*true\s*\}/);
 
   const admin = read("../api/admin.js");
   assert.match(admin, /notifyAppointmentChange/);
@@ -380,6 +397,9 @@ process.env.SELF_SERVICE_OTP_PEPPER =
   assert.match(admin, /actor: "admin"/);
   assert.match(admin, /becameCancelled \? "cancel" : "reschedule"/);
   assert.match(admin, /syncClinicCalendarForAppointment/);
+  assert.match(admin, /await notifyAppointmentChange/);
+  assert.match(admin, /maxDuration:\s*30/);
+  assert.doesNotMatch(admin, /void \(async/);
   // Admin must notify customer+clinic+SMS on reschedule — not clinic-cancel-only.
   assert.doesNotMatch(admin, /notifyClinicAppointmentCancelled/);
 
@@ -387,8 +407,55 @@ process.env.SELF_SERVICE_OTP_PEPPER =
   assert.match(changeNotify, /buildAppointmentChangeSms/);
   assert.match(changeNotify, /canSendSmsChangeNotify/);
   assert.match(changeNotify, /sendSms019/);
+  assert.match(changeNotify, /buildChangeIdempotencyKey/);
+  assert.match(changeNotify, /idempotency_key/);
+  assert.match(changeNotify, /retryFailedAppointmentChangeNotifies/);
   // Must not gate change SMS on reminder/confirm env (comment may mention them).
   assert.doesNotMatch(changeNotify, /isSmsRemindersEnvEnabled|isSmsBookingConfirmEnvEnabled/);
+
+  const changeSql = read("../supabase/customer-self-service.sql");
+  assert.match(changeSql, /idempotency_key/);
+  assert.match(changeSql, /uq_appointment_change_events_idempotency/);
+
+  const sendReminders = read("../api/send-reminders.js");
+  assert.match(sendReminders, /retryFailedAppointmentChangeNotifies/);
+
+  const adminUi = read("../src/pages/Admin.jsx");
+  assert.match(adminUi, /refetchInterval/);
+  assert.match(adminUi, /refetchOnWindowFocus:\s*true/);
+
+  const gcal = read("../server/googleCalendarMutation.js");
+  assert.match(gcal, /jerusalemLocalToUtcMs/);
+}
+
+// --- Idempotency key + Jerusalem wall-clock ---
+{
+  const { buildChangeIdempotencyKey } = await import("../server/appointmentChangeNotify.js");
+  const key = buildChangeIdempotencyKey({
+    appointmentId: "abc",
+    eventType: "reschedule",
+    actor: "customer",
+    before: { date: "2026-03-01", time: "10:00", status: "confirmed" },
+    after: { date: "2026-03-08", time: "12:00", status: "confirmed" },
+  });
+  assert.match(key, /abc\|reschedule\|customer\|2026-03-01\|10:00/);
+  assert.equal(
+    buildChangeIdempotencyKey({
+      appointmentId: "abc",
+      eventType: "reschedule",
+      actor: "customer",
+      before: { date: "2026-03-01", time: "10:00", status: "confirmed" },
+      after: { date: "2026-03-08", time: "12:00", status: "confirmed" },
+    }),
+    key,
+    "idempotency key stable"
+  );
+
+  const ms = jerusalemLocalToUtcMs("2026-03-08", "12:00");
+  assert.equal(ms != null && Number.isFinite(ms), true);
+  // 12:00 Jerusalem in winter is UTC+2 → 10:00Z
+  const iso = new Date(ms).toISOString();
+  assert.match(iso, /2026-03-08T10:00:00/);
 }
 
 console.log("self-service tests passed");

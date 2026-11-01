@@ -422,26 +422,44 @@ export async function rescheduleOwnedAppointment({
     },
   });
 
-  // Calendar + emails after commit — never fail the customer response.
-  void syncClinicCalendarForAppointment(
-    { ...appointment, ...updated, google_event_id: updated.google_event_id || appointment.google_event_id },
-    { action: "reschedule", previous: appointment }
-  ).catch((error) => {
-    console.error("[self-service] calendar reschedule failed:", error?.message || error);
-  });
+  // Await post-commit side effects on Vercel — fire-and-forget is killed when
+  // the response finishes. Booking already committed: never throw to the client.
+  const mergedForCalendar = {
+    ...appointment,
+    ...updated,
+    google_event_id: updated.google_event_id || appointment.google_event_id,
+  };
 
-  void notifySelfServiceChange({
-    event,
-    eventType: "reschedule",
-    appointment: updated,
-    previous: appointment,
-  }).catch((error) => {
+  let calendar = null;
+  try {
+    calendar = await syncClinicCalendarForAppointment(mergedForCalendar, {
+      action: "reschedule",
+      previous: appointment,
+    });
+  } catch (error) {
+    calendar = { error: true, message: error?.message || String(error) };
+    console.error("[self-service] calendar reschedule failed:", error?.message || error);
+  }
+
+  let notify = null;
+  try {
+    notify = await notifySelfServiceChange({
+      event,
+      eventType: "reschedule",
+      appointment: updated,
+      previous: appointment,
+    });
+  } catch (error) {
+    notify = { error: true, message: error?.message || String(error) };
     console.error("[self-service] notify reschedule failed:", error?.message || error);
-  });
+  }
 
   return {
     appointment: publicAppointmentView(updated, { now, clinicPhone: clinicPhoneFromEnv() }),
     previous: beforeSnapshot,
+    booking: { ok: true },
+    calendar,
+    notify,
   };
 }
 
@@ -516,24 +534,40 @@ export async function cancelOwnedAppointment({
     detail: { appointmentId: updated.id, before: beforeSnapshot },
   });
 
-  void syncClinicCalendarForAppointment(
-    { ...appointment, ...updated, google_event_id: updated.google_event_id || appointment.google_event_id },
-    { action: "delete" }
-  ).catch((error) => {
-    console.error("[self-service] calendar cancel failed:", error?.message || error);
-  });
+  const mergedForCalendar = {
+    ...appointment,
+    ...updated,
+    google_event_id: updated.google_event_id || appointment.google_event_id,
+  };
 
-  void notifySelfServiceChange({
-    event,
-    eventType: "cancel",
-    appointment: updated,
-    previous: appointment,
-  }).catch((error) => {
+  let calendar = null;
+  try {
+    calendar = await syncClinicCalendarForAppointment(mergedForCalendar, {
+      action: "delete",
+    });
+  } catch (error) {
+    calendar = { error: true, message: error?.message || String(error) };
+    console.error("[self-service] calendar cancel failed:", error?.message || error);
+  }
+
+  let notify = null;
+  try {
+    notify = await notifySelfServiceChange({
+      event,
+      eventType: "cancel",
+      appointment: updated,
+      previous: appointment,
+    });
+  } catch (error) {
+    notify = { error: true, message: error?.message || String(error) };
     console.error("[self-service] notify cancel failed:", error?.message || error);
-  });
+  }
 
   return {
     appointment: publicAppointmentView(updated, { now, clinicPhone: clinicPhoneFromEnv() }),
     previous: beforeSnapshot,
+    booking: { ok: true },
+    calendar,
+    notify,
   };
 }

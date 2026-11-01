@@ -3,7 +3,7 @@
  * reschedule / cancel (admin UI or self-service).
  *
  * Runs after DB commit. Failures are logged; booking state stays correct.
- * Idempotent via appointment_change_events claim columns when present.
+ * Idempotent via appointment_change_events.idempotency_key + claim columns.
  *
  * SMS is transactional: requires SMS019_* credentials and SMS_CHANGE_NOTIFY_ENABLED
  * (defaults ON when unset). Does NOT use SMS_REMINDERS_ENABLED / booking-confirm gates.
@@ -36,28 +36,96 @@ function formatSmsTime(time) {
   return formatAppointmentTimeForSms(time);
 }
 
+function clinicPhoneFromEnv() {
+  return String(process.env.CLINIC_PUBLIC_PHONE || process.env.SMS019_SENDER || "0549000301").trim();
+}
+
+/**
+ * Stable per-change key so retries / double-submits reuse one notify row.
+ */
+export function buildChangeIdempotencyKey({
+  appointmentId,
+  eventType,
+  actor = "customer",
+  before = null,
+  after = null,
+} = {}) {
+  const parts = [
+    String(appointmentId || "").trim(),
+    String(eventType || "").trim(),
+    actor === "admin" ? "admin" : "customer",
+    String(before?.date || "").trim(),
+    String(before?.time || "").trim().slice(0, 5),
+    String(before?.status || "").trim(),
+    String(after?.date || "").trim(),
+    String(after?.time || "").trim().slice(0, 5),
+    String(after?.status || "").trim(),
+  ];
+  return parts.join("|").slice(0, 240);
+}
+
 export function buildAppointmentChangeSms({
   eventType,
   patientName,
   date,
   time,
+  previousDate = null,
+  previousTime = null,
+  treatmentName = "",
+  clinicPhone = "",
 } = {}) {
-  const template =
-    eventType === "cancel" ? DEFAULT_CANCEL_SMS_TEMPLATE : DEFAULT_RESCHEDULE_SMS_TEMPLATE;
-  const rendered = renderSmsTemplate(
-    template,
-    { patientName, date, time },
-    { formatDate: formatSmsDate, formatTime: formatSmsTime }
-  );
-  if (rendered.ok) return rendered.message;
-
+  const phone = String(clinicPhone || "").trim() || clinicPhoneFromEnv();
   const name = String(patientName || "").trim() || "לקוח/ה";
+  const treatment = String(treatmentName || "").trim();
   const dateLabel = formatSmsDate(date);
   const timeLabel = formatSmsTime(time);
+  const prevDateLabel = previousDate ? formatSmsDate(previousDate) : "";
+  const prevTimeLabel = previousTime ? formatSmsTime(previousTime) : "";
+
   if (eventType === "cancel") {
-    return `שלום ${name}, התור שלך בתאריך ${dateLabel} בשעה ${timeLabel} בוטל. לתיאום מחדש: 0549000301`;
+    const template = DEFAULT_CANCEL_SMS_TEMPLATE;
+    const rendered = renderSmsTemplate(
+      template,
+      { patientName: name, date, time },
+      { formatDate: formatSmsDate, formatTime: formatSmsTime }
+    );
+    if (rendered.ok) {
+      const withTreatment = treatment
+        ? rendered.message.replace(`התור שלך`, `התור שלך ל${treatment}`)
+        : rendered.message;
+      return withTreatment.includes(phone)
+        ? withTreatment
+        : `${withTreatment} ${phone}`.trim();
+    }
+    const treatBit = treatment ? ` ל${treatment}` : "";
+    return `שלום ${name}, התור שלך${treatBit} בתאריך ${dateLabel} בשעה ${timeLabel} בוטל. לתיאום מחדש: ${phone}`;
   }
-  return `שלום ${name}, התור שלך עודכן ל־${dateLabel} בשעה ${timeLabel}. לשינוי או ביטול: 0549000301`;
+
+  // Reschedule — include treatment + previous + new slot + contact.
+  if (prevDateLabel && prevTimeLabel) {
+    const treatBit = treatment ? ` ל${treatment}` : "";
+    return (
+      `שלום ${name}, התור שלך${treatBit} עודכן מ־${prevDateLabel} ${prevTimeLabel}` +
+      ` ל־${dateLabel} בשעה ${timeLabel}. לשינוי או ביטול: ${phone}`
+    );
+  }
+
+  const template = DEFAULT_RESCHEDULE_SMS_TEMPLATE;
+  const rendered = renderSmsTemplate(
+    template,
+    { patientName: name, date, time },
+    { formatDate: formatSmsDate, formatTime: formatSmsTime }
+  );
+  if (rendered.ok) {
+    const withTreatment = treatment
+      ? rendered.message.replace(`התור שלך`, `התור שלך ל${treatment}`)
+      : rendered.message;
+    return withTreatment.includes(phone)
+      ? withTreatment
+      : `${withTreatment} ${phone}`.trim();
+  }
+  const treatBit = treatment ? ` ל${treatment}` : "";
+  return `שלום ${name}, התור שלך${treatBit} עודכן ל־${dateLabel} בשעה ${timeLabel}. לשינוי או ביטול: ${phone}`;
 }
 
 async function claimEventChannel(eventId, kind) {
@@ -98,6 +166,7 @@ async function claimEventChannel(eventId, kind) {
     return Boolean(row);
   } catch (error) {
     console.warn("[appointment-change-notify] claim failed:", error?.message || error);
+    // Missing claim columns / table: still attempt delivery once.
     return true;
   }
 }
@@ -127,6 +196,7 @@ async function markEventChannel(eventId, kind, { status, error = null } = {}) {
             err: "customer_sms_last_error",
           };
 
+  // "accepted" = provider accepted (SMS). "sent" = SMTP accepted. Never "delivered".
   const patch = {
     [cols.status]: status,
     [cols.claimed]: null,
@@ -150,8 +220,27 @@ function resolveCancelActionLabel({ actor, reason }) {
   return "בוטל ע״י הלקוח";
 }
 
+async function fetchChangeEventByIdempotencyKey(idempotencyKey) {
+  if (!idempotencyKey) return null;
+  try {
+    const rows = await supabaseRequest(
+      `appointment_change_events?idempotency_key=eq.${encodeURIComponent(idempotencyKey)}` +
+        `&select=*&order=created_at.desc&limit=1`
+    );
+    return Array.isArray(rows) ? rows[0] || null : rows || null;
+  } catch (error) {
+    if (/idempotency_key|column/i.test(String(error?.message || ""))) return null;
+    console.warn(
+      "[appointment-change-notify] idempotency lookup failed:",
+      error?.message || error
+    );
+    return null;
+  }
+}
+
 /**
  * Insert audit + notify claim row. Returns null when table/migration missing.
+ * Reuses an existing row when idempotency_key already exists.
  */
 export async function recordAppointmentChangeEvent({
   appointmentId,
@@ -161,48 +250,90 @@ export async function recordAppointmentChangeEvent({
   phoneNormalized = null,
   beforeSnapshot = null,
   afterSnapshot = null,
+  idempotencyKey = null,
 } = {}) {
   if (!appointmentId || !eventType) return null;
-  try {
+
+  const key =
+    idempotencyKey ||
+    buildChangeIdempotencyKey({
+      appointmentId,
+      eventType,
+      actor,
+      before: beforeSnapshot,
+      after: afterSnapshot,
+    });
+
+  const existing = await fetchChangeEventByIdempotencyKey(key);
+  if (existing) return existing;
+
+  const baseRow = {
+    appointment_id: appointmentId,
+    tenant_id: tenantId || null,
+    event_type: eventType,
+    actor: actor === "admin" ? "admin" : "customer",
+    phone_normalized: phoneNormalized || null,
+    before_snapshot: beforeSnapshot,
+    after_snapshot: afterSnapshot,
+    customer_email_status: "pending",
+    clinic_email_status: "pending",
+    customer_sms_status: "pending",
+  };
+
+  const tryInsert = async (body) => {
     const rows = await supabaseRequest("appointment_change_events", {
       method: "POST",
       headers: { Prefer: "return=representation" },
-      body: JSON.stringify({
-        appointment_id: appointmentId,
-        tenant_id: tenantId || null,
-        event_type: eventType,
-        actor: actor === "admin" ? "admin" : "customer",
-        phone_normalized: phoneNormalized || null,
-        before_snapshot: beforeSnapshot,
-        after_snapshot: afterSnapshot,
-        customer_email_status: "pending",
-        clinic_email_status: "pending",
-        customer_sms_status: "pending",
-      }),
+      body: JSON.stringify(body),
     });
     return Array.isArray(rows) ? rows[0] : rows;
+  };
+
+  try {
+    return await tryInsert({ ...baseRow, idempotency_key: key });
   } catch (error) {
-    // Retry without SMS claim columns (pre-migration DBs).
     const message = String(error?.message || error || "");
-    if (/customer_sms_/i.test(message) || (/column/i.test(message) && /sms/i.test(message))) {
+
+    // Unique conflict — another worker won; reuse their row.
+    if (/duplicate|unique|23505/i.test(message)) {
+      const raced = await fetchChangeEventByIdempotencyKey(key);
+      if (raced) return raced;
+    }
+
+    let insertError = error;
+
+    // Pre-migration: no idempotency_key column.
+    if (/idempotency_key/i.test(message) || (/column/i.test(message) && /idempotency/i.test(message))) {
       try {
-        const rows = await supabaseRequest("appointment_change_events", {
-          method: "POST",
-          headers: { Prefer: "return=representation" },
-          body: JSON.stringify({
-            appointment_id: appointmentId,
-            tenant_id: tenantId || null,
-            event_type: eventType,
-            actor: actor === "admin" ? "admin" : "customer",
-            phone_normalized: phoneNormalized || null,
-            before_snapshot: beforeSnapshot,
-            after_snapshot: afterSnapshot,
-            customer_email_status: "pending",
-            clinic_email_status: "pending",
-          }),
-        });
-        return Array.isArray(rows) ? rows[0] : rows;
+        return await tryInsert(baseRow);
       } catch (retryError) {
+        insertError = retryError;
+      }
+    }
+
+    const insertMessage = String(insertError?.message || insertError || "");
+
+    // Retry without SMS claim columns (pre-migration DBs).
+    if (/customer_sms_/i.test(insertMessage) || (/column/i.test(insertMessage) && /sms/i.test(insertMessage))) {
+      try {
+        const withoutSms = { ...baseRow };
+        delete withoutSms.customer_sms_status;
+        return await tryInsert({ ...withoutSms, idempotency_key: key });
+      } catch (retryError) {
+        const retryMsg = String(retryError?.message || "");
+        if (/idempotency_key/i.test(retryMsg)) {
+          try {
+            const withoutSms = { ...baseRow };
+            delete withoutSms.customer_sms_status;
+            return await tryInsert(withoutSms);
+          } catch (finalError) {
+            console.warn(
+              "[appointment-change-notify] change event insert failed:",
+              finalError?.message || finalError
+            );
+            return null;
+          }
+        }
         console.warn(
           "[appointment-change-notify] change event insert failed:",
           retryError?.message || retryError
@@ -210,9 +341,10 @@ export async function recordAppointmentChangeEvent({
         return null;
       }
     }
+
     console.warn(
       "[appointment-change-notify] change event insert failed (run customer-self-service.sql):",
-      error?.message || error
+      insertError?.message || insertError
     );
     return null;
   }
@@ -290,6 +422,8 @@ export async function notifyAppointmentChange({
             error?.message || error
           );
         }
+      } else if (event?.customer_email_sent_at || event?.customer_email_status === "sent") {
+        results.customer = { ok: true, already: true };
       }
     } else {
       results.customer = { ok: false, skipped: true, reason: "no_customer_email" };
@@ -356,7 +490,11 @@ export async function notifyAppointmentChange({
             error?.message || error
           );
         }
+      } else if (event?.clinic_email_sent_at || event?.clinic_email_status === "sent") {
+        results.clinic = { ok: true, already: true };
       }
+    } else {
+      results.clinic = { ok: false, skipped: true, reason: "no_clinic_recipients" };
     }
   } else {
     results.customer = { skipped: true, reason: "email_not_configured" };
@@ -398,17 +536,26 @@ export async function notifyAppointmentChange({
             patientName: appointment.patient_name || previous?.patient_name,
             date: smsDate,
             time: smsTime,
+            previousDate: eventType === "reschedule" ? previous?.date : null,
+            previousTime: eventType === "reschedule" ? previous?.time : null,
+            treatmentName: appointment.treatment_name || previous?.treatment_name || "",
+            clinicPhone: clinicPhoneFromEnv(),
           });
+          // Stable external id per change-event (not Date.now) so provider retries stay idempotent.
+          const externalId = eventId
+            ? `chg-${eventType}-${String(eventId).slice(0, 24)}`
+            : `chg-${eventType}-${String(appointment.id || "").slice(0, 8)}-${String(smsDate)}-${String(smsTime).slice(0, 5)}`;
           const smsResult = await sendSms019({
             phone: normalized.normalized,
             message,
-            externalId: `chg-${eventType}-${String(appointment.id || "").slice(0, 8)}-${Date.now()}`,
+            externalId,
             campaignName:
               eventType === "cancel" ? "appointment-cancel" : "appointment-reschedule",
           });
           if (!smsResult?.ok) {
             throw new Error(smsResult?.error || "sms_send_failed");
           }
+          // Provider accepted — not confirmed delivered.
           await markEventChannel(eventId, "sms", { status: "accepted" });
           results.sms = { ok: true, accepted: true };
         } catch (error) {
@@ -422,11 +569,123 @@ export async function notifyAppointmentChange({
             error?.message || error
           );
         }
+      } else if (
+        event?.customer_sms_sent_at ||
+        event?.customer_sms_status === "accepted" ||
+        event?.customer_sms_status === "sent"
+      ) {
+        results.sms = { ok: true, already: true };
       }
     }
   }
 
   return results;
+}
+
+function channelNeedsRetry(status) {
+  const s = String(status || "");
+  return !s || s === "pending" || s === "temporary_failure";
+}
+
+/**
+ * Re-attempt failed/pending change notifications (cron). Does not re-send
+ * channels already marked sent/accepted. Reloads appointment from DB.
+ */
+export async function retryFailedAppointmentChangeNotifies({
+  limit = 25,
+  olderThanMinutes = 2,
+  maxAgeDays = 7,
+} = {}) {
+  const now = Date.now();
+  const createdBefore = new Date(now - olderThanMinutes * 60 * 1000).toISOString();
+  const createdAfter = new Date(now - maxAgeDays * 24 * 60 * 60 * 1000).toISOString();
+
+  let events = [];
+  try {
+    events =
+      (await supabaseRequest(
+        `appointment_change_events?created_at=gte.${encodeURIComponent(createdAfter)}` +
+          `&created_at=lte.${encodeURIComponent(createdBefore)}` +
+          `&or=(customer_email_status.in.(pending,temporary_failure),` +
+          `clinic_email_status.in.(pending,temporary_failure),` +
+          `customer_sms_status.in.(pending,temporary_failure),` +
+          `customer_email_status.is.null,clinic_email_status.is.null,customer_sms_status.is.null)` +
+          `&select=*&order=created_at.asc&limit=${Math.max(1, Math.min(100, Number(limit) || 25))}`
+      )) || [];
+  } catch (error) {
+    console.warn(
+      "[appointment-change-notify] retry fetch failed (run customer-self-service.sql):",
+      error?.message || error
+    );
+    return { ok: false, skipped: true, reason: "fetch_failed", retried: 0 };
+  }
+
+  let retried = 0;
+  let succeeded = 0;
+  let failed = 0;
+
+  for (const event of events) {
+    const needs =
+      channelNeedsRetry(event.customer_email_status) ||
+      channelNeedsRetry(event.clinic_email_status) ||
+      channelNeedsRetry(event.customer_sms_status);
+    if (!needs) continue;
+
+    let appointment = null;
+    try {
+      const rows = await supabaseRequest(
+        `appointments?id=eq.${encodeURIComponent(event.appointment_id)}&select=*&limit=1`
+      );
+      appointment = Array.isArray(rows) ? rows[0] : rows;
+    } catch (error) {
+      console.warn(
+        "[appointment-change-notify] retry load appointment failed:",
+        error?.message || error
+      );
+      failed += 1;
+      continue;
+    }
+
+    if (!appointment && event.after_snapshot) {
+      appointment = {
+        id: event.appointment_id,
+        ...(typeof event.after_snapshot === "object" ? event.after_snapshot : {}),
+        patient_phone: event.phone_normalized,
+      };
+    }
+    if (!appointment) {
+      failed += 1;
+      continue;
+    }
+
+    const previous =
+      event.before_snapshot && typeof event.before_snapshot === "object"
+        ? event.before_snapshot
+        : null;
+
+    retried += 1;
+    try {
+      const results = await notifyAppointmentChange({
+        event,
+        eventType: event.event_type,
+        appointment,
+        previous,
+        actor: event.actor === "admin" ? "admin" : "customer",
+      });
+      const anyOk =
+        results?.customer?.ok || results?.clinic?.ok || results?.sms?.ok || results?.sms?.accepted;
+      if (anyOk) succeeded += 1;
+      else failed += 1;
+    } catch (error) {
+      failed += 1;
+      console.error(
+        "[appointment-change-notify] retry failed:",
+        error?.message || error
+      );
+    }
+  }
+
+  return { ok: true, retried, succeeded, failed, scanned: events.length };
 }
 
 /** @deprecated Prefer notifyAppointmentChange — kept for self-service imports. */

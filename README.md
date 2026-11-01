@@ -176,7 +176,7 @@ INVOICE4U_TOKEN=your-org-api-guid
 
 לקוחות מאמתים נייד בקוד SMS (019), רואים תורים קרובים, ומעדכנים/מבטלים רק אם נותרו ≥24 שעות לפני מועד התור (Asia/Jerusalem).
 
-ב־Supabase SQL Editor הריצו:
+ב־Supabase SQL Editor הריצו (בטוח להריץ שוב — כולל `idempotency_key` + עמודות SMS):
 
 ```text
 supabase/customer-self-service.sql
@@ -188,12 +188,19 @@ supabase/customer-self-service.sql
 SMS019_USERNAME=...
 SMS019_API_TOKEN=...
 SMS019_SENDER=0549000301
+GMAIL_USER=...
+GMAIL_APP_PASSWORD=...
+BOOKING_NOTIFY_EMAILS=ofirbabyinfo@gmail.com
+GOOGLE_SERVICE_ACCOUNT_KEY_JSON=...
+GOOGLE_CALENDAR_ID=...
 ```
 
-אחרי עדכון/ביטול תור (ממשק ניהול **או** שירות עצמי) השרת שולח:
+אחרי עדכון/ביטול תור (ממשק ניהול **או** שירות עצמי) השרת **ממתין** לסיום (לא fire-and-forget) של:
 - אימייל ללקוח + אימייל לקליניקה (`GMAIL_*` + `BOOKING_NOTIFY_EMAILS`)
 - SMS ללקוח (טרנזקציוני — דורש `SMS019_*`; נשלט ב־`SMS_CHANGE_NOTIFY_ENABLED`, ברירת מחדל פעיל כשלא מוגדר; **לא** תלוי ב־`SMS_REMINDERS_ENABLED` / `SMS_BOOKING_CONFIRM_ENABLED`)
 - עדכון/מחיקה ביומן Google (`GOOGLE_SERVICE_ACCOUNT_KEY_JSON` + `GOOGLE_CALENDAR_ID`)
+
+כשל ביומן/התראות **לא** מבטל את עדכון התור ב־DB. כשלונות נשמרים ב־`appointment_change_events` ומנסים שוב ב־`/api/send-reminders` (cron יומי).
 
 אופציונלי: `SELF_SERVICE_SESSION_SECRET`, `SELF_SERVICE_OTP_PEPPER`, `CLINIC_PUBLIC_PHONE`, `SMS_CHANGE_NOTIFY_ENABLED=false` לכיבוי SMS על שינויים.
 אין להגדיר `SELF_SERVICE_OTP_BYPASS` בפרודקשן (מתעלמים ממנו שם בכל מקרה).

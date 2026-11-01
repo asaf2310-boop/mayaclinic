@@ -25,6 +25,7 @@ import {
   markReminderOutcome,
   markSmsReminderOutcome,
 } from "../server/supabaseServer.js";
+import { retryFailedAppointmentChangeNotifies } from "../server/appointmentChangeNotify.js";
 
 function isAuthorized(req) {
   const secret = process.env.CRON_SECRET;
@@ -369,16 +370,35 @@ export default async function handler(req, res) {
   }
   const smsMayRun = canSendLiveSmsReminders(smsSettings);
 
-  if (!emailConfigured && !smsMayRun) {
-    res.status(503).json({
-      error: "Reminders not configured",
-      emailConfigured: false,
-      smsRemindersEnabled: false,
-    });
-    return;
-  }
-
   try {
+    // Always attempt change-notify retries (independent of reminder env gates).
+    let changeNotify = { ok: true, skipped: true, reason: "not_run", retried: 0 };
+    try {
+      changeNotify = await retryFailedAppointmentChangeNotifies({ limit: 25 });
+    } catch (error) {
+      console.error(
+        "[send-reminders] change-notify retry failed:",
+        error?.message || error
+      );
+      changeNotify = {
+        ok: false,
+        error: error?.message || String(error),
+        retried: 0,
+      };
+    }
+
+    if (!emailConfigured && !smsMayRun) {
+      res.status(200).json({
+        ok: true,
+        skipped: true,
+        reason: "reminders_not_configured",
+        emailConfigured: false,
+        smsRemindersEnabled: false,
+        changeNotify,
+      });
+      return;
+    }
+
     const email = emailConfigured
       ? await processEmailReminders()
       : { ok: true, skipped: true, reason: "email_not_configured", sent: 0, skippedCount: 0, failed: 0, total: 0 };
@@ -393,6 +413,7 @@ export default async function handler(req, res) {
       total: email.total,
       email,
       sms,
+      changeNotify,
     });
   } catch (error) {
     res.status(500).json({ error: error.message || "Failed to send reminders" });
