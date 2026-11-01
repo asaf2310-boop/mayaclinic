@@ -1,19 +1,15 @@
 import { validateCalendarAppointments, resolveDurationMinutes } from "./calendarEventBody.js";
 import { getCalendarClient, isGoogleCalendarConfigured } from "./googleCalendarClient.js";
+import { jerusalemLocalToUtcMs } from "./selfServicePolicy.js";
 
 export function isCalendarMutationConfigured() {
   return isGoogleCalendarConfigured();
 }
 
 function appointmentStartMs(date, time) {
-  const datePart = String(date || "").trim();
-  const timePart = String(time || "").trim();
-  const match = timePart.match(/^(\d{1,2}):(\d{2})/);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart) || !match) return NaN;
-  const [year, month, day] = datePart.split("-").map(Number);
-  const hours = Number(match[1]);
-  const minutes = Number(match[2]);
-  return new Date(year, month - 1, day, hours, minutes, 0, 0).getTime();
+  // Clinic appointments are Asia/Jerusalem wall-clock — never use server-local Date().
+  const ms = jerusalemLocalToUtcMs(date, time);
+  return ms == null ? NaN : ms;
 }
 
 export async function deleteCalendarEvent(eventId) {

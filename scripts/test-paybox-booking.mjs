@@ -81,6 +81,16 @@ assert.match(
 );
 assert.match(
   serverSrc,
+  /eventType:\s*"create"/,
+  "PayBox booking must persist durable calendar sync job"
+);
+assert.match(
+  serverSrc,
+  /syncCalendarForChangeEvent/,
+  "PayBox booking must sync via durable calendar change path"
+);
+assert.match(
+  serverSrc,
   /await maybeSendConfirmationEmail\(persisted\.createdRows\);[\s\S]*await maybeSendClinicBookingNotify\(persisted\.createdRows,\s*\{\s*sourceLabel:\s*"PayBox"/,
   "PayBox must send patient + clinic emails after persistence"
 );

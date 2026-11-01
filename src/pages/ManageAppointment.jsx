@@ -132,6 +132,7 @@ export default function ManageAppointment() {
   const [doneKind, setDoneKind] = useState(""); // reschedule | cancel
   const [previousSlot, setPreviousSlot] = useState(null);
   const [resultAppointment, setResultAppointment] = useState(null);
+  const [notifyStatus, setNotifyStatus] = useState(null);
 
   useEffect(() => {
     const existing = loadSelfServiceSession();
@@ -282,6 +283,7 @@ export default function ManageAppointment() {
       });
       setPreviousSlot(result.previous || { date: selected.date, time: selected.time });
       setResultAppointment(result.appointment);
+      setNotifyStatus(result.notify || null);
       setDoneKind("reschedule");
       setStep("done");
       await refreshList().catch(() => {});
@@ -311,6 +313,7 @@ export default function ManageAppointment() {
       });
       setPreviousSlot(result.previous || { date: selected.date, time: selected.time });
       setResultAppointment(result.appointment);
+      setNotifyStatus(result.notify || null);
       setDoneKind("cancel");
       setStep("done");
       await refreshList().catch(() => {});
@@ -334,7 +337,15 @@ export default function ManageAppointment() {
     setDoneKind("");
     setResultAppointment(null);
     setPreviousSlot(null);
+    setNotifyStatus(null);
   }
+
+  const notifyHadIssue =
+    notifyStatus &&
+    (notifyStatus.error ||
+      notifyStatus.customer?.ok === false ||
+      notifyStatus.clinic?.ok === false ||
+      notifyStatus.sms?.ok === false);
 
   const shellClass = clinicSite
     ? `page-background ${clinicPageGradient} clinic-page-enter font-sans`
@@ -672,6 +683,15 @@ export default function ManageAppointment() {
                 {doneKind === "cancel" ? (
                   <p className={`text-sm ${clinicSite ? clinicTextMuted : "text-muted-foreground"}`}>
                     המועד שוחרר. נשמח לראותך שוב.
+                  </p>
+                ) : null}
+                {notifyHadIssue ? (
+                  <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+                    התור נשמר במערכת. אם לא קיבלתם SMS או מייל, צרו קשר עם הקליניקה ב־
+                    <a className="underline" href={`tel:${clinicPhone}`}>
+                      {clinicPhone}
+                    </a>
+                    .
                   </p>
                 ) : null}
                 <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">

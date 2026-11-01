@@ -59,13 +59,17 @@ export async function syncClinicCalendarForAppointment(
 
     return { ...result, eventId: eventId || null };
   } catch (error) {
+    // Never log raw OAuth/client payloads — status + sanitized message only.
+    const message = String(error?.message || error || "calendar_sync_failed")
+      .replace(/Bearer\s+\S+/gi, "Bearer [redacted]")
+      .replace(/ya29\.[0-9A-Za-z._\-]+/g, "[redacted_oauth]")
+      .slice(0, 240);
     console.error("[syncClinicCalendar] failed", {
       appointmentId: appointment?.id,
-      message: error?.message,
-      status: error?.response?.status,
-      data: error?.response?.data,
+      message,
+      status: error?.response?.status || error?.code || null,
     });
-    return { error: true, message: error?.message || String(error) };
+    return { error: true, message };
   }
 }
 

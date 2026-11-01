@@ -18,13 +18,22 @@ function normalizeTime(time) {
 }
 
 function addMinutesToLocalParts(date, time, minutesToAdd) {
+  // Arithmetic on wall-clock parts (not server-local Date) so Vercel UTC
+  // does not shift end times relative to Asia/Jerusalem appointments.
   const [year, month, day] = date.split("-").map(Number);
-  const [hours, minutes] = time.split(":").map(Number);
-  const start = new Date(year, month - 1, day, hours, minutes, 0, 0);
-  const end = new Date(start.getTime() + minutesToAdd * 60 * 1000);
+  const [hours, minutes] = String(time).slice(0, 5).split(":").map(Number);
+  const totalMinutes =
+    hours * 60 + minutes + (Number.isFinite(minutesToAdd) ? minutesToAdd : 0);
+  const dayOffset = Math.floor(totalMinutes / (24 * 60));
+  const minuteOfDay = ((totalMinutes % (24 * 60)) + 24 * 60) % (24 * 60);
+  const endHours = Math.floor(minuteOfDay / 60);
+  const endMinutes = minuteOfDay % 60;
+
+  const startUtc = Date.UTC(year, month - 1, day);
+  const endUtc = new Date(startUtc + dayOffset * 24 * 60 * 60 * 1000);
   return {
-    date: `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}`,
-    time: `${pad(end.getHours())}:${pad(end.getMinutes())}:00`,
+    date: `${endUtc.getUTCFullYear()}-${pad(endUtc.getUTCMonth() + 1)}-${pad(endUtc.getUTCDate())}`,
+    time: `${pad(endHours)}:${pad(endMinutes)}:00`,
   };
 }
 

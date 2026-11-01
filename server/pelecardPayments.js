@@ -24,6 +24,9 @@ import { hasAppointmentTimeConflict } from "../src/lib/bookingSlots.js";
 import { activateGiftVoucher, appendVoucherAppointments, redeemVoucherAtomic, restoreVoucherBalance } from "./giftVouchers.js";
 import { isCalendarMutationConfigured } from "./googleCalendarMutation.js";
 import { syncClinicCalendarForAppointments } from "./syncClinicCalendar.js";
+import { recordAppointmentChangeEvent } from "./appointmentChangeNotify.js";
+import { syncCalendarForChangeEvent } from "./calendarChangeSync.js";
+import { normalizeIsraeliMobile } from "./israeliPhone.js";
 import {
   hasSuccessfulInvoice4u,
   isInvoice4uIssuing,
@@ -396,14 +399,64 @@ export async function createAppointmentsFromBooking(
   }
 
   if (createdRows.length) {
-    const syncResults = await syncClinicCalendarForAppointments(
-      createdRows.map((row) => ({ ...row, duration_minutes: bookingDurationMinutes })),
-      { action: "create" }
-    );
+    // Durable create jobs on appointment_change_events — cron retries via
+    // retryFailedCalendarSyncs without duplicating events or restoring cancels.
+    const syncResults = [];
+    for (const row of createdRows) {
+      const appointment = { ...row, duration_minutes: bookingDurationMinutes };
+      const phoneNormalized =
+        normalizeIsraeliMobile(appointment.patient_phone || booking.patient_phone || "") ||
+        null;
+      let event = null;
+      try {
+        event = await recordAppointmentChangeEvent({
+          appointmentId: appointment.id,
+          tenantId: appointment.tenant_id || booking.tenant_id || null,
+          eventType: "create",
+          actor: "customer",
+          phoneNormalized,
+          beforeSnapshot: null,
+          afterSnapshot: {
+            date: appointment.date,
+            time: appointment.time,
+            status: appointment.status || "confirmed",
+            patient_name: appointment.patient_name,
+            patient_phone: appointment.patient_phone,
+            patient_email: appointment.patient_email,
+            treatment_name: appointment.treatment_name,
+            treatment_id: appointment.treatment_id,
+            duration_minutes: bookingDurationMinutes,
+            google_event_id: appointment.google_event_id || null,
+            notes: appointment.notes || null,
+          },
+          calendarOnly: true,
+        });
+      } catch (error) {
+        console.warn(
+          "[booking] calendar create job insert failed:",
+          String(error?.message || error).slice(0, 200)
+        );
+      }
+
+      if (event?.id) {
+        syncResults.push(
+          await syncCalendarForChangeEvent({
+            event,
+            appointment,
+            action: "create",
+          })
+        );
+      } else {
+        // Pre-migration / constraint rejection — fall back to best-effort sync.
+        syncResults.push(
+          ...(await syncClinicCalendarForAppointments([appointment], { action: "create" }))
+        );
+      }
+    }
 
     if (requireCalendarSync && isCalendarMutationConfigured()) {
       const syncFailed = (Array.isArray(syncResults) ? syncResults : []).some(
-        (result) => result?.error
+        (result) => result?.error || result?.ok === false
       );
       if (syncFailed) {
         await syncClinicCalendarForAppointments(createdRows, { action: "delete" });
