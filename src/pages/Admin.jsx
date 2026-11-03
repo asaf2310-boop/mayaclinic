@@ -97,10 +97,16 @@ export default function Admin() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Appointment.update(id, data),
-    onSuccess: (updatedAppointment) => {
+    onSuccess: (updatedAppointment, variables) => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
-      if (updatedAppointment?.date) {
-        queryClient.invalidateQueries({ queryKey: ["appointments-for-date", updatedAppointment.date] });
+      queryClient.invalidateQueries({ queryKey: ["appointments-for-date"] });
+      const nextDate = updatedAppointment?.date || variables?.data?.date;
+      if (nextDate) {
+        queryClient.invalidateQueries({ queryKey: ["appointments-for-date", nextDate] });
+      }
+      const previousDate = variables?.previousDate;
+      if (previousDate && previousDate !== nextDate) {
+        queryClient.invalidateQueries({ queryKey: ["appointments-for-date", previousDate] });
       }
     },
   });
@@ -286,10 +292,17 @@ export default function Admin() {
                   }
                   onStatusChange={(id, status) => updateMutation.mutate({ id, data: { status } })}
                   onPaidChange={(id, paid) => updateMutation.mutate({ id, data: { paid } })}
-                  onUpdate={(id, data) => updateMutation.mutate({ id, data })}
+                  onUpdate={async (id, data, meta = {}) =>
+                    updateMutation.mutateAsync({
+                      id,
+                      data,
+                      previousDate: meta.previousDate || null,
+                    })
+                  }
                   onDelete={(id) => deleteMutation.mutate(id)}
                   onRefresh={() => queryClient.invalidateQueries({ queryKey: ["appointments"] })}
                   isMutating={updateMutation.isPending || deleteMutation.isPending}
+                  updateError={updateMutation.error?.message || ""}
                 />
               )}
             </TabsContent>

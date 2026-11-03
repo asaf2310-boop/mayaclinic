@@ -24,15 +24,17 @@ function createTransport() {
   });
 }
 
-export async function sendEmail({ to, subject, html }) {
+export async function sendEmail({ to, subject, html, text }) {
   const fromName = getClinicName();
   const { user: fromAddress } = getGmailCredentials();
 
   const transport = createTransport();
-  await transport.sendMail({
+  const payload = {
     from: `"${fromName}" <${fromAddress}>`,
     to,
     subject,
     html,
-  });
+  };
+  if (text) payload.text = String(text);
+  await transport.sendMail(payload);
 }

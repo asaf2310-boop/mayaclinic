@@ -57,6 +57,15 @@ const EMPTY_EDIT_FORM = {
   marketing_consent: false,
 };
 
+/** HTML time inputs need HH:MM; DB text may be HH:MM:SS. */
+function normalizeTimeInput(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const match = /^(\d{1,2}):(\d{2})/.exec(raw);
+  if (!match) return raw.slice(0, 5);
+  return `${String(Number(match[1])).padStart(2, "0")}:${match[2]}`;
+}
+
 function extractVerifiedMeridianId(notes) {
   const match = String(notes || "").match(/מזהה טיפול מרידיאן שאומת:\s*(\d+)/);
   return match?.[1] || "";
@@ -232,6 +241,7 @@ export default function AppointmentTable({
   onDelete,
   onRefresh,
   isMutating,
+  updateError = "",
 }) {
   const [editingAppointment, setEditingAppointment] = useState(null);
   const [appointmentToDelete, setAppointmentToDelete] = useState(null);
@@ -241,6 +251,7 @@ export default function AppointmentTable({
   const [meridianError, setMeridianError] = useState("");
   const [meridianSuccess, setMeridianSuccess] = useState("");
   const [editEmailError, setEditEmailError] = useState("");
+  const [editSaveError, setEditSaveError] = useState("");
 
   useEffect(() => {
     if (!editingAppointment) {
@@ -250,6 +261,7 @@ export default function AppointmentTable({
       setMeridianSuccess("");
       setMeridianBusy(false);
       setEditEmailError("");
+      setEditSaveError("");
       return;
     }
 
@@ -262,7 +274,7 @@ export default function AppointmentTable({
       treatment_name: editingAppointment.treatment_name || "",
       treatment_price: editingAppointment.treatment_price ?? "",
       date: editingAppointment.date || "",
-      time: editingAppointment.time || "",
+      time: normalizeTimeInput(editingAppointment.time),
       notes: cleanedNotes === "-" ? "" : cleanedNotes,
       status: editingAppointment.status || "pending",
       paid: Boolean(editingAppointment.paid),
@@ -272,16 +284,21 @@ export default function AppointmentTable({
     setMeridianError("");
     setMeridianSuccess("");
     setEditEmailError("");
+    setEditSaveError("");
   }, [editingAppointment]);
 
   const handleEditChange = (field, value) => {
     if (field === "patient_email" && editEmailError) setEditEmailError("");
-    setEditForm((prev) => ({ ...prev, [field]: value }));
+    if (editSaveError) setEditSaveError("");
+    setEditForm((prev) => ({
+      ...prev,
+      [field]: field === "time" ? normalizeTimeInput(value) : value,
+    }));
   };
 
-  const handleSaveEdit = (event) => {
+  const handleSaveEdit = async (event) => {
     event.preventDefault();
-    if (!editingAppointment) return;
+    if (!editingAppointment || isMutating) return;
 
     const emailResult = validateBookingEmail(editForm.patient_email, { required: false });
     if (!emailResult.ok) {
@@ -289,23 +306,33 @@ export default function AppointmentTable({
       return;
     }
     setEditEmailError("");
+    setEditSaveError("");
 
     const notesToSave = formatNotesForDisplay(editForm.notes);
-    onUpdate(editingAppointment.id, {
-      patient_name: editForm.patient_name,
-      patient_phone: editForm.patient_phone,
-      patient_email: emailResult.normalized || "",
-      treatment_name: editForm.treatment_name,
-      treatment_price: editForm.treatment_price === "" ? null : Number(editForm.treatment_price),
-      date: editForm.date,
-      time: editForm.time,
-      notes: notesToSave === "-" ? "" : notesToSave,
-      status: editForm.status,
-      paid: editForm.paid,
-      marketing_consent: editForm.marketing_consent,
-    });
-
-    setEditingAppointment(null);
+    try {
+      await onUpdate(
+        editingAppointment.id,
+        {
+          patient_name: editForm.patient_name,
+          patient_phone: editForm.patient_phone,
+          patient_email: emailResult.normalized || "",
+          treatment_name: editForm.treatment_name,
+          treatment_price: editForm.treatment_price === "" ? null : Number(editForm.treatment_price),
+          date: editForm.date,
+          time: normalizeTimeInput(editForm.time),
+          notes: notesToSave === "-" ? "" : notesToSave,
+          status: editForm.status,
+          paid: editForm.paid,
+          marketing_consent: editForm.marketing_consent,
+        },
+        { previousDate: editingAppointment.date || null }
+      );
+      setEditingAppointment(null);
+    } catch (error) {
+      setEditSaveError(
+        error?.message || updateError || "לא הצלחנו לשמור את השינויים. נסו שוב."
+      );
+    }
   };
 
   const handleVerifyMeridian = async () => {
@@ -710,16 +737,30 @@ export default function AppointmentTable({
               </label>
             </div>
 
+            {(editSaveError || updateError) && (
+              <p className="px-4 pt-2 text-sm text-destructive sm:px-6" role="alert">
+                {editSaveError || updateError}
+              </p>
+            )}
+
             <DialogFooter className="shrink-0 gap-2 border-t border-border/70 bg-background px-4 py-3 sm:px-6">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setEditingAppointment(null)}
+                disabled={isMutating}
               >
                 ביטול
               </Button>
               <Button type="submit" disabled={isMutating || meridianBusy}>
-                שמור שינויים
+                {isMutating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    שומר...
+                  </>
+                ) : (
+                  "שמור שינויים"
+                )}
               </Button>
             </DialogFooter>
           </form>

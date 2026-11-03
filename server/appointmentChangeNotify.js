@@ -60,8 +60,30 @@ export function buildChangeIdempotencyKey({
     String(after?.date || "").trim(),
     String(after?.time || "").trim().slice(0, 5),
     String(after?.status || "").trim(),
+    // Distinguish separate writes of the same A→B transition (admin revert+reapply).
+    String(after?.updated_at || "").trim(),
   ];
   return parts.join("|").slice(0, 240);
+}
+
+function channelStillOpen(status) {
+  const s = String(status || "").trim();
+  return !s || s === "pending" || s === "temporary_failure" || s === "sending";
+}
+
+/**
+ * Reuse an existing change-event row only while work remains, or for a brief
+ * double-submit window. Never reuse a fully completed row for a later identical
+ * A→B transition — that skipped GCal/notify after admin revert+reapply.
+ */
+export function shouldReuseChangeEvent(existing, { now = Date.now() } = {}) {
+  if (!existing) return false;
+  if (channelStillOpen(existing.calendar_sync_status)) return true;
+  if (channelStillOpen(existing.customer_email_status)) return true;
+  if (channelStillOpen(existing.clinic_email_status)) return true;
+  if (channelStillOpen(existing.customer_sms_status)) return true;
+  const ageMs = now - new Date(existing.created_at || 0).getTime();
+  return Number.isFinite(ageMs) && ageMs >= 0 && ageMs < 2 * 60 * 1000;
 }
 
 export function buildAppointmentChangeSms({
@@ -256,7 +278,7 @@ export async function recordAppointmentChangeEvent({
 } = {}) {
   if (!appointmentId || !eventType) return null;
 
-  const key =
+  let key =
     idempotencyKey ||
     buildChangeIdempotencyKey({
       appointmentId,
@@ -267,7 +289,12 @@ export async function recordAppointmentChangeEvent({
     });
 
   const existing = await fetchChangeEventByIdempotencyKey(key);
-  if (existing) return existing;
+  if (existing && shouldReuseChangeEvent(existing)) return existing;
+  // Terminal success for this key (e.g. earlier A→B) — mint a fresh job so a
+  // later identical transition still moves GCal and notifies.
+  if (existing) {
+    key = `${key}|reapply|${Date.now()}`.slice(0, 240);
+  }
 
   const notifyStatus = calendarOnly || eventType === "create" ? "skipped" : "pending";
 

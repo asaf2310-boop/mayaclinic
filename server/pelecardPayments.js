@@ -26,6 +26,7 @@ import { isCalendarMutationConfigured } from "./googleCalendarMutation.js";
 import { syncClinicCalendarForAppointments } from "./syncClinicCalendar.js";
 import { recordAppointmentChangeEvent } from "./appointmentChangeNotify.js";
 import { syncCalendarForChangeEvent } from "./calendarChangeSync.js";
+import { resolveCustomerManageAppointmentUrl } from "./bookingMount.js";
 import { normalizeIsraeliMobile } from "./israeliPhone.js";
 import {
   hasSuccessfulInvoice4u,
@@ -905,10 +906,11 @@ async function maybeSendConfirmationEmail(appointments) {
   }
 
   const clinicName = getClinicName();
-  const { subject, html } = buildConfirmationEmail({
+  const { subject, html, text } = buildConfirmationEmail({
     patientName: appointments[0].patient_name || "",
     appointments,
     clinicName,
+    manageUrl: resolveCustomerManageAppointmentUrl(),
   });
 
   for (const appointment of appointments) {
@@ -930,6 +932,7 @@ async function maybeSendConfirmationEmail(appointments) {
         to: validation.normalized,
         subject,
         html,
+        text,
         appointmentId: appointment.id,
         requireValid: true,
       });

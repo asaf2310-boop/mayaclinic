@@ -167,6 +167,7 @@ export async function sendPatientEmail({
   to,
   subject,
   html,
+  text,
   appointmentId = null,
   requireValid = true,
 }) {
@@ -192,6 +193,7 @@ export async function sendPatientEmail({
       to: validation.normalized,
       subject,
       html,
+      text,
     });
     return { ok: true, status: "accepted", to: validation.normalized };
   } catch (error) {

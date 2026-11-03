@@ -2,7 +2,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { getBookingBasePath, bookingUrl, isBookingAdminPath, isPublicBookingMount } from "../src/lib/bookingMount.js";
-import { getRequestBookingBasePath, resolveAdminAppOrigin, resolveAdminFrontPath, resolveBookingPublicBase } from "../server/bookingMount.js";
+import {
+  getRequestBookingBasePath,
+  resolveAdminAppOrigin,
+  resolveAdminFrontPath,
+  resolveBookingPublicBase,
+  resolveCustomerManageAppointmentUrl,
+} from "../server/bookingMount.js";
 import paymentReturn from "../api/pelecard/return.js";
 
 test("booking mount preserves legacy paths and external URLs", () => {
@@ -50,6 +56,10 @@ test("mounted admin origin and OAuth front path stay on the main domain", () => 
     assert.equal(resolveAdminFrontPath("/booking", "/admin"), "/booking/admin");
     assert.equal(resolveAdminFrontPath("", "/admin"), "/admin");
     assert.equal(getRequestBookingBasePath({ headers: { host: "ofirbaby.vercel.app" }, query: {} }), "");
+    assert.equal(
+      resolveCustomerManageAppointmentUrl(),
+      "https://www.ofirbaby.com/booking/manage"
+    );
   } finally {
     if (previous === undefined) delete process.env.OFIRBABY_BOOKING_ORIGIN; else process.env.OFIRBABY_BOOKING_ORIGIN = previous;
     if (legacy === undefined) delete process.env.PELECARD_PUBLIC_ORIGIN; else process.env.PELECARD_PUBLIC_ORIGIN = legacy;

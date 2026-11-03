@@ -60,3 +60,46 @@ export function resolveBookingPublicBase(req, basePath = "") {
   }
   return `${url.origin}/booking`;
 }
+
+/**
+ * Absolute customer self-service manage URL for emails (no PII, no tokens).
+ * OFIRBABY public site mounts booking at /booking → /booking/manage.
+ * Standalone ofirbaby.vercel.app serves /manage at the app root.
+ */
+export function resolveCustomerManageAppointmentUrl() {
+  const ofirOrigin = String(process.env.OFIRBABY_BOOKING_ORIGIN || "")
+    .trim()
+    .replace(/\/$/, "");
+  if (ofirOrigin) {
+    try {
+      const url = new URL(ofirOrigin);
+      if (url.pathname === "/" && !url.search && !url.hash) {
+        return `${url.origin}/booking/manage`;
+      }
+    } catch {
+      /* fall through */
+    }
+  }
+
+  const publicOrigin = String(
+    process.env.PUBLIC_ORIGIN ||
+      process.env.PELECARD_PUBLIC_ORIGIN ||
+      process.env.PUBLIC_SITE_URL ||
+      process.env.VITE_PUBLIC_SITE_URL ||
+      ""
+  )
+    .trim()
+    .replace(/\/$/, "");
+  if (!publicOrigin) return "";
+
+  try {
+    const url = new URL(publicOrigin);
+    const host = url.hostname.toLowerCase();
+    if (host === "www.ofirbaby.com" || host === "ofirbaby.com") {
+      return `${url.origin}/booking/manage`;
+    }
+    return `${url.origin}/manage`;
+  } catch {
+    return "";
+  }
+}

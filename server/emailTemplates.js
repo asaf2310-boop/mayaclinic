@@ -88,17 +88,71 @@ function baseLayout({ title, bodyHtml, clinicName }) {
 </html>`;
 }
 
-export function buildConfirmationEmail({ patientName, appointments, clinicName }) {
+function formatManageCtaBlock(manageUrl = "") {
+  const url = String(manageUrl || "").trim();
+  if (!url) {
+    return {
+      html: `<p style="font-size:14px;line-height:1.6;margin-top:18px;color:#666;">לשינוי או ביטול, צרו קשר עם הקליניקה.</p>`,
+      text: "לשינוי או ביטול, צרו קשר עם הקליניקה.",
+    };
+  }
+  return {
+    html: `
+    <div style="margin-top:22px;padding:18px 16px;background:#f3f7f4;border:1px solid #E0E8E2;border-radius:14px;text-align:center;">
+      <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#2F3B34;">ניתן לעדכן או לבטל את התור דרך האתר (עד 24 שעות לפני המועד, עם אימות SMS).</p>
+      <a href="${escapeHtml(url)}" style="display:inline-block;background:#5D7F6D;color:#ffffff;padding:14px 22px;border-radius:12px;text-decoration:none;font-size:16px;font-weight:700;">לעדכון או ביטול התור</a>
+    </div>
+    <p style="font-size:13px;line-height:1.6;margin-top:12px;color:#888;word-break:break-all;">${escapeHtml(url)}</p>`,
+    text:
+      `לעדכון או ביטול התור (עד 24 שעות לפני המועד, עם אימות SMS):\n${url}`,
+  };
+}
+
+function formatAppointmentsPlain(appointments = []) {
+  return (appointments || [])
+    .map((item) => {
+      const when = `${formatDateHe(item.date)} ${item.time || ""}`.trim();
+      const price = item.treatment_price
+        ? ` · ₪${Number(item.treatment_price).toLocaleString("he-IL")}`
+        : "";
+      return `- ${item.treatment_name || "טיפול"} · ${when}${price}`;
+    })
+    .join("\n");
+}
+
+export function buildConfirmationEmail({
+  patientName,
+  appointments,
+  clinicName,
+  manageUrl = "",
+}) {
+  const cta = formatManageCtaBlock(manageUrl);
   const bodyHtml = `
     <p style="font-size:16px;line-height:1.6;">שלום ${escapeHtml(patientName || "יקיר/ה")},</p>
     <p style="font-size:16px;line-height:1.6;">התור שלך נקבע בהצלחה. להלן פרטי הזמנת התור:</p>
     ${formatAppointmentsTable(appointments)}
     ${formatVisitInstructionsBlock()}
-    <p style="font-size:14px;line-height:1.6;margin-top:18px;color:#666;">לשינוי או ביטול, צרו קשר עם הקליניקה.</p>`;
+    ${cta.html}`;
+
+  const text = [
+    `שלום ${patientName || "יקיר/ה"},`,
+    "",
+    `התור שלך נקבע בהצלחה ב${clinicName}.`,
+    "",
+    formatAppointmentsPlain(appointments),
+    "",
+    "פרטים חשובים לפני הגעה:",
+    "ישראל עידוד 8, פתח תקווה — קומה 7, דירה 26",
+    "",
+    cta.text,
+  ]
+    .filter((line) => line != null)
+    .join("\n");
 
   return {
     subject: `אישור הזמנת תור — ${clinicName}`,
     html: baseLayout({ title: "אישור הזמנת תור", bodyHtml, clinicName }),
+    text,
   };
 }
 
