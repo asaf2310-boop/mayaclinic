@@ -138,6 +138,70 @@ const appointments = [
     true,
     "brief window still suppresses double-submit re-notify"
   );
+
+  // Admin A→B→C→B narrative (slot A=10:00, B=12:00, C=14:00):
+  // after each completed sync, the next identical or new transition must mint work.
+  const completed = (iso) => ({
+    created_at: iso,
+    calendar_sync_status: "synced",
+    customer_email_status: "sent",
+    clinic_email_status: "sent",
+    customer_sms_status: "sent",
+  });
+  assert.equal(
+    shouldReuseChangeEvent(completed("2020-01-01T00:00:00.000Z")),
+    false,
+    "A→B completed: later A→B reapply must not reuse"
+  );
+  assert.equal(
+    shouldReuseChangeEvent(completed("2020-01-01T00:00:00.000Z")),
+    false,
+    "B→C completed: prior job must not block C sync"
+  );
+  const sameWriteRetry = completed(new Date().toISOString());
+  assert.equal(
+    shouldReuseChangeEvent(sameWriteRetry),
+    true,
+    "retry same edit request within 2m reuses (no duplicate GCal work)"
+  );
+  const keyAB1 = buildChangeIdempotencyKey({
+    appointmentId: "appt-1",
+    eventType: "reschedule",
+    actor: "admin",
+    before: { date: "2026-03-01", time: "10:00", status: "confirmed" },
+    after: {
+      date: "2026-03-01",
+      time: "12:00",
+      status: "confirmed",
+      updated_at: "2026-03-01T10:00:00.000Z",
+    },
+  });
+  const keyBC = buildChangeIdempotencyKey({
+    appointmentId: "appt-1",
+    eventType: "reschedule",
+    actor: "admin",
+    before: { date: "2026-03-01", time: "12:00", status: "confirmed" },
+    after: {
+      date: "2026-03-01",
+      time: "14:00",
+      status: "confirmed",
+      updated_at: "2026-03-01T11:00:00.000Z",
+    },
+  });
+  const keyAB2 = buildChangeIdempotencyKey({
+    appointmentId: "appt-1",
+    eventType: "reschedule",
+    actor: "admin",
+    before: { date: "2026-03-01", time: "10:00", status: "confirmed" },
+    after: {
+      date: "2026-03-01",
+      time: "12:00",
+      status: "confirmed",
+      updated_at: "2026-03-01T12:00:00.000Z",
+    },
+  });
+  assert.notEqual(keyAB1, keyBC, "A→B and B→C are distinct jobs");
+  assert.notEqual(keyAB1, keyAB2, "reapply A→B after C→A uses fresh updated_at");
 }
 
 console.log("confirmation manage CTA + change-event reuse: ok");
