@@ -4,6 +4,7 @@ import {
 } from "../server/emailTemplates.js";
 import { getClinicName, isEmailConfigured, sendEmail } from "../server/gmail.js";
 import { getBookingNotifyEmails } from "../server/bookingNotify.js";
+import { resolveCustomerManageAppointmentUrl } from "../server/bookingMount.js";
 import { isAllowedAdminEmail } from "../server/googleAdminAuth.js";
 import { fetchRecentAppointmentsByIds } from "../server/supabaseServer.js";
 
@@ -48,12 +49,14 @@ export default async function handler(req, res) {
     if (isAdminTest && !appointmentIds.length) {
       const clinicName = getClinicName();
       const appointments = sampleAppointments(body);
-      const { subject, html } = buildConfirmationEmail({
+      const manageUrl = resolveCustomerManageAppointmentUrl();
+      const { subject, html, text } = buildConfirmationEmail({
         patientName: String(body.patientName || "אסף").trim(),
         appointments,
         clinicName,
+        manageUrl,
       });
-      await sendEmail({ to: testTo, subject, html });
+      await sendEmail({ to: testTo, subject, html, text });
       res.status(200).json({
         ok: true,
         sent: 1,
@@ -61,6 +64,7 @@ export default async function handler(req, res) {
         patientEmailed: true,
         patientEmailMasked: maskEmail(testTo),
         clinicEmailed: false,
+        manageUrl: manageUrl || null,
       });
       return;
     }
@@ -88,12 +92,13 @@ export default async function handler(req, res) {
 
     if (patientEmail) {
       try {
-        const { subject, html } = buildConfirmationEmail({
+        const { subject, html, text } = buildConfirmationEmail({
           patientName,
           appointments,
           clinicName,
+          manageUrl: resolveCustomerManageAppointmentUrl(),
         });
-        await sendEmail({ to: patientEmail, subject, html });
+        await sendEmail({ to: patientEmail, subject, html, text });
         sent += 1;
       } catch (error) {
         errors.push(`patient: ${error.message || error}`);

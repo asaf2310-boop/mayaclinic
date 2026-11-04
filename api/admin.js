@@ -321,6 +321,27 @@ async function getEntityById(entity, id, tenantId) {
   return Array.isArray(rows) ? rows[0] || null : rows || null;
 }
 
+function normalizeAppointmentTime(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  // HTML time inputs and Postgres text may be HH:MM or HH:MM:SS(.sss)
+  const match = /^(\d{1,2}):(\d{2})(?::\d{2}(?:\.\d+)?)?$/.exec(raw);
+  if (!match) return raw.slice(0, 5);
+  return `${String(Number(match[1])).padStart(2, "0")}:${match[2]}`;
+}
+
+function appointmentDateKey(value) {
+  return String(value || "").trim().slice(0, 10);
+}
+
+function appointmentSlotChanged(previous, next) {
+  if (!previous || !next) return false;
+  return (
+    appointmentDateKey(previous.date) !== appointmentDateKey(next.date) ||
+    normalizeAppointmentTime(previous.time) !== normalizeAppointmentTime(next.time)
+  );
+}
+
 async function updateEntity(entity, id, row, tenantId) {
   const payload = { ...(row || {}) };
   delete payload.tenant_id;
@@ -328,6 +349,10 @@ async function updateEntity(entity, id, row, tenantId) {
 
   const previous =
     entity === "appointments" ? await getEntityById(entity, id, tenantId) : null;
+
+  if (entity === "appointments" && Object.prototype.hasOwnProperty.call(payload, "time")) {
+    payload.time = normalizeAppointmentTime(payload.time);
+  }
 
   if (entity === "appointments" && Object.prototype.hasOwnProperty.call(payload, "patient_email")) {
     const emailResult = validateBookingEmail(payload.patient_email, { required: false });
@@ -359,13 +384,14 @@ async function updateEntity(entity, id, row, tenantId) {
 
   // Date or time change = new reminder occurrence. Invalidate prior reminder claim/sent state.
   // Do not touch confirmation_* audit fields or auto-resend confirmations.
+  // Compare normalized HH:MM so "10:00" vs "10:00:00" is not a false slot change.
   const appointmentSlotChanging =
     entity === "appointments" &&
     previous &&
-    ((Object.prototype.hasOwnProperty.call(payload, "date") &&
-      String(payload.date || "") !== String(previous.date || "")) ||
-      (Object.prototype.hasOwnProperty.call(payload, "time") &&
-        String(payload.time || "") !== String(previous.time || "")));
+    appointmentSlotChanged(previous, {
+      date: Object.prototype.hasOwnProperty.call(payload, "date") ? payload.date : previous.date,
+      time: Object.prototype.hasOwnProperty.call(payload, "time") ? payload.time : previous.time,
+    });
 
   if (appointmentSlotChanging) {
     payload.reminder_sent_at = null;
@@ -443,10 +469,7 @@ async function updateEntity(entity, id, row, tenantId) {
 
   const previousStatus = String(previous?.status || "");
   const nextStatus = String(rowOut.status || "");
-  const dateTimeChanged =
-    Boolean(previous) &&
-    (String(previous.date || "") !== String(rowOut.date || "") ||
-      String(previous.time || "") !== String(rowOut.time || ""));
+  const dateTimeChanged = Boolean(previous) && appointmentSlotChanged(previous, rowOut);
   const becameCancelled =
     nextStatus === "cancelled" && previousStatus && previousStatus !== "cancelled";
 
@@ -473,7 +496,7 @@ async function updateEntity(entity, id, row, tenantId) {
       const beforeSnapshot = previous
         ? {
             date: previous.date,
-            time: previous.time,
+            time: normalizeAppointmentTime(previous.time) || previous.time,
             status: previous.status,
             treatment_name: previous.treatment_name,
             patient_name: previous.patient_name || null,
@@ -484,13 +507,15 @@ async function updateEntity(entity, id, row, tenantId) {
         : null;
       const afterSnapshot = {
         date: rowOut.date,
-        time: rowOut.time,
+        time: normalizeAppointmentTime(rowOut.time) || rowOut.time,
         status: rowOut.status,
         treatment_name: rowOut.treatment_name,
         patient_name: rowOut.patient_name || previous?.patient_name || null,
         patient_phone: rowOut.patient_phone || previous?.patient_phone || null,
         patient_email: rowOut.patient_email || previous?.patient_email || null,
         google_event_id: rowOut.google_event_id || previous?.google_event_id || null,
+        // Pins idempotency to this write so revert+reapply still syncs GCal.
+        updated_at: rowOut.updated_at || null,
       };
       try {
         const event = await recordAppointmentChangeEvent({
@@ -1046,6 +1071,14 @@ export default async function handler(req, res) {
 
     res.status(405).json({ error: "Method not allowed" });
   } catch (error) {
-    res.status(500).json({ error: error?.message || "Admin request failed" });
+    const message = String(error?.message || error || "Admin request failed");
+    if (/appointment_time_conflict/i.test(message)) {
+      res.status(409).json({
+        error: "המועד חופף לתור אחר. בחרו שעה אחרת או בטלו את התור הקיים.",
+        code: "appointment_time_conflict",
+      });
+      return;
+    }
+    res.status(error?.statusCode || 500).json({ error: message });
   }
 }

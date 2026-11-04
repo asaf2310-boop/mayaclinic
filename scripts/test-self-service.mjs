@@ -448,6 +448,26 @@ process.env.SELF_SERVICE_OTP_PEPPER =
   const adminUi = read("../src/pages/Admin.jsx");
   assert.match(adminUi, /refetchInterval/);
   assert.match(adminUi, /refetchOnWindowFocus:\s*true/);
+  assert.match(adminUi, /mutateAsync/);
+  assert.match(adminUi, /previousDate/);
+
+  const appointmentTable = read("../src/components/admin/AppointmentTable.jsx");
+  assert.match(appointmentTable, /normalizeTimeInput/);
+  assert.match(appointmentTable, /await onUpdate/);
+  assert.match(appointmentTable, /editSaveError/);
+
+  const changeNotifyReuse = read("../server/appointmentChangeNotify.js");
+  assert.match(changeNotifyReuse, /shouldReuseChangeEvent/);
+  assert.match(changeNotifyReuse, /reapply/);
+
+  const confirmTpl = read("../server/emailTemplates.js");
+  assert.match(confirmTpl, /לעדכון או ביטול התור/);
+  assert.match(confirmTpl, /manageUrl/);
+  assert.match(confirmTpl, /\btext\b/);
+
+  const bookingMount = read("../server/bookingMount.js");
+  assert.match(bookingMount, /resolveCustomerManageAppointmentUrl/);
+  assert.match(bookingMount, /\/booking\/manage/);
 
   const gcal = read("../server/googleCalendarMutation.js");
   assert.match(gcal, /jerusalemLocalToUtcMs/);

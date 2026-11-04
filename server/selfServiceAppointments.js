@@ -416,6 +416,7 @@ export async function rescheduleOwnedAppointment({
       patient_phone: updated.patient_phone || appointment.patient_phone || null,
       patient_email: updated.patient_email || appointment.patient_email || null,
       google_event_id: updated.google_event_id || appointment.google_event_id || null,
+      updated_at: updated.updated_at || null,
     },
   });
 
@@ -561,6 +562,7 @@ export async function cancelOwnedAppointment({
       patient_phone: updated.patient_phone || appointment.patient_phone || null,
       patient_email: updated.patient_email || appointment.patient_email || null,
       google_event_id: updated.google_event_id || appointment.google_event_id || null,
+      updated_at: updated.updated_at || null,
     },
   });
 
