@@ -73,6 +73,7 @@ export default function PaymentStep({
   formData,
   treatment,
   onBack,
+  onBookAgain,
   paymentMethod = "credit",
 }) {
   const isMeridian = paymentMethod === "meridian";
@@ -483,12 +484,22 @@ export default function PaymentStep({
     finally { setVoucherLoading(false); }
   };
 
+  const handleBookAgain = () => {
+    // Prefer parent reset: clears pendingFormData so this PaymentStep unmounts,
+    // dropping success/payment/idempotency state without a same-route navigate.
+    if (typeof onBookAgain === "function") {
+      onBookAgain();
+      return;
+    }
+    navigate("/book", { replace: true });
+  };
+
   if (meridianSuccess) {
     return (
       <BookingSuccess
         appointment={meridianSuccess}
         hidePrices
-        onReset={() => navigate("/book", { replace: true })}
+        onReset={handleBookAgain}
       />
     );
   }
@@ -498,12 +509,16 @@ export default function PaymentStep({
       <BookingSuccess
         appointment={movementSuccess}
         hidePrices
-        onReset={() =>
+        onReset={() => {
+          if (typeof onBookAgain === "function") {
+            onBookAgain();
+            return;
+          }
           navigate(
             `/book?channel=${clinicSite?.momentBooking?.channel || "movement"}`,
             { replace: true }
-          )
-        }
+          );
+        }}
       />
     );
   }
@@ -512,7 +527,7 @@ export default function PaymentStep({
     return (
       <BookingSuccess
         appointment={cashSuccess}
-        onReset={() => navigate("/book", { replace: true })}
+        onReset={handleBookAgain}
       />
     );
   }
@@ -521,12 +536,14 @@ export default function PaymentStep({
     return (
       <BookingSuccess
         appointment={payboxSuccess}
-        onReset={() => navigate("/book", { replace: true })}
+        onReset={handleBookAgain}
       />
     );
   }
 
-  if (voucherSuccess) return <BookingSuccess appointment={voucherSuccess} onReset={() => navigate("/book", { replace: true })} />;
+  if (voucherSuccess) {
+    return <BookingSuccess appointment={voucherSuccess} onReset={handleBookAgain} />;
+  }
 
   return (
     <motion.div
