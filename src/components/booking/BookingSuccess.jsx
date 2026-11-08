@@ -142,17 +142,17 @@ export default function BookingSuccess({ appointment, onReset, hidePrices = fals
             עדכון או ביטול תור
           </Link>
         </Button>
+        {/*
+          Must call onReset (parent state clear) — do not Link-navigate to /book
+          while already on /book, or PaymentStep success state never unmounts.
+        */}
         <Button
-          asChild
+          type="button"
           className={`w-full gap-2 sm:w-auto ${clinicSite ? clinicPrimaryBtn : "rounded-xl"}`}
+          onClick={() => onReset?.()}
         >
-          <Link
-            to={bookingBasePath ? "/book" : "/"}
-            onClick={() => onReset?.()}
-          >
-            <CalendarPlus className="w-4 h-4" />
-            קביעת תור נוסף
-          </Link>
+          <CalendarPlus className="w-4 h-4" />
+          קביעת תור נוסף
         </Button>
       </div>
     </motion.div>

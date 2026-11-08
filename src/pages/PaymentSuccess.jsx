@@ -4,6 +4,7 @@ import { Loader2 } from "lucide-react";
 import Navbar from "../components/layout/Navbar";
 import BookingSuccess from "../components/booking/BookingSuccess";
 import GiftVoucherSuccess from "../components/booking/GiftVoucherSuccess";
+import { buildBookAgainNavigationState } from "@/lib/bookAgain";
 import {
   fetchPelecardSession,
   getStoredPelecardSessionToken,
@@ -101,7 +102,29 @@ export default function PaymentSuccess() {
           ) : appointment ? (
             <BookingSuccess
               appointment={appointment}
-              onReset={() => navigate("/book", { replace: true })}
+              onReset={() =>
+                navigate("/book", {
+                  replace: true,
+                  state: buildBookAgainNavigationState({
+                    ...appointment,
+                    patient_email:
+                      appointment.patient_email ||
+                      session?.patientEmail ||
+                      session?.patient_email ||
+                      "",
+                    patient_name:
+                      appointment.patient_name ||
+                      session?.patientName ||
+                      session?.patient_name ||
+                      "",
+                    patient_phone:
+                      appointment.patient_phone ||
+                      session?.patientPhone ||
+                      session?.patient_phone ||
+                      "",
+                  }),
+                })
+              }
             />
           ) : (
             <div className={`px-6 py-16 text-center ${clinicSite ? clinicGlassPanel : ""}`}>

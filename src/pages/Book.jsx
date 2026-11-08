@@ -1,9 +1,14 @@
 import { bookingBasePath } from "@/lib/bookingMount";
+import {
+  createFreshBookingSessionState,
+  extractReusableBookingContact,
+  readBookAgainContactFromLocationState,
+} from "@/lib/bookAgain";
 import { emitBookingFunnelEvent } from "@/lib/ofirbabyAnalytics";
 import { Button } from "@/components/ui/button";
 import React, { useState, useEffect, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Link, useSearchParams } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { CalendarClock } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import AllInCenterAttribution from "@/components/AllInCenterAttribution";
@@ -49,6 +54,9 @@ function resolvePaymentMethod(searchParams) {
 
 export default function Book() {
   const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const paymentMethod = resolvePaymentMethod(searchParams);
   const isMoment = paymentMethod === "movement";
   const isMeridian = paymentMethod === "meridian";
@@ -59,8 +67,11 @@ export default function Book() {
   const [selectedTreatment, setSelectedTreatment] = useState(null);
   const [pendingFormData, setPendingFormData] = useState(null);
   const [meridianVerified, setMeridianVerified] = useState(null);
-  const [savedFormData, setSavedFormData] = useState(null);
+  const [savedFormData, setSavedFormData] = useState(() =>
+    readBookAgainContactFromLocationState(location.state)
+  );
   const [stage, setStage] = useState("treatment");
+  const [bookingEpoch, setBookingEpoch] = useState(0);
   const clinicSite = getClinicSite();
 
   useEffect(() => {
@@ -71,6 +82,14 @@ export default function Book() {
     if (!selectedTreatment?.id) return;
     emitBookingFunnelEvent("treatment_selected", { contentKey: `/booking/book` });
   }, [selectedTreatment?.id]);
+
+  // Consume one-shot contact reuse from /payment/success → /book navigation.
+  useEffect(() => {
+    const contact = readBookAgainContactFromLocationState(location.state);
+    if (!contact) return;
+    setSavedFormData(contact);
+    navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
+  }, [location.pathname, location.search, location.state, navigate]);
 
   const { data: treatments = [], isLoading } = useQuery({
     queryKey: ["treatments"],
@@ -88,7 +107,7 @@ export default function Book() {
     setSelectedTreatment(null);
     setPendingFormData(null);
     setMeridianVerified(null);
-    setSavedFormData(null);
+    setSavedFormData((prev) => extractReusableBookingContact(prev));
     setStage("treatment");
   }, [paymentMethod]);
 
@@ -111,6 +130,27 @@ export default function Book() {
       meridianTreatmentId: meridianVerified?.treatmentId || "",
       meridianVerificationToken: meridianVerified?.verificationToken || "",
     });
+  };
+
+  /** Leave success UI and start a new booking at treatment selection. */
+  const handleBookAgain = () => {
+    const previous = pendingFormData || savedFormData;
+    const next = createFreshBookingSessionState(previous);
+    setSelectedTreatment(next.selectedTreatment);
+    setPendingFormData(next.pendingFormData);
+    setMeridianVerified(next.meridianVerified);
+    setSavedFormData(next.savedFormData);
+    setStage(next.stage);
+    setBookingEpoch((value) => value + 1);
+
+    // Confirmed appointment stays in DB; refresh slot caches for the new flow.
+    void queryClient.invalidateQueries({ queryKey: ["appointments-for-booking"] });
+    void queryClient.invalidateQueries({ queryKey: ["appointments-for-date"] });
+    void queryClient.invalidateQueries({ queryKey: ["availability"] });
+
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   const pageTitle = isMoment
@@ -157,10 +197,12 @@ export default function Book() {
           ) : null}
           {pendingFormData ? (
             <PaymentStep
+              key={`payment-${bookingEpoch}`}
               formData={pendingFormData}
               treatment={selectedTreatment}
               paymentMethod={paymentMethod}
               onBack={() => setPendingFormData(null)}
+              onBookAgain={handleBookAgain}
             />
           ) : (
             <>
@@ -253,13 +295,14 @@ export default function Book() {
                         <div className={`h-px ${clinicSite ? "bg-[#E8ECE8]" : "bg-border"}`} />
 
                         <BookingErrorBoundary
-                          key={selectedTreatment.id}
+                          key={`${bookingEpoch}-${selectedTreatment.id}`}
                           onReset={() => {
                             setPendingFormData(null);
                             setStage("treatment");
                           }}
                         >
                           <BookingForm
+                            key={`form-${bookingEpoch}-${selectedTreatment.id}`}
                             step={bookingBasePath ? stage : "all"}
                             onStepChange={setStage}
                             initialData={savedFormData}
