@@ -2,12 +2,12 @@
  * Minutes blocked after an existing appointment start (treatment + buffer).
  *
  * For each active appointment at time T on date D, slot S (same day) is unavailable when:
- *   forward:  minutes(S) >= minutes(T) AND minutes(S) <= minutes(T) + BLOCK_AFTER_MINUTES
+ *   forward:  minutes(S) >= minutes(T) AND minutes(S) < minutes(T) + BLOCK_AFTER_MINUTES
  *   backward: minutes(S) < minutes(T) AND minutes(T) - minutes(S) < BLOCK_AFTER_MINUTES
  *   overlap:  minutes(S) < minutes(T) AND minutes(S) + bookingDurationMinutes > minutes(T)
  *
- * Next bookable slot after T is the first configured slot with minutes(S) > minutes(T) + BLOCK_AFTER_MINUTES
- * (e.g. T=10:00 → blocked through 11:30 inclusive, next is 12:00 on a 30-min grid).
+ * Next bookable slot after T is the first configured slot with minutes(S) >= minutes(T) + BLOCK_AFTER_MINUTES
+ * (e.g. T=10:00 → blocked through 11:00, next is 11:30 on a 30-min grid; T=19:30 → 21:00 is free).
  */
 export const BLOCK_AFTER_MINUTES = 90;
 
@@ -24,7 +24,7 @@ export const getActiveAppointments = (appointments = []) =>
 
 /**
  * True when `slot` must not be offered because of an existing booking at `appointment.time`.
- * Forward: same start and any slot up to BLOCK_AFTER_MINUTES after the booking.
+ * Forward: same start and any slot strictly before BLOCK_AFTER_MINUTES after the booking.
  * Backward: slot starts within BLOCK_AFTER_MINUTES before the booking, or would run into it.
  */
 export const isSlotBlockedByAppointment = (
@@ -38,7 +38,7 @@ export const isSlotBlockedByAppointment = (
 
   if (
     slotMinutes >= appointmentMinutes &&
-    slotMinutes <= appointmentMinutes + BLOCK_AFTER_MINUTES
+    slotMinutes < appointmentMinutes + BLOCK_AFTER_MINUTES
   ) {
     return true;
   }
