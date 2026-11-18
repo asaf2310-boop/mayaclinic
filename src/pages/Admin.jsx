@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useDeferredValue, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import Navbar from "../components/layout/Navbar";
@@ -68,7 +68,12 @@ export default function Admin() {
   const [activeAdminTab, setActiveAdminTab] = useState("appointments");
   const [statusFilter, setStatusFilter] = useState("all");
   const [appointmentSearch, setAppointmentSearch] = useState("");
+  const [isEditingAppointment, setIsEditingAppointment] = useState(false);
+  const deferredAppointmentSearch = useDeferredValue(appointmentSearch);
   const queryClient = useQueryClient();
+  const handleEditingChange = useCallback((editing) => {
+    setIsEditingAppointment(Boolean(editing));
+  }, []);
 
   const { data: appointments = [], isLoading } = useQuery({
     queryKey: ["appointments"],
@@ -76,8 +81,11 @@ export default function Admin() {
     // Customer self-service reschedules update Supabase directly — keep admin
     // calendar fresh without requiring a hard reload.
     staleTime: 15_000,
-    refetchInterval: activeAdminTab === "appointments" ? 30_000 : false,
-    refetchOnWindowFocus: true,
+    // Pause polling while the edit dialog is open so a mid-type refetch
+    // cannot jank the form under the modal.
+    refetchInterval:
+      activeAdminTab === "appointments" && !isEditingAppointment ? 30_000 : false,
+    refetchOnWindowFocus: !isEditingAppointment,
   });
 
   const { data: treatments = [] } = useQuery({
@@ -126,14 +134,16 @@ export default function Admin() {
         : clinicAppointments.filter((a) => a.status === statusFilter);
 
     return byStatus
-      .filter((appointment) => appointmentMatchesSearch(appointment, appointmentSearch))
+      .filter((appointment) =>
+        appointmentMatchesSearch(appointment, deferredAppointmentSearch)
+      )
       .sort((a, b) => {
         // Newest date first, then latest time within the same day.
         const dateCompare = (b.date || "").localeCompare(a.date || "");
         if (dateCompare !== 0) return dateCompare;
         return (b.time || "").localeCompare(a.time || "");
       });
-  }, [appointmentSearch, clinicAppointments, statusFilter]);
+  }, [deferredAppointmentSearch, clinicAppointments, statusFilter]);
 
   const stats = {
     total: clinicAppointments.length,
@@ -286,7 +296,7 @@ export default function Admin() {
                 <AppointmentTable
                   appointments={filteredAppointments}
                   emptyMessage={
-                    appointmentSearch.trim()
+                    deferredAppointmentSearch.trim()
                       ? "לא נמצאו תורים התואמים לחיפוש"
                       : "אין תורים עדיין"
                   }
@@ -301,6 +311,7 @@ export default function Admin() {
                   }
                   onDelete={(id) => deleteMutation.mutate(id)}
                   onRefresh={() => queryClient.invalidateQueries({ queryKey: ["appointments"] })}
+                  onEditingChange={handleEditingChange}
                   isMutating={updateMutation.isPending || deleteMutation.isPending}
                   updateError={updateMutation.error?.message || ""}
                 />

@@ -7,13 +7,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -24,175 +17,18 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
+import { CheckCircle2, Circle, ExternalLink, Pencil, Trash2 } from "lucide-react";
+import AppointmentEditDialog from "@/components/admin/AppointmentEditDialog";
 import {
-  bookingEmailErrorMessage,
-  validateBookingEmail,
-} from "@/lib/bookingEmailValidation";
-import { CheckCircle2, Circle, ExternalLink, Loader2, Pencil, Trash2 } from "lucide-react";
-import { verifyMeridianTreatmentId } from "@/lib/meridianBooking";
-
-const STATUS_MAP = {
-  pending: { label: "ממתין" },
-  confirmed: { label: "מאושר" },
-  cancelled: { label: "בוטל" },
-  completed: { label: "הושלם" },
-};
-
-const EMPTY_EDIT_FORM = {
-  patient_name: "",
-  patient_phone: "",
-  patient_email: "",
-  treatment_name: "",
-  treatment_price: "",
-  date: "",
-  time: "",
-  notes: "",
-  status: "pending",
-  paid: false,
-  marketing_consent: false,
-};
-
-/** HTML time inputs need HH:MM; DB text may be HH:MM:SS. */
-function normalizeTimeInput(value) {
-  const raw = String(value || "").trim();
-  if (!raw) return "";
-  const match = /^(\d{1,2}):(\d{2})/.exec(raw);
-  if (!match) return raw.slice(0, 5);
-  return `${String(Number(match[1])).padStart(2, "0")}:${match[2]}`;
-}
-
-function extractVerifiedMeridianId(notes) {
-  const match = String(notes || "").match(/מזהה טיפול מרידיאן שאומת:\s*(\d+)/);
-  return match?.[1] || "";
-}
-
-/** Prefer verified state when notes still contain a leftover "pending" line. */
-function getMeridianBadge(appointment) {
-  const notes = String(appointment?.notes || "");
-  const verifiedId = extractVerifiedMeridianId(notes);
-  if (verifiedId) {
-    return {
-      kind: "verified",
-      label: `מרידיאן — אומת (${verifiedId})`,
-      className: "text-green-700",
-    };
-  }
-  if (/מרידיאן/.test(notes) && /ממתין לאימות/.test(notes)) {
-    return {
-      kind: "pending",
-      label: "מרידיאן — ממתין לאימות מזהה",
-      className: "text-amber-700",
-    };
-  }
-  if (/מרידיאן/.test(notes)) {
-    return {
-      kind: "info",
-      label: "מרידיאן",
-      className: "text-muted-foreground",
-    };
-  }
-  return null;
-}
-
-/** Hide contradictory pending Meridian lines once a verified ID exists. */
-function formatNotesForDisplay(notes) {
-  const text = String(notes || "");
-  const verifiedId = extractVerifiedMeridianId(text);
-  if (!verifiedId) return text || "-";
-  return (
-    text
-      .split(/\r?\n+/)
-      .map((line) =>
-        String(line || "")
-          .replace(/תשלום דרך מרידיאן\s*[—–\-:]?\s*ממתין לאימות מזהה טיפול/g, "")
-          .replace(/מרידיאן\s*[—–\-:]?\s*ממתין לאימות[^\n]*/g, "")
-          .replace(/ממתין לאימות מזהה טיפול/g, "")
-          .trim()
-      )
-      .filter(Boolean)
-      .join("\n") || `מזהה טיפול מרידיאן שאומת: ${verifiedId}`
-  );
-}
-
-function getEmailDeliveryWarning(appointment) {
-  const statuses = [
-    appointment?.confirmation_email_status,
-    appointment?.reminder_email_status,
-  ]
-    .map((value) => String(value || ""))
-    .filter(Boolean);
-
-  if (statuses.includes("permanent_failure") || statuses.includes("suppressed")) {
-    return "שליחת אימייל נכשלה באופן קבוע — בדקי/תקני את כתובת המייל. לא יישלחו ניסיונות נוספים עד לתיקון.";
-  }
-  if (statuses.includes("temporary_failure")) {
-    return "שליחת אימייל נכשלה זמנית — ייתכן ניסיון חוזר מוגבל.";
-  }
-  return "";
-}
-
-function getSmsDeliveryWarning(appointment) {
-  const status = String(appointment?.reminder_sms_status || "");
-  if (status === "permanent_failure") {
-    return "שליחת SMS נכשלה — לא יבוצע ניסיון חוזר אוטומטי.";
-  }
-  if (status === "invalid_phone") {
-    return "מספר נייד לא תקין לתזכורת SMS — תקני את הטלפון.";
-  }
-  if (status === "temporary_failure") {
-    return "שליחת SMS הופסקה / לא ודאית — ללא ניסיון חוזר אוטומטי.";
-  }
-  return "";
-}
-
-function emailDeliveryStatusLabel(status) {
-  switch (String(status || "")) {
-    case "accepted":
-      return "התקבל לשליחה";
-    case "delivered":
-      return "נמסר";
-    case "sending":
-      return "בשליחה";
-    case "temporary_failure":
-      return "כשל זמני";
-    case "permanent_failure":
-      return "כשל קבוע";
-    case "suppressed":
-      return "חסום לשליחה";
-    case "cancelled":
-      return "בוטל";
-    case "pending":
-      return "ממתין";
-    case "invalid_phone":
-      return "מספר לא תקין";
-    default:
-      return "";
-  }
-}
-
-/** Label for Invoice4U summary attached by /api/admin appointment list. */
-function invoice4uDisplayLabel(invoice) {
-  if (!invoice) return "";
-  if (invoice.ok) {
-    if (invoice.documentNumber != null && invoice.documentNumber !== "") {
-      return `מס׳ ${invoice.documentNumber}`;
-    }
-    if (invoice.id) return `מסמך ${invoice.id}`;
-    return "הופקה";
-  }
-  if (invoice.status === "issuing") return "בהפקה…";
-  if (invoice.reason === "not_configured") return "לא הוגדר Invoice4U";
-  if (invoice.reason === "zero_amount") return "סכום אפס — לא הופקה";
-  if (invoice.skipped && invoice.reason) return `דולג: ${invoice.reason}`;
-  if (invoice.error) return `שגיאה: ${String(invoice.error).slice(0, 120)}`;
-  if (invoice.reason) return String(invoice.reason);
-  return "לא הופקה";
-}
+  STATUS_MAP,
+  emailDeliveryStatusLabel,
+  formatNotesForDisplay,
+  getEmailDeliveryWarning,
+  getMeridianBadge,
+  getSmsDeliveryWarning,
+  invoice4uDisplayLabel,
+} from "@/components/admin/appointmentTableShared";
 
 function renderInvoiceField(invoice) {
   const label = invoice4uDisplayLabel(invoice);
@@ -232,6 +68,146 @@ function renderInvoiceField(invoice) {
   );
 }
 
+function renderField(label, value, className = "") {
+  return (
+    <div className="space-y-1">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className={`text-sm font-medium text-foreground ${className}`}>{value || "-"}</p>
+    </div>
+  );
+}
+
+const AppointmentCard = React.memo(function AppointmentCard({
+  apt,
+  onPaidChange,
+  onStatusChange,
+  onEdit,
+  onDelete,
+}) {
+  const badge = getMeridianBadge(apt);
+  const emailWarning = getEmailDeliveryWarning(apt);
+  const smsWarning = getSmsDeliveryWarning(apt);
+
+  return (
+    <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0 flex-1 space-y-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground">מטופל</p>
+              <h3 className="text-lg font-bold text-foreground">{apt.patient_name}</h3>
+              {badge ? (
+                <p className={`mt-1 text-xs font-medium ${badge.className}`}>{badge.label}</p>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => onPaidChange(apt.id, !apt.paid)}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium transition-colors ${
+                  apt.paid
+                    ? "bg-green-50 text-green-700"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {apt.paid ? (
+                  <CheckCircle2 className="h-4 w-4" />
+                ) : (
+                  <Circle className="h-4 w-4" />
+                )}
+                {apt.paid ? "שילם" : "לא שילם"}
+              </button>
+              <Select
+                value={apt.status || "pending"}
+                onValueChange={(val) => onStatusChange(apt.id, val)}
+              >
+                <SelectTrigger className="h-8 w-32 rounded-full text-right">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(STATUS_MAP).map(([key, { label }]) => (
+                    <SelectItem key={key} value={key}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+            {renderField("טלפון", apt.patient_phone, "tabular-nums")}
+            {renderField("אימייל", apt.patient_email || "-", "break-all")}
+            {renderField("טיפול", apt.treatment_name)}
+            {renderField(
+              "מחיר טיפול",
+              apt.treatment_price
+                ? `₪${Number(apt.treatment_price).toLocaleString("he-IL")}`
+                : "-"
+            )}
+            {renderField(
+              "תאריך",
+              apt.date ? format(new Date(`${apt.date}T00:00:00`), "dd/MM/yyyy") : "-",
+              "tabular-nums"
+            )}
+            {renderField("שעה", apt.time, "tabular-nums")}
+            {renderField("הערות", formatNotesForDisplay(apt.notes))}
+            {renderInvoiceField(apt.invoice4u)}
+            {renderField(
+              "סטטוס אימייל אישור",
+              emailDeliveryStatusLabel(apt.confirmation_email_status) ||
+                (apt.confirmation_sent_at ? "התקבל לשליחה" : "-")
+            )}
+            {renderField(
+              "סטטוס תזכורת אימייל",
+              emailDeliveryStatusLabel(apt.reminder_email_status) ||
+                (apt.reminder_sent_at ? "התקבל לשליחה" : "-")
+            )}
+            {renderField(
+              "סטטוס תזכורת SMS",
+              emailDeliveryStatusLabel(apt.reminder_sms_status) ||
+                (apt.reminder_sms_sent_at ? "התקבל אצל הספק" : "-")
+            )}
+          </div>
+          {emailWarning ? (
+            <div
+              className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+              role="status"
+            >
+              {emailWarning}
+            </div>
+          ) : null}
+          {smsWarning ? (
+            <div
+              className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+              role="status"
+            >
+              {smsWarning}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="flex shrink-0 gap-2 lg:flex-col">
+          <Button type="button" variant="outline" size="sm" onClick={() => onEdit(apt)} className="gap-1">
+            <Pencil className="h-3.5 w-3.5" />
+            ערוך
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => onDelete(apt)}
+            className="gap-1 text-destructive hover:text-destructive"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            מחק
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+});
+
 export default function AppointmentTable({
   appointments,
   emptyMessage = "אין תורים עדיין",
@@ -242,151 +218,14 @@ export default function AppointmentTable({
   onRefresh,
   isMutating,
   updateError = "",
+  onEditingChange,
 }) {
   const [editingAppointment, setEditingAppointment] = useState(null);
   const [appointmentToDelete, setAppointmentToDelete] = useState(null);
-  const [editForm, setEditForm] = useState(EMPTY_EDIT_FORM);
-  const [meridianIdInput, setMeridianIdInput] = useState("");
-  const [meridianBusy, setMeridianBusy] = useState(false);
-  const [meridianError, setMeridianError] = useState("");
-  const [meridianSuccess, setMeridianSuccess] = useState("");
-  const [editEmailError, setEditEmailError] = useState("");
-  const [editSaveError, setEditSaveError] = useState("");
 
   useEffect(() => {
-    if (!editingAppointment) {
-      setEditForm(EMPTY_EDIT_FORM);
-      setMeridianIdInput("");
-      setMeridianError("");
-      setMeridianSuccess("");
-      setMeridianBusy(false);
-      setEditEmailError("");
-      setEditSaveError("");
-      return;
-    }
-
-    const rawNotes = editingAppointment.notes || "";
-    const cleanedNotes = formatNotesForDisplay(rawNotes);
-    setEditForm({
-      patient_name: editingAppointment.patient_name || "",
-      patient_phone: editingAppointment.patient_phone || "",
-      patient_email: editingAppointment.patient_email || "",
-      treatment_name: editingAppointment.treatment_name || "",
-      treatment_price: editingAppointment.treatment_price ?? "",
-      date: editingAppointment.date || "",
-      time: normalizeTimeInput(editingAppointment.time),
-      notes: cleanedNotes === "-" ? "" : cleanedNotes,
-      status: editingAppointment.status || "pending",
-      paid: Boolean(editingAppointment.paid),
-      marketing_consent: Boolean(editingAppointment.marketing_consent),
-    });
-    setMeridianIdInput(extractVerifiedMeridianId(rawNotes));
-    setMeridianError("");
-    setMeridianSuccess("");
-    setEditEmailError("");
-    setEditSaveError("");
-  }, [editingAppointment]);
-
-  const handleEditChange = (field, value) => {
-    if (field === "patient_email" && editEmailError) setEditEmailError("");
-    if (editSaveError) setEditSaveError("");
-    setEditForm((prev) => ({
-      ...prev,
-      [field]: field === "time" ? normalizeTimeInput(value) : value,
-    }));
-  };
-
-  const handleSaveEdit = async (event) => {
-    event.preventDefault();
-    if (!editingAppointment || isMutating) return;
-
-    const emailResult = validateBookingEmail(editForm.patient_email, { required: false });
-    if (!emailResult.ok) {
-      setEditEmailError(bookingEmailErrorMessage(emailResult.error));
-      return;
-    }
-    setEditEmailError("");
-    setEditSaveError("");
-
-    const notesToSave = formatNotesForDisplay(editForm.notes);
-    try {
-      await onUpdate(
-        editingAppointment.id,
-        {
-          patient_name: editForm.patient_name,
-          patient_phone: editForm.patient_phone,
-          patient_email: emailResult.normalized || "",
-          treatment_name: editForm.treatment_name,
-          treatment_price: editForm.treatment_price === "" ? null : Number(editForm.treatment_price),
-          date: editForm.date,
-          time: normalizeTimeInput(editForm.time),
-          notes: notesToSave === "-" ? "" : notesToSave,
-          status: editForm.status,
-          paid: editForm.paid,
-          marketing_consent: editForm.marketing_consent,
-        },
-        { previousDate: editingAppointment.date || null }
-      );
-      setEditingAppointment(null);
-    } catch (error) {
-      setEditSaveError(
-        error?.message || updateError || "לא הצלחנו לשמור את השינויים. נסו שוב."
-      );
-    }
-  };
-
-  const handleVerifyMeridian = async () => {
-    if (!editingAppointment) return;
-    const digits = String(meridianIdInput || "").replace(/\D/g, "");
-    if (digits.length < 6) {
-      setMeridianError("נא להזין מזהה טיפול תקין ממרידיאן (לפחות 6 ספרות)");
-      setMeridianSuccess("");
-      return;
-    }
-
-    setMeridianBusy(true);
-    setMeridianError("");
-    setMeridianSuccess("");
-    try {
-      const result = await verifyMeridianTreatmentId({
-        appointmentIds: [editingAppointment.id],
-        treatmentId: digits,
-      });
-      const updated = Array.isArray(result?.appointments)
-        ? result.appointments.find((row) => row.id === editingAppointment.id) ||
-          result.appointments[0]
-        : null;
-
-      if (updated) {
-        setEditingAppointment(updated);
-        setEditForm((prev) => ({
-          ...prev,
-          notes: updated.notes || prev.notes,
-          paid: Boolean(updated.paid),
-          status: updated.status || prev.status,
-        }));
-        setMeridianIdInput(extractVerifiedMeridianId(updated.notes) || digits);
-      }
-
-      setMeridianSuccess(
-        result?.alreadyVerified
-          ? "המזהה כבר אומת בעבר — עודכנו ההערות."
-          : "המזהה אומת בהצלחה. נשלח מייל אישור למטופל ולקליניקה."
-      );
-      if (typeof onRefresh === "function") onRefresh();
-    } catch (error) {
-      setMeridianError(error?.message || "לא ניתן לאמת את המזהה כרגע");
-    } finally {
-      setMeridianBusy(false);
-    }
-  };
-
-  const renderField = (label, value, className = "") => (
-    <div className="space-y-1">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className={`text-sm font-medium text-foreground ${className}`}>{value || "-"}</p>
-    </div>
-  );
+    onEditingChange?.(Boolean(editingAppointment));
+  }, [editingAppointment, onEditingChange]);
 
   return (
     <>
@@ -397,375 +236,29 @@ export default function AppointmentTable({
           </div>
         ) : (
           appointments.map((apt) => (
-            <div key={apt.id} className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div className="min-w-0 flex-1 space-y-4">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="text-xs text-muted-foreground">מטופל</p>
-                      <h3 className="text-lg font-bold text-foreground">{apt.patient_name}</h3>
-                      {(() => {
-                        const badge = getMeridianBadge(apt);
-                        if (!badge) return null;
-                        return (
-                          <p className={`mt-1 text-xs font-medium ${badge.className}`}>
-                            {badge.label}
-                          </p>
-                        );
-                      })()}
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => onPaidChange(apt.id, !apt.paid)}
-                        className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium transition-colors ${
-                          apt.paid
-                            ? "bg-green-50 text-green-700"
-                            : "bg-muted text-muted-foreground"
-                        }`}
-                      >
-                        {apt.paid ? (
-                          <CheckCircle2 className="h-4 w-4" />
-                        ) : (
-                          <Circle className="h-4 w-4" />
-                        )}
-                        {apt.paid ? "שילם" : "לא שילם"}
-                      </button>
-                      <Select
-                        value={apt.status || "pending"}
-                        onValueChange={(val) => onStatusChange(apt.id, val)}
-                      >
-                        <SelectTrigger className="h-8 w-32 rounded-full text-right">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Object.entries(STATUS_MAP).map(([key, { label }]) => (
-                            <SelectItem key={key} value={key}>
-                              {label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
-                    {renderField("טלפון", apt.patient_phone, "tabular-nums")}
-                    {renderField("אימייל", apt.patient_email || "-", "break-all")}
-                    {renderField("טיפול", apt.treatment_name)}
-                    {renderField(
-                      "מחיר טיפול",
-                      apt.treatment_price
-                        ? `₪${Number(apt.treatment_price).toLocaleString("he-IL")}`
-                        : "-"
-                    )}
-                    {renderField(
-                      "תאריך",
-                      apt.date
-                        ? format(new Date(`${apt.date}T00:00:00`), "dd/MM/yyyy")
-                        : "-",
-                      "tabular-nums"
-                    )}
-                    {renderField("שעה", apt.time, "tabular-nums")}
-                    {renderField("הערות", formatNotesForDisplay(apt.notes))}
-                    {renderInvoiceField(apt.invoice4u)}
-                    {renderField(
-                      "סטטוס אימייל אישור",
-                      emailDeliveryStatusLabel(apt.confirmation_email_status) ||
-                        (apt.confirmation_sent_at ? "התקבל לשליחה" : "-")
-                    )}
-                    {renderField(
-                      "סטטוס תזכורת אימייל",
-                      emailDeliveryStatusLabel(apt.reminder_email_status) ||
-                        (apt.reminder_sent_at ? "התקבל לשליחה" : "-")
-                    )}
-                    {renderField(
-                      "סטטוס תזכורת SMS",
-                      emailDeliveryStatusLabel(apt.reminder_sms_status) ||
-                        (apt.reminder_sms_sent_at ? "התקבל אצל הספק" : "-")
-                    )}
-                  </div>
-                  {getEmailDeliveryWarning(apt) ? (
-                    <div
-                      className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
-                      role="status"
-                    >
-                      {getEmailDeliveryWarning(apt)}
-                    </div>
-                  ) : null}
-                  {getSmsDeliveryWarning(apt) ? (
-                    <div
-                      className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
-                      role="status"
-                    >
-                      {getSmsDeliveryWarning(apt)}
-                    </div>
-                  ) : null}
-                </div>
-
-                <div className="flex shrink-0 gap-2 lg:flex-col">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setEditingAppointment(apt)}
-                    className="gap-1"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                    ערוך
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setAppointmentToDelete(apt)}
-                    className="gap-1 text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    מחק
-                  </Button>
-                </div>
-              </div>
-            </div>
+            <AppointmentCard
+              key={apt.id}
+              apt={apt}
+              onPaidChange={onPaidChange}
+              onStatusChange={onStatusChange}
+              onEdit={setEditingAppointment}
+              onDelete={setAppointmentToDelete}
+            />
           ))
         )}
       </div>
 
-      <Dialog
+      <AppointmentEditDialog
+        appointment={editingAppointment}
         open={Boolean(editingAppointment)}
-        onOpenChange={(open) => !open && setEditingAppointment(null)}
-      >
-        <DialogContent
-          className="flex max-h-[min(92dvh,920px)] w-[calc(100vw-1.25rem)] max-w-2xl flex-col gap-0 overflow-hidden p-0 sm:w-full"
-          dir="rtl"
-        >
-          <DialogHeader className="shrink-0 border-b border-border/70 px-4 py-4 pe-12 sm:px-6">
-            <DialogTitle>עריכת תור</DialogTitle>
-          </DialogHeader>
-
-          <form onSubmit={handleSaveEdit} className="flex min-h-0 flex-1 flex-col">
-            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6">
-              <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50/80 p-4">
-                <div>
-                  <p className="text-sm font-semibold text-amber-950">אימות מזהה מרידיאן</p>
-                  <p className="mt-1 text-xs leading-5 text-amber-900/80">
-                    הזינו את מזהה הטיפול ממרידיאן. אחרי אימות מוצלח יישלח מייל אישור למטופל
-                    ולקליניקה.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-meridian-id">מזהה טיפול מרידיאן</Label>
-                  <Input
-                    id="edit-meridian-id"
-                    inputMode="numeric"
-                    autoComplete="off"
-                    placeholder="לדוגמה 123456789"
-                    value={meridianIdInput}
-                    onChange={(e) => {
-                      setMeridianIdInput(e.target.value.replace(/[^\d]/g, ""));
-                      if (meridianError) setMeridianError("");
-                      if (meridianSuccess) setMeridianSuccess("");
-                    }}
-                    dir="ltr"
-                    className="text-left tracking-wide"
-                  />
-                </div>
-                <Button
-                  type="button"
-                  onClick={handleVerifyMeridian}
-                  disabled={meridianBusy || isMutating}
-                  className="w-full gap-2 sm:w-auto"
-                >
-                  {meridianBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                  {meridianBusy ? "מאמת מזהה..." : "אמת מזהה מרידיאן"}
-                </Button>
-                {meridianError ? (
-                  <p className="text-sm text-destructive">{meridianError}</p>
-                ) : null}
-                {meridianSuccess ? (
-                  <p className="text-sm font-medium text-green-700">{meridianSuccess}</p>
-                ) : null}
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-name">שם מלא</Label>
-                  <Input
-                    id="edit-name"
-                    value={editForm.patient_name}
-                    onChange={(e) => handleEditChange("patient_name", e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-phone">טלפון</Label>
-                  <Input
-                    id="edit-phone"
-                    value={editForm.patient_phone}
-                    onChange={(e) => handleEditChange("patient_phone", e.target.value)}
-                    required
-                    dir="ltr"
-                    className="text-left"
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-email">אימייל</Label>
-                  <Input
-                    id="edit-email"
-                    type="email"
-                    value={editForm.patient_email}
-                    onChange={(e) => handleEditChange("patient_email", e.target.value)}
-                    dir="ltr"
-                    className="text-left"
-                    aria-invalid={Boolean(editEmailError)}
-                  />
-                  {editEmailError ? (
-                    <p className="text-sm text-destructive" role="alert">
-                      {editEmailError}
-                    </p>
-                  ) : null}
-                  {getEmailDeliveryWarning(editingAppointment) ? (
-                    <p className="text-xs text-amber-800">
-                      {getEmailDeliveryWarning(editingAppointment)} תיקון הכתובת יסיר חסימה לשליחות עתידיות בלבד (ללא שליחה אוטומטית מחדש של אישור ישן).
-                    </p>
-                  ) : null}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-treatment">טיפול</Label>
-                  <Input
-                    id="edit-treatment"
-                    value={editForm.treatment_name}
-                    onChange={(e) => handleEditChange("treatment_name", e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-price">מחיר טיפול</Label>
-                <Input
-                  id="edit-price"
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={editForm.treatment_price}
-                  onChange={(e) => handleEditChange("treatment_price", e.target.value)}
-                />
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-date">תאריך</Label>
-                  <Input
-                    id="edit-date"
-                    type="date"
-                    value={editForm.date}
-                    onChange={(e) => handleEditChange("date", e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-time">שעה</Label>
-                  <Input
-                    id="edit-time"
-                    type="time"
-                    value={editForm.time}
-                    onChange={(e) => handleEditChange("time", e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>סטטוס</Label>
-                  <Select
-                    value={editForm.status}
-                    onValueChange={(value) => handleEditChange("status", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(STATUS_MAP).map(([key, { label }]) => (
-                        <SelectItem key={key} value={key}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>תשלום</Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => handleEditChange("paid", !editForm.paid)}
-                    className="w-full justify-start gap-2"
-                  >
-                    {editForm.paid ? (
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                    ) : (
-                      <Circle className="h-4 w-4 text-muted-foreground" />
-                    )}
-                    {editForm.paid ? "שילם" : "לא שילם"}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-notes">הערות</Label>
-                <Textarea
-                  id="edit-notes"
-                  value={editForm.notes}
-                  onChange={(e) => handleEditChange("notes", e.target.value)}
-                  rows={3}
-                />
-              </div>
-
-              <label className="flex items-center gap-3 rounded-xl border border-border p-3 text-sm">
-                <Checkbox
-                  checked={editForm.marketing_consent}
-                  onCheckedChange={(checked) =>
-                    handleEditChange("marketing_consent", Boolean(checked))
-                  }
-                />
-                <span>אישר/ה קבלת דיוור שיווקי</span>
-              </label>
-            </div>
-
-            {(editSaveError || updateError) && (
-              <p className="px-4 pt-2 text-sm text-destructive sm:px-6" role="alert">
-                {editSaveError || updateError}
-              </p>
-            )}
-
-            <DialogFooter className="shrink-0 gap-2 border-t border-border/70 bg-background px-4 py-3 sm:px-6">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setEditingAppointment(null)}
-                disabled={isMutating}
-              >
-                ביטול
-              </Button>
-              <Button type="submit" disabled={isMutating || meridianBusy}>
-                {isMutating ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    שומר...
-                  </>
-                ) : (
-                  "שמור שינויים"
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+        onOpenChange={(open) => {
+          if (!open) setEditingAppointment(null);
+        }}
+        onUpdate={onUpdate}
+        onRefresh={onRefresh}
+        isMutating={isMutating}
+        updateError={updateError}
+      />
 
       <AlertDialog
         open={Boolean(appointmentToDelete)}
