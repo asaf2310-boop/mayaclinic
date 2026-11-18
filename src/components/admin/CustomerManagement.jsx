@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useDeferredValue, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -180,6 +180,7 @@ function PatientDetailsDialog({ customer, profile, open, onOpenChange }) {
 export default function CustomerManagement({ appointments }) {
   const clinicSite = getClinicSite();
   const [searchTerm, setSearchTerm] = useState("");
+  const deferredSearchTerm = useDeferredValue(searchTerm);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const customers = useMemo(() => buildCustomers(appointments), [appointments]);
 
@@ -199,7 +200,7 @@ export default function CustomerManagement({ appointments }) {
   );
 
   const filteredCustomers = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
+    const query = deferredSearchTerm.trim().toLowerCase();
     if (!query) return customers;
 
     return customers.filter((customer) => {
@@ -214,7 +215,7 @@ export default function CustomerManagement({ appointments }) {
 
       return searchable.includes(query);
     });
-  }, [customers, searchTerm]);
+  }, [customers, deferredSearchTerm]);
 
   return (
     <div className="space-y-6" dir="rtl">
