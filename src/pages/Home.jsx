@@ -155,7 +155,7 @@ export default function Home() {
                       to={`/book?channel=${clinicSite.momentBooking.channel || "movement"}`}
                       className={clinicHeroCtaSecondaryBtn}
                     >
-                      {clinicSite.momentBooking.ctaLabel || "קביעת תור — movement/שיקומי"}
+                      {clinicSite.momentBooking.ctaLabel || "קביעת תור — Movement/שיקומי"}
                     </Link>
                   )}
                   {clinicSite.heroExternalLinks?.length > 0 && (
