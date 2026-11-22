@@ -91,8 +91,8 @@ export const CLINIC_SITES = {
     momentBooking: {
       channel: "movement",
       durationMinutes: 60,
-      ctaLabel: "קביעת תור — movement/שיקומי",
-      pageTitle: "קביעת תור — movement/שיקומי",
+      ctaLabel: "קביעת תור — Movement/שיקומי",
+      pageTitle: "קביעת תור — Movement/שיקומי",
       /** Base names hidden on the Movement booking channel. */
       excludeTreatmentBaseNames: ["התנהגות לילד"],
     },
