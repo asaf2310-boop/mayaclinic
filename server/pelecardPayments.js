@@ -20,7 +20,10 @@ import {
   createMeridianVerificationToken,
   verifyMeridianVerificationToken,
 } from "./paymentSessionToken.js";
-import { hasAppointmentTimeConflict } from "../src/lib/bookingSlots.js";
+import {
+  hasAppointmentTimeConflict,
+  isSlotInThePast,
+} from "../src/lib/bookingSlots.js";
 import { activateGiftVoucher, appendVoucherAppointments, redeemVoucherAtomic, restoreVoucherBalance } from "./giftVouchers.js";
 import { isCalendarMutationConfigured } from "./googleCalendarMutation.js";
 import { syncClinicCalendarForAppointments } from "./syncClinicCalendar.js";
@@ -272,6 +275,13 @@ export async function assertBookingSlotsAvailable(booking, { bookingDurationMinu
   const existing = await fetchActiveAppointmentsForDates(dates, booking.tenant_id);
 
   for (const appointment of booking.appointments || []) {
+    if (isSlotInThePast(appointment.time, appointment.date)) {
+      const error = new Error(
+        `השעה ${appointment.time} בתאריך ${appointment.date} כבר עברה. בחרו מועד אחר.`
+      );
+      error.status = 409;
+      throw error;
+    }
     if (
       hasAppointmentTimeConflict(
         { date: appointment.date, time: appointment.time },

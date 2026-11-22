@@ -159,6 +159,7 @@ export default function BookingForm({
     if (!rec) return [];
     return filterAvailableSlots(rec.slots, clinicAppointmentsForDate, {
       bookingDurationMinutes,
+      date: form.date,
     });
   }, [form.date, clinicAvailability, clinicAppointmentsForDate, bookingDurationMinutes]);
 
