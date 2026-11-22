@@ -154,7 +154,7 @@ export default function Book() {
   };
 
   const pageTitle = isMoment
-    ? clinicSite?.momentBooking?.pageTitle || "קביעת תור — לקוחות מובמנט"
+    ? clinicSite?.momentBooking?.pageTitle || "קביעת תור — movement/שיקומי"
     : isMeridian
       ? "קביעת תור — מרידיאן"
       : "קביעת תור";

@@ -2,6 +2,7 @@ import {
   BLOCK_AFTER_MINUTES,
   filterAvailableSlots,
   isSlotBlockedByAppointment,
+  isSlotInThePast,
 } from "../src/lib/bookingSlots.js";
 
 const slots = ["09:00", "10:30", "12:00", "14:00", "16:00", "17:30"];
@@ -35,8 +36,27 @@ console.assert(!evening.includes("20:00"), "20:00 blocked");
 console.assert(!evening.includes("20:30"), "20:30 blocked");
 console.assert(evening.includes("21:00"), "21:00 free at end of 90m window");
 
+// Same-day past slots must not be offered (Jerusalem clock).
+// 2026-11-22T08:00:00Z = 10:00 Asia/Jerusalem (winter, UTC+2).
+const morningNow = new Date("2026-11-22T08:00:00.000Z");
+console.assert(isSlotInThePast("08:30", "2026-11-22", morningNow), "08:30 past at 10:00");
+console.assert(isSlotInThePast("10:00", "2026-11-22", morningNow), "10:00 not bookable at 10:00");
+console.assert(!isSlotInThePast("10:30", "2026-11-22", morningNow), "10:30 still future");
+console.assert(!isSlotInThePast("08:30", "2026-11-23", morningNow), "tomorrow morning ok");
+
+const morningSlots = ["08:00", "08:30", "09:00", "10:00", "10:30", "11:00"];
+const morning = filterAvailableSlots(morningSlots, [], {
+  date: "2026-11-22",
+  now: morningNow,
+});
+console.assert(!morning.includes("08:30"), "past 08:30 filtered");
+console.assert(!morning.includes("10:00"), "current 10:00 filtered");
+console.assert(morning.includes("10:30"), "future 10:30 kept");
+console.assert(morning.includes("11:00"), "future 11:00 kept");
+
 console.log("bookingSlots tests passed", {
   available,
   atTenAvailable: atTen,
   eveningAvailable: evening,
+  morningAvailable: morning,
 });

@@ -401,7 +401,7 @@ export default function PaymentStep({
         appointments: created.appointments || [],
         treatment_name:
           created.appointments?.[0]?.treatment_name ||
-          `${treatment?.name || formData.treatment_name || ""} (מובמנט · 60 דק׳)`,
+          `${treatment?.name || formData.treatment_name || ""} (movement/שיקומי · 60 דק׳)`,
         treatment_price: null,
         hide_price: true,
         patient_email: formData.patient_email,
@@ -596,7 +596,7 @@ export default function PaymentStep({
             {isMeridian
               ? "אישור תור — מרידיאן"
               : isMovement
-                ? "אישור תור — לקוחות מובמנט"
+                ? "אישור תור — movement/שיקומי"
                 : "תשלום על התור"}
           </h2>
           {!isMovement && (
@@ -670,7 +670,7 @@ export default function PaymentStep({
                 clinicSite ? "border-[var(--ofir-e8ece8,#E8ECE8)]" : "border-border"
               } ${mutedClass}`}
             >
-              לקוחות מובמנט — ללא הצגת מחיר באתר · כל תור 60 דקות
+              movement/שיקומי — ללא הצגת מחיר באתר · כל תור 60 דקות
             </div>
           )}
         </div>
@@ -720,7 +720,7 @@ export default function PaymentStep({
                     : "border-border bg-muted/40 text-foreground"
                 }`}
               >
-                לאחר אישור התור יישלח סיכום למייל שלכם ולקליניקה. הטיפול מיועד ללקוחות מובמנט.
+                לאחר אישור התור יישלח סיכום למייל שלכם ולקליניקה. הטיפול מיועד ללקוחות movement/שיקומי.
               </div>
 
               {movementError && (

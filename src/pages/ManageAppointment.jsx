@@ -212,6 +212,7 @@ export default function ManageAppointment() {
     );
     return filterAvailableSlots(record?.slots || [], dayAppointments, {
       bookingDurationMinutes: durationMinutes,
+      date: newDate,
     });
   }, [availabilityRecords, appointmentsByDate, newDate, selected?.id, durationMinutes]);
 
