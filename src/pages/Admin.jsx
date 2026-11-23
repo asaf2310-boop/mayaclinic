@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import Navbar from "../components/layout/Navbar";
 import AppointmentTable from "../components/admin/AppointmentTable";
+import AppointmentCreateDialog from "../components/admin/AppointmentCreateDialog";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import AvailabilityManager from "../components/admin/AvailabilityManager";
 import RevenueReport from "../components/admin/RevenueReport";
@@ -11,10 +12,11 @@ import TreatmentManagement from "../components/admin/TreatmentManagement";
 import GiftVoucherManagement from "../components/admin/GiftVoucherManagement";
 import SmsReminderSettings from "../components/admin/SmsReminderSettings";
 import { Card } from "@/components/ui/card";
-import { BarChart3, CalendarCheck, CalendarDays, CheckCircle2, Clock, Gift, LogOut, MessageSquare, Search, Settings2, Sparkles, Users } from "lucide-react";
+import { BarChart3, CalendarCheck, CalendarDays, CheckCircle2, Clock, Gift, LogOut, MessageSquare, Plus, Search, Settings2, Sparkles, Users } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/lib/AuthContext";
 import {
   filterAppointmentsForClinic,
@@ -69,8 +71,10 @@ export default function Admin() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [appointmentSearch, setAppointmentSearch] = useState("");
   const [isEditingAppointment, setIsEditingAppointment] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const deferredAppointmentSearch = useDeferredValue(appointmentSearch);
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const handleEditingChange = useCallback((editing) => {
     setIsEditingAppointment(Boolean(editing));
   }, []);
@@ -84,13 +88,22 @@ export default function Admin() {
     // Pause polling while the edit dialog is open so a mid-type refetch
     // cannot jank the form under the modal.
     refetchInterval:
-      activeAdminTab === "appointments" && !isEditingAppointment ? 30_000 : false,
-    refetchOnWindowFocus: !isEditingAppointment,
+      activeAdminTab === "appointments" && !isEditingAppointment && !createOpen
+        ? 30_000
+        : false,
+    refetchOnWindowFocus: !isEditingAppointment && !createOpen,
   });
 
   const { data: treatments = [] } = useQuery({
     queryKey: ["treatments"],
     queryFn: () => base44.entities.Treatment.list(),
+  });
+
+  const { data: availabilityRecords = [] } = useQuery({
+    queryKey: ["availability"],
+    queryFn: () => base44.entities.Availability.list("date", 500),
+    enabled: activeAdminTab === "appointments",
+    staleTime: 60_000,
   });
 
   const clinicAppointments = useMemo(
@@ -262,15 +275,25 @@ export default function Admin() {
               </div>
 
               <div className="mb-6 flex flex-col gap-4">
-                <div className="relative max-w-xl mr-auto w-full">
-                  <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    value={appointmentSearch}
-                    onChange={(event) => setAppointmentSearch(event.target.value)}
-                    placeholder="חיפוש לפי שם, טלפון או תאריך"
-                    className="pr-9"
-                    aria-label="חיפוש תורים לפי שם, טלפון או תאריך"
-                  />
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="relative w-full max-w-xl">
+                    <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      value={appointmentSearch}
+                      onChange={(event) => setAppointmentSearch(event.target.value)}
+                      placeholder="חיפוש לפי שם, טלפון או תאריך"
+                      className="pr-9"
+                      aria-label="חיפוש תורים לפי שם, טלפון או תאריך"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    className={`gap-2 shrink-0 ${clinicSite ? clinicPrimaryBtn : ""}`}
+                    onClick={() => setCreateOpen(true)}
+                  >
+                    <Plus className="h-4 w-4" />
+                    תור חדש
+                  </Button>
                 </div>
                 <div className="flex w-full flex-wrap justify-end gap-2 rounded-xl bg-muted/50 p-2 sm:w-fit" role="tablist" aria-label="סינון סטטוס תורים">
                   {statusTabs.map((tab) => (
@@ -316,6 +339,21 @@ export default function Admin() {
                   updateError={updateMutation.error?.message || ""}
                 />
               )}
+
+              <AppointmentCreateDialog
+                open={createOpen}
+                onOpenChange={setCreateOpen}
+                treatments={clinicTreatments}
+                availabilityRecords={availabilityRecords}
+                appointments={clinicAppointments}
+                onCreated={() => {
+                  queryClient.invalidateQueries({ queryKey: ["appointments"] });
+                  toast({
+                    title: "התור נוצר",
+                    description: "נשלח אישור למטופל והתור סונכרן ליומן.",
+                  });
+                }}
+              />
             </TabsContent>
 
             <TabsContent value="availability">

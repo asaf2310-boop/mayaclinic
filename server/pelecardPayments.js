@@ -349,6 +349,7 @@ export async function createAppointmentsFromBooking(
     bookingDurationMinutes = 60,
     analytics,
     requireCalendarSync = false,
+    actor = "customer",
   } = {}
 ) {
   await assertBookingSlotsAvailable(booking, { bookingDurationMinutes });
@@ -424,7 +425,7 @@ export async function createAppointmentsFromBooking(
           appointmentId: appointment.id,
           tenantId: appointment.tenant_id || booking.tenant_id || null,
           eventType: "create",
-          actor: "customer",
+          actor: actor === "admin" ? "admin" : "customer",
           phoneNormalized,
           beforeSnapshot: null,
           afterSnapshot: {
@@ -653,6 +654,52 @@ export async function createMovementBooking(rawBooking = {}) {
   });
 
   return { createdIds, appointments: createdRows };
+}
+
+/**
+ * Admin manual create from /admin appointments tab.
+ * Same side-effects as customer booking: calendar sync, patient email + SMS
+ * confirmation, clinic notify, and cron reminders for tomorrow.
+ */
+export async function createAdminBooking(rawBooking = {}) {
+  const booking = normalizeBookingPayload(rawBooking);
+  if (!isBookingPayloadValid(booking)) {
+    const error = new Error("booking payload is required (patient, treatment, appointments)");
+    error.status = 400;
+    throw error;
+  }
+
+  assertBookingEmail(booking, { required: true });
+
+  const paid = Boolean(rawBooking.paid);
+  const status = String(rawBooking.status || "confirmed").trim() || "confirmed";
+  const bookingDurationMinutes =
+    Number(rawBooking.duration_minutes || rawBooking.bookingDurationMinutes) || 60;
+
+  const { createdIds, createdRows } = await createAppointmentsFromBooking(booking, {
+    paymentNote: "תור שנוצר ידנית מממשק הניהול",
+    paid,
+    status,
+    bookingDurationMinutes,
+    analytics: rawBooking,
+    requireCalendarSync: true,
+    actor: "admin",
+  });
+
+  const persisted = assertPersistedAppointmentResult({
+    expectedCount: booking.appointments.length,
+    createdIds,
+    createdRows,
+  });
+
+  await maybeSendConfirmationEmail(persisted.createdRows);
+  await maybeSendBookingConfirmSms(persisted.createdRows);
+  await maybeSendClinicBookingNotify(persisted.createdRows, {
+    sourceLabel: "ניהול / תור ידני",
+    extraNote: "התור נוצר ידנית מממשק הניהול — אישור נשלח למטופל",
+  });
+
+  return { createdIds: persisted.createdIds, appointments: persisted.createdRows };
 }
 
 /**
