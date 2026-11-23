@@ -37,6 +37,7 @@ export const config = {
   maxDuration: 30,
 };
 import { clearEmailSuppression } from "../server/emailDelivery.js";
+import { createAdminBooking } from "../server/pelecardPayments.js";
 import {
   DEFAULT_CLINIC_ADDRESS,
   DEFAULT_CONFIRM_SMS_TEMPLATE,
@@ -1024,6 +1025,31 @@ export default async function handler(req, res) {
       });
     } catch (error) {
       res.status(500).json({ ok: false, error: error?.message || "Live SMS test failed" });
+    }
+    return;
+  }
+
+  // Manual appointment create — same confirmations + calendar as customer booking.
+  if (req.method === "POST" && action === "create-appointment") {
+    try {
+      const body = readBody(req);
+      const booking = {
+        ...(body?.booking || body || {}),
+        tenant_id: tenantId,
+      };
+      const result = await createAdminBooking(booking);
+      res.status(200).json({
+        ok: true,
+        appointmentIds: result.createdIds,
+        appointments: result.appointments,
+      });
+    } catch (error) {
+      const status = Number(error?.status) || 500;
+      res.status(status).json({
+        ok: false,
+        error: error?.message || "לא ניתן ליצור את התור",
+        code: error?.code || null,
+      });
     }
     return;
   }
